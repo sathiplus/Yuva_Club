@@ -8,8 +8,8 @@ $researchAll = read_json_file(research_file());
 $records = read_json_file(portal_records_file());
 $aiReviews = ai_reviews();
 $hub = hub_settings();
-$juniorSession = group_session($hub, 'junior');
-$seniorSession = group_session($hub, 'senior');
+$schoolSession = group_session($hub, 'junior');
+$collegeSession = group_session($hub, 'senior');
 $reports = safety_reports();
 $status = $_GET['status'] ?? '';
 $scheduledMeetings = [];
@@ -61,7 +61,7 @@ foreach ($records as $recordStudentId => $record) {
     $scheduledMeetings[$meetingKey]['participants'][] = [
         'id' => $recordStudentId,
         'name' => student_display_name($students[$recordStudentId]),
-        'group' => student_program_group($students[$recordStudentId]) === 'junior' ? 'Junior' : 'Senior',
+        'group' => student_program_group($students[$recordStudentId]) === 'junior' ? 'School Yuva' : 'College Yuva',
     ];
 }
 
@@ -131,7 +131,7 @@ portal_header('Admin Dashboard');
 
     <form class="form-card" action="admin-hub-actions.php" method="post">
       <h2>Portal Hub Settings</h2>
-      <h2>Junior Group Session (Ages 8-11)</h2>
+      <h2>School Yuva Session (Ages 13-17)</h2>
       <div class="field-grid">
         <div class="field">
           <label for="junior_session_title">Session Title</label>
@@ -159,22 +159,22 @@ portal_header('Admin Dashboard');
         </div>
         <div class="field">
           <label for="junior_zoom_url">Zoom Link</label>
-          <input id="junior_zoom_url" name="junior_zoom_url" type="url" value="<?php echo e($juniorSession['zoom_url']); ?>" placeholder="https://zoom.us/j/...">
+          <input id="junior_zoom_url" name="junior_zoom_url" type="url" value="<?php echo e($schoolSession['zoom_url']); ?>" placeholder="https://zoom.us/j/...">
         </div>
         <div class="field">
           <label for="junior_zoom_meeting_id">Zoom Meeting ID</label>
-          <input id="junior_zoom_meeting_id" name="junior_zoom_meeting_id" type="text" value="<?php echo e($juniorSession['zoom_meeting_id']); ?>" placeholder="820 9486 5538">
+          <input id="junior_zoom_meeting_id" name="junior_zoom_meeting_id" type="text" value="<?php echo e($schoolSession['zoom_meeting_id']); ?>" placeholder="820 9486 5538">
         </div>
         <div class="field">
           <label for="junior_zoom_password">Zoom Password</label>
-          <input id="junior_zoom_password" name="junior_zoom_password" type="text" value="<?php echo e($juniorSession['zoom_password']); ?>" placeholder="Meeting passcode">
+          <input id="junior_zoom_password" name="junior_zoom_password" type="text" value="<?php echo e($schoolSession['zoom_password']); ?>" placeholder="Meeting passcode">
         </div>
       </div>
       <div class="field">
-        <label for="junior_scheduler_embed">Junior Zoom Scheduler Embed Code</label>
+        <label for="junior_scheduler_embed">School Yuva Zoom Scheduler Embed Code</label>
         <textarea id="junior_scheduler_embed" name="junior_scheduler_embed" placeholder="<iframe src=&quot;https://scheduler.zoom.us/...&quot; ...></iframe>"><?php echo e($hub['junior_scheduler_embed'] ?? ''); ?></textarea>
       </div>
-      <h2>Senior Group Session (Ages 12-18)</h2>
+      <h2>College Yuva Session (Ages 18-21)</h2>
       <div class="field-grid">
         <div class="field">
           <label for="senior_session_title">Session Title</label>
@@ -202,19 +202,19 @@ portal_header('Admin Dashboard');
         </div>
         <div class="field">
           <label for="senior_zoom_url">Zoom Link</label>
-          <input id="senior_zoom_url" name="senior_zoom_url" type="url" value="<?php echo e($seniorSession['zoom_url']); ?>" placeholder="https://zoom.us/j/...">
+          <input id="senior_zoom_url" name="senior_zoom_url" type="url" value="<?php echo e($collegeSession['zoom_url']); ?>" placeholder="https://zoom.us/j/...">
         </div>
         <div class="field">
           <label for="senior_zoom_meeting_id">Zoom Meeting ID</label>
-          <input id="senior_zoom_meeting_id" name="senior_zoom_meeting_id" type="text" value="<?php echo e($seniorSession['zoom_meeting_id']); ?>" placeholder="820 9486 5538">
+          <input id="senior_zoom_meeting_id" name="senior_zoom_meeting_id" type="text" value="<?php echo e($collegeSession['zoom_meeting_id']); ?>" placeholder="820 9486 5538">
         </div>
         <div class="field">
           <label for="senior_zoom_password">Zoom Password</label>
-          <input id="senior_zoom_password" name="senior_zoom_password" type="text" value="<?php echo e($seniorSession['zoom_password']); ?>" placeholder="Meeting passcode">
+          <input id="senior_zoom_password" name="senior_zoom_password" type="text" value="<?php echo e($collegeSession['zoom_password']); ?>" placeholder="Meeting passcode">
         </div>
       </div>
       <div class="field">
-        <label for="senior_scheduler_embed">Senior Zoom Scheduler Embed Code</label>
+        <label for="senior_scheduler_embed">College Yuva Zoom Scheduler Embed Code</label>
         <textarea id="senior_scheduler_embed" name="senior_scheduler_embed" placeholder="<iframe src=&quot;https://scheduler.zoom.us/...&quot; ...></iframe>"><?php echo e($hub['senior_scheduler_embed'] ?? ''); ?></textarea>
       </div>
       <div class="field">
@@ -234,11 +234,11 @@ portal_header('Admin Dashboard');
 
     <div class="two-grid">
       <form class="form-card" action="admin-bulk-session-actions.php" method="post">
-        <h2>Bulk Assign Junior Zoom Slot</h2>
+        <h2>Bulk Assign School Yuva Zoom Slot</h2>
         <div class="field-grid">
           <div class="field">
             <label>Session Title</label>
-            <input name="student_session_title" type="text" value="<?php echo e($hub['junior_session_title'] ?? 'Junior Yuva Club Session'); ?>">
+            <input name="student_session_title" type="text" value="<?php echo e($hub['junior_session_title'] ?? 'School Yuva Session'); ?>">
           </div>
           <div class="field">
             <label>Session Date</label>
@@ -262,19 +262,19 @@ portal_header('Admin Dashboard');
           </div>
           <div class="field">
             <label>Zoom Link</label>
-            <input name="student_zoom_url" type="url" value="<?php echo e($juniorSession['zoom_url']); ?>" placeholder="https://zoom.us/j/...">
+            <input name="student_zoom_url" type="url" value="<?php echo e($schoolSession['zoom_url']); ?>" placeholder="https://zoom.us/j/...">
           </div>
           <div class="field">
             <label>Zoom Meeting ID</label>
-            <input name="student_zoom_meeting_id" type="text" value="<?php echo e($juniorSession['zoom_meeting_id']); ?>" placeholder="820 9486 5538">
+            <input name="student_zoom_meeting_id" type="text" value="<?php echo e($schoolSession['zoom_meeting_id']); ?>" placeholder="820 9486 5538">
           </div>
           <div class="field">
             <label>Zoom Password</label>
-            <input name="student_zoom_password" type="text" value="<?php echo e($juniorSession['zoom_password']); ?>" placeholder="Meeting passcode">
+            <input name="student_zoom_password" type="text" value="<?php echo e($schoolSession['zoom_password']); ?>" placeholder="Meeting passcode">
           </div>
         </div>
         <div class="field">
-          <label>Select Junior Students</label>
+          <label>Select School Yuva Students</label>
           <div class="choice-grid compact-choice-grid">
             <?php foreach ($students as $studentId => $student): ?>
               <?php if (student_program_group($student) !== 'junior') { continue; } ?>
@@ -282,15 +282,15 @@ portal_header('Admin Dashboard');
             <?php endforeach; ?>
           </div>
         </div>
-        <button class="button primary" type="submit">Assign Junior Slot</button>
+        <button class="button primary" type="submit">Assign School Yuva Slot</button>
       </form>
 
       <form class="form-card" action="admin-bulk-session-actions.php" method="post">
-        <h2>Bulk Assign Senior Zoom Slot</h2>
+        <h2>Bulk Assign College Yuva Zoom Slot</h2>
         <div class="field-grid">
           <div class="field">
             <label>Session Title</label>
-            <input name="student_session_title" type="text" value="<?php echo e($hub['senior_session_title'] ?? 'Senior Yuva Club Session'); ?>">
+            <input name="student_session_title" type="text" value="<?php echo e($hub['senior_session_title'] ?? 'College Yuva Session'); ?>">
           </div>
           <div class="field">
             <label>Session Date</label>
@@ -314,19 +314,19 @@ portal_header('Admin Dashboard');
           </div>
           <div class="field">
             <label>Zoom Link</label>
-            <input name="student_zoom_url" type="url" value="<?php echo e($seniorSession['zoom_url']); ?>" placeholder="https://zoom.us/j/...">
+            <input name="student_zoom_url" type="url" value="<?php echo e($collegeSession['zoom_url']); ?>" placeholder="https://zoom.us/j/...">
           </div>
           <div class="field">
             <label>Zoom Meeting ID</label>
-            <input name="student_zoom_meeting_id" type="text" value="<?php echo e($seniorSession['zoom_meeting_id']); ?>" placeholder="820 9486 5538">
+            <input name="student_zoom_meeting_id" type="text" value="<?php echo e($collegeSession['zoom_meeting_id']); ?>" placeholder="820 9486 5538">
           </div>
           <div class="field">
             <label>Zoom Password</label>
-            <input name="student_zoom_password" type="text" value="<?php echo e($seniorSession['zoom_password']); ?>" placeholder="Meeting passcode">
+            <input name="student_zoom_password" type="text" value="<?php echo e($collegeSession['zoom_password']); ?>" placeholder="Meeting passcode">
           </div>
         </div>
         <div class="field">
-          <label>Select Senior Students</label>
+          <label>Select College Yuva Students</label>
           <div class="choice-grid compact-choice-grid">
             <?php foreach ($students as $studentId => $student): ?>
               <?php if (student_program_group($student) !== 'senior') { continue; } ?>
@@ -334,13 +334,13 @@ portal_header('Admin Dashboard');
             <?php endforeach; ?>
           </div>
         </div>
-        <button class="button primary" type="submit">Assign Senior Slot</button>
+        <button class="button primary" type="submit">Assign College Yuva Slot</button>
       </form>
     </div>
 
     <section class="form-card">
       <h2>Scheduled Meetings</h2>
-      <p class="form-note">Students appear here after you assign them with the Junior or Senior bulk assignment forms. Remove selected students from a meeting without deleting their registration.</p>
+      <p class="form-note">Students appear here after you assign them with the School Yuva or College Yuva bulk assignment forms. Remove selected students from a meeting without deleting their registration.</p>
       <?php if ($scheduledMeetings === []): ?>
         <p>No scheduled student meetings yet.</p>
       <?php else: ?>

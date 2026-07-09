@@ -15,7 +15,7 @@ $reports[] = [
     'id' => 'YR' . date('YmdHis') . '-' . substr(hash('sha256', $studentId . microtime(true)), 0, 6),
     'student_id' => $studentId,
     'student_name' => student_display_name($student),
-    'program_group' => student_program_group($student) === 'junior' ? 'Junior' : 'Senior',
+    'program_group' => student_program_group($student) === 'junior' ? 'School Yuva' : 'College Yuva',
     'parent_email' => $student['Parent Email'] ?? '',
     'type' => $reportType,
     'message' => substr($message, 0, 2000),

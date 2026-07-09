@@ -92,11 +92,6 @@ $studentId = $_GET['id'] ?? '';
               <label for="grade">Grade *</label>
               <select id="grade" name="grade" required>
                 <option value="">Select grade</option>
-                <option>3rd Grade</option>
-                <option>4th Grade</option>
-                <option>5th Grade</option>
-                <option>6th Grade</option>
-                <option>7th Grade</option>
                 <option>8th Grade</option>
                 <option>9th Grade</option>
                 <option>10th Grade</option>
@@ -327,13 +322,11 @@ $studentId = $_GET['id'] ?? '';
 
       ageInput.value = age >= 0 ? age : '';
       if (age >= 18 && age <= 21) {
-        groupInput.value = 'College Yuva Leader (Ages 18-21)';
+        groupInput.value = 'College Yuva (Ages 18-21)';
       } else if (age >= 13 && age <= 17) {
-        groupInput.value = 'School Yuva Leader (Ages 13-17)';
-      } else if (age >= 8 && age <= 12) {
-        groupInput.value = 'Junior Yuva Learner (Ages 8-12)';
+        groupInput.value = 'School Yuva (Ages 13-17)';
       } else if (age >= 0) {
-        groupInput.value = 'Outside standard age groups';
+        groupInput.value = 'Not eligible: Yuva Club is for ages 13-21';
       } else {
         groupInput.value = '';
       }

@@ -127,13 +127,11 @@ $suggestions = clean_text($_POST['suggestions'] ?? '');
 if ($programGroup === '') {
     $ageNumber = (int) $age;
     if ($ageNumber >= 18 && $ageNumber <= 21) {
-        $programGroup = 'College Yuva Leader (Ages 18-21)';
+        $programGroup = 'College Yuva (Ages 18-21)';
     } elseif ($ageNumber >= 13 && $ageNumber <= 17) {
-        $programGroup = 'School Yuva Leader (Ages 13-17)';
-    } elseif ($ageNumber >= 8 && $ageNumber <= 12) {
-        $programGroup = 'Junior Yuva Learner (Ages 8-12)';
+        $programGroup = 'School Yuva (Ages 13-17)';
     } else {
-        $programGroup = 'Outside standard age groups';
+        $programGroup = '';
     }
 }
 
@@ -174,6 +172,8 @@ $requiredFields = [
 
 if (
     in_array('', $requiredFields, true)
+    || (int) $age < 13
+    || (int) $age > 21
     || count($schedule) === 0
     || $agreeCode !== 'Yes'
     || $agreeRecording !== 'Yes'

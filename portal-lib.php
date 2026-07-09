@@ -128,7 +128,7 @@ function default_hub_settings(): array {
         'junior_zoom_meeting_id' => '820 9486 5538',
         'junior_zoom_password' => 'Yuva2026',
         'junior_scheduler_embed' => $defaultSchedulerEmbed,
-        'junior_session_title' => 'Junior Yuva Club Session',
+        'junior_session_title' => 'School Yuva Session',
         'senior_session_date' => '',
         'senior_session_start' => '',
         'senior_session_end' => '',
@@ -137,7 +137,7 @@ function default_hub_settings(): array {
         'senior_zoom_meeting_id' => '820 9486 5538',
         'senior_zoom_password' => 'Yuva2026',
         'senior_scheduler_embed' => $defaultSchedulerEmbed,
-        'senior_session_title' => 'Senior Yuva Club Session',
+        'senior_session_title' => 'College Yuva Session',
         'announcements' => '',
         'recordings' => '',
         'resources' => 'Stories Library|stories.html' . "\n" . 'Topics Library|curriculum.html' . "\n" . 'Reading Resources|resources.html',
@@ -147,32 +147,31 @@ function default_hub_settings(): array {
 function student_program_group(array $student): string {
     $group = $student['Program Group'] ?? '';
     if ($group !== '') {
-        if (str_contains($group, 'Junior')) {
+        if (str_contains($group, 'School')) {
             return 'junior';
         }
-        if (str_contains($group, 'Senior') || str_contains($group, 'School') || str_contains($group, 'College')) {
+        if (str_contains($group, 'College')) {
             return 'senior';
         }
     }
     $age = (int) ($student['Age'] ?? 0);
-    return ($age >= 8 && $age <= 11) ? 'junior' : 'senior';
+    return ($age >= 18 && $age <= 21) ? 'senior' : 'junior';
 }
 
 function membership_group_label(array $student): string {
     $group = trim((string) ($student['Program Group'] ?? ''));
-    if ($group !== '') {
-        return $group;
-    }
-
     $age = (int) ($student['Age'] ?? 0);
     if ($age >= 18 && $age <= 21) {
-        return 'College Yuva Leader (Ages 18-21)';
+        return 'College Yuva (Ages 18-21)';
     }
     if ($age >= 13 && $age <= 17) {
-        return 'School Yuva Leader (Ages 13-17)';
+        return 'School Yuva (Ages 13-17)';
     }
-    if ($age >= 8 && $age <= 12) {
-        return 'Junior Yuva Learner (Ages 8-12)';
+    if (str_contains($group, 'College')) {
+        return 'College Yuva (Ages 18-21)';
+    }
+    if (str_contains($group, 'School')) {
+        return 'School Yuva (Ages 13-17)';
     }
     return 'Yuva Club Member';
 }
@@ -313,7 +312,7 @@ function group_session(array $hub, string $group): array {
     $schedulerEmbed = trim((string) ($hub[$prefix . '_scheduler_embed'] ?? ''));
 
     return [
-        'group_label' => $prefix === 'junior' ? 'Junior Group (Ages 8-11)' : 'Senior Group (Ages 12-18)',
+        'group_label' => $prefix === 'junior' ? 'School Yuva (Ages 13-17)' : 'College Yuva (Ages 18-21)',
         'title' => $hub[$prefix . '_session_title'] ?? '',
         'date' => $hub[$prefix . '_session_date'] ?? '',
         'start' => $hub[$prefix . '_session_start'] ?? '',
@@ -552,15 +551,11 @@ function registration_rows(): array {
             if (($record['WhatsApp Username / Number'] ?? '') === '') {
                 $record['WhatsApp Username / Number'] = trim(($record['WhatsApp Username'] ?? '') . ' ' . ($record['WhatsApp Phone Number'] ?? ''));
             }
-            if (($record['Program Group'] ?? '') === '') {
-                $age = (int) ($record['Age'] ?? 0);
-                if ($age >= 18 && $age <= 21) {
-                    $record['Program Group'] = 'College Yuva Leader (Ages 18-21)';
-                } elseif ($age >= 13 && $age <= 17) {
-                    $record['Program Group'] = 'School Yuva Leader (Ages 13-17)';
-                } elseif ($age >= 8 && $age <= 12) {
-                    $record['Program Group'] = 'Junior Yuva Learner (Ages 8-12)';
-                }
+            $age = (int) ($record['Age'] ?? 0);
+            if ($age >= 18 && $age <= 21) {
+                $record['Program Group'] = 'College Yuva (Ages 18-21)';
+            } elseif ($age >= 13 && $age <= 17) {
+                $record['Program Group'] = 'School Yuva (Ages 13-17)';
             }
             $allRows[] = $record;
         }
