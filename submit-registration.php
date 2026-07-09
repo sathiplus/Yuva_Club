@@ -1,6 +1,9 @@
 <?php
 declare(strict_types=1);
 
+require_once __DIR__ . '/backend/database.php';
+require_once __DIR__ . '/backend/repositories.php';
+
 $notificationEmail = 'yuvaclub@karmabro.com';
 $studentIdYear = '2026';
 
@@ -16,6 +19,10 @@ function clean_email(string $value): string {
 
 function checked_value(string $name): string {
     return isset($_POST[$name]) ? 'Yes' : 'No';
+}
+
+function checked_bool(string $name): bool {
+    return isset($_POST[$name]);
 }
 
 function next_yuva_id_from_paths(array $csvPaths, string $year): string {
@@ -257,20 +264,64 @@ $csvPath = $dataDir . DIRECTORY_SEPARATOR . 'registrations-current.csv';
 $fullCsvPath = $dataDir . DIRECTORY_SEPARATOR . 'registrations-full.csv';
 $legacyCsvPath = $dataDir . DIRECTORY_SEPARATOR . 'registrations.csv';
 $idScanPaths = [$csvPath, $fullCsvPath, $legacyCsvPath];
-$studentId = append_registration_row($csvPath, $headers, $row, $studentIdYear, $idScanPaths);
+$studentId = '';
+$registrationId = null;
+$storedInDatabase = false;
 
-if ($studentId === '') {
+if (database_settings_present()) {
+    try {
+        $registrationId = create_registration([
+            'student_first_name' => $studentFirstName,
+            'student_last_name' => $studentLastName,
+            'preferred_name' => $preferredName,
+            'date_of_birth' => $dateOfBirth,
+            'age' => $age,
+            'grade' => $grade,
+            'school' => $school,
+            'city_state' => $cityState,
+            'parent_name' => $parentName,
+            'relationship' => $relationship,
+            'parent_email' => $parentEmail,
+            'parent_phone' => $parentPhone,
+            'student_email' => $studentEmail,
+            'student_phone' => $studentPhone,
+            'whatsapp_contact' => $whatsappContact,
+            'interests' => $interestsText,
+            'why_join' => $joinReason,
+            'presentation_experience' => $presentationExperience,
+            'presentation_topics' => $presentationTopics,
+            'preferred_schedule' => $scheduleText,
+            'suggestions' => $suggestions,
+            'code_of_conduct_agreed' => checked_bool('agree_code'),
+            'recording_agreed' => checked_bool('agree_recording'),
+            'parent_permission_granted' => checked_bool('agree_parent_permission'),
+            'ip_address' => $ipAddress,
+        ]);
+        $storedInDatabase = true;
+    } catch (Throwable $error) {
+        error_log('Yuva Club database registration failed: ' . $error->getMessage());
+        header('Location: registration.php?status=error');
+        exit;
+    }
+} else {
+    $studentId = append_registration_row($csvPath, $headers, $row, $studentIdYear, $idScanPaths);
+}
+
+if (!$storedInDatabase && $studentId === '') {
     header('Location: registration.php?status=error');
     exit;
 }
 
-$row[1] = $studentId;
-append_registration_row($fullCsvPath, $headers, $row, $studentIdYear, $idScanPaths);
+if (!$storedInDatabase) {
+    $row[1] = $studentId;
+    append_registration_row($fullCsvPath, $headers, $row, $studentIdYear, $idScanPaths);
+}
 
 if ($notificationEmail !== '') {
-    $subject = "New Yuva Club Registration: $studentId";
+    $registrationReference = $storedInDatabase ? ('Registration #' . (string) $registrationId) : $studentId;
+    $subject = "New Yuva Club Registration: $registrationReference";
     $message = "New Yuva Club registration:\n\n"
-        . "Yuva Club ID: $studentId\n"
+        . ($storedInDatabase ? "Registration ID: $registrationId\n" : "Yuva Club ID: $studentId\n")
         . "Submitted At: $submittedAt\n\n"
         . "Student: $studentFirstName $studentLastName\n"
         . "Preferred Name: $preferredName\n"
@@ -296,10 +347,13 @@ if ($notificationEmail !== '') {
         . "Code of Conduct Agreement: $agreeCode\n"
         . "Recording Agreement: $agreeRecording\n"
         . "Parent Permission: $agreeParentPermission\n";
-    $headersText = "From: no-reply@yuvaclub.karmabro.com\r\n"
+    $headersText = "From: no-reply@yuvaclub.net\r\n"
         . "Reply-To: $parentEmail\r\n";
     @mail($notificationEmail, $subject, $message, $headersText);
 }
 
-header('Location: registration.php?status=success&id=' . urlencode($studentId));
+$query = $storedInDatabase
+    ? 'status=success&registration=' . urlencode((string) $registrationId)
+    : 'status=success&id=' . urlencode($studentId);
+header('Location: registration.php?' . $query);
 exit;
