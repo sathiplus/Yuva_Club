@@ -1,0 +1,65 @@
+{
+  "id": "/",
+  "name": "YUVA Club",
+  "short_name": "YUVA Club",
+  "description": "A global youth leadership app where students explore topics, present ideas, discuss, and lead.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#ffffff",
+  "theme_color": "#062856",
+  "categories": ["education", "kids", "productivity"],
+  "icons": [
+    {
+      "src": "/assets/app-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/app-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/app-icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Open App",
+      "short_name": "App",
+      "url": "/app.html",
+      "icons": [{ "src": "/assets/app-icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Student Portal",
+      "short_name": "Portal",
+      "url": "/portal-login.php",
+      "icons": [{ "src": "/assets/app-icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Programs",
+      "short_name": "Programs",
+      "url": "/programs.html",
+      "icons": [{ "src": "/assets/app-icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Register",
+      "short_name": "Register",
+      "url": "/registration.php",
+      "icons": [{ "src": "/assets/app-icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Stories",
+      "short_name": "Stories",
+      "url": "/stories.html",
+      "icons": [{ "src": "/assets/app-icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}

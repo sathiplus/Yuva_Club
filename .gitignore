@@ -1,0 +1,9 @@
+portal-data/
+portal-uploads/
+submissions/
+server.err.log
+server.out.log
+*.zip
+yuva-env.php
+.DS_Store
+Thumbs.db

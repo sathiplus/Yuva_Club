@@ -1,0 +1,35 @@
+DirectoryIndex index.html index.php
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteCond %{HTTPS} !=on [OR]
+  RewriteCond %{HTTP_HOST} !^www\.yuvaclub\.karmabro\.com$ [NC]
+  RewriteRule ^ https://www.yuvaclub.karmabro.com%{REQUEST_URI} [R=301,L]
+</IfModule>
+
+# Ensure PHP files are handled by PHP on common cPanel/Apache hosting.
+# If your hosting uses a different PHP version, change ea-php82 to the
+# version enabled in cPanel MultiPHP Manager.
+<IfModule mime_module>
+  AddHandler application/x-httpd-ea-php82 .php .php8 .phtml
+  AddType application/manifest+json .webmanifest
+  AddType application/javascript .js
+</IfModule>
+
+<IfModule mod_headers.c>
+  Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains"
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set Referrer-Policy "strict-origin-when-cross-origin"
+  Header always set X-Frame-Options "SAMEORIGIN"
+  Header always set Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=(), bluetooth=(), accelerometer=(), gyroscope=(), magnetometer=()"
+  Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self'; frame-src https://scheduler.zoom.us https://*.zoom.us https://zoom.us; frame-ancestors 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests"
+
+  <FilesMatch "^(service-worker\.js|manifest\.webmanifest)$">
+    Header set Cache-Control "no-cache"
+  </FilesMatch>
+</IfModule>
+
+# Protect registration submission data.
+<FilesMatch "\.(csv)$">
+  Require all denied
+</FilesMatch>
