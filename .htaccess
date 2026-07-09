@@ -1,5 +1,7 @@
 DirectoryIndex index.html index.php
 
+RedirectMatch 404 ^/(backend|database|docs|tools)(/|$)
+
 <IfModule mod_rewrite.c>
   RewriteEngine On
   RewriteCond %{HTTPS} !=on [OR]
