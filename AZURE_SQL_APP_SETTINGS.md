@@ -4,7 +4,7 @@ Add these in Azure App Service > Configuration > Application settings:
 
 ```text
 DB_DRIVER=sqlsrv
-DB_HOST=yuvaclub-sql.database.windows.net
+DB_HOST=yuvaclub-sql-central.database.windows.net
 DB_PORT=1433
 DB_DATABASE=yuva_club
 DB_USERNAME=yuvaadmin
