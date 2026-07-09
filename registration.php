@@ -1,6 +1,7 @@
 <?php
 $status = $_GET['status'] ?? '';
 $studentId = $_GET['id'] ?? '';
+$registrationId = $_GET['registration'] ?? '';
 ?>
 <!doctype html>
 <html lang="en">
@@ -48,7 +49,11 @@ $studentId = $_GET['id'] ?? '';
         </div>
 
         <?php if ($status === 'success'): ?>
-          <div class="form-status success">Thank you. Your registration was submitted successfully<?php echo $studentId !== '' ? ' with Yuva Club ID ' . htmlspecialchars($studentId, ENT_QUOTES, 'UTF-8') : ''; ?>.</div>
+          <?php if ($registrationId !== ''): ?>
+            <div class="form-status success">Thank you. Your registration was submitted successfully. We will review it and send the Yuva Club ID after approval.</div>
+          <?php else: ?>
+            <div class="form-status success">Thank you. Your registration was submitted successfully<?php echo $studentId !== '' ? ' with Yuva Club ID ' . htmlspecialchars($studentId, ENT_QUOTES, 'UTF-8') : ''; ?>.</div>
+          <?php endif; ?>
         <?php elseif ($status === 'error'): ?>
           <div class="form-status error">Please complete the required fields, choose at least one day/time preference, and accept the agreements.</div>
         <?php endif; ?>
