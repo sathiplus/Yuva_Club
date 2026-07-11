@@ -465,6 +465,12 @@ h3 { font-size: 22px; }
   border-top: 0;
 }
 
+.next-action-card {
+  margin-bottom: 24px;
+  border-color: rgba(15, 118, 110, .35);
+  background: #f3fffb;
+}
+
 .meeting-list {
   display: grid;
   gap: 16px;

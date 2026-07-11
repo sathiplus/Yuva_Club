@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /backend/
+Disallow: /database/
+Disallow: /docs/
+Disallow: /tools/
+
+Sitemap: https://www.yuvaclub.app/sitemap.xml

@@ -16,8 +16,9 @@ ini_set('session.use_only_cookies', '1');
 session_start();
 
 const YUVA_ADMIN_SALT = 'yuva-club-admin-v1';
-const YUVA_ADMIN_EMAIL = 'admin@karmabro.com';
-const YUVA_ADMIN_PASSWORD_HASH = 'e5cdf3325de344337779c499e1d8b07b59bdba6b72fbbe7fa97bc0e00d978288';
+const YUVA_PLATFORM_ADMIN_EMAIL = 'admin@yuvaclub.app';
+const YUVA_ADMIN_EMAIL = YUVA_PLATFORM_ADMIN_EMAIL;
+const YUVA_ADMIN_PASSWORD_HASH = '8028e3a1b67db0e8f715a09c54f460c6449f1f091f065a28be74e6879b5b78b3';
 
 function e(string $value): string {
     return htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
@@ -97,6 +98,14 @@ function hub_settings_file(): string {
     return portal_path('portal-data') . DIRECTORY_SEPARATOR . 'hub-settings.json';
 }
 
+function student_accounts_file(): string {
+    return portal_path('portal-data') . DIRECTORY_SEPARATOR . 'student-accounts.json';
+}
+
+function login_attempts_file(): string {
+    return portal_path('portal-data') . DIRECTORY_SEPARATOR . 'login-attempts.json';
+}
+
 function safety_reports_file(): string {
     return portal_path('portal-data') . DIRECTORY_SEPARATOR . 'safety-reports.json';
 }
@@ -114,6 +123,119 @@ function admin_credentials(): array {
 
 function password_hash_for_admin(string $password): string {
     return hash('sha256', YUVA_ADMIN_SALT . $password);
+}
+
+function csrf_token(): string {
+    if (empty($_SESSION['csrf_token']) || !is_string($_SESSION['csrf_token'])) {
+        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+    }
+    return $_SESSION['csrf_token'];
+}
+
+function csrf_field(): string {
+    return '<input type="hidden" name="csrf_token" value="' . e(csrf_token()) . '">';
+}
+
+function verify_csrf_token(?string $token): bool {
+    return is_string($token)
+        && isset($_SESSION['csrf_token'])
+        && is_string($_SESSION['csrf_token'])
+        && hash_equals($_SESSION['csrf_token'], $token);
+}
+
+function password_policy_error(string $password): string {
+    if (strlen($password) < 12) {
+        return 'Password must be at least 12 characters.';
+    }
+    if (!preg_match('/[A-Z]/', $password)) {
+        return 'Password must include an uppercase letter.';
+    }
+    if (!preg_match('/[a-z]/', $password)) {
+        return 'Password must include a lowercase letter.';
+    }
+    if (!preg_match('/[0-9]/', $password)) {
+        return 'Password must include a number.';
+    }
+    if (!preg_match('/[^A-Za-z0-9]/', $password)) {
+        return 'Password must include a special character.';
+    }
+    return '';
+}
+
+function normalize_login_identifier(string $value): string {
+    $value = clean_text($value);
+    if (str_contains($value, '@')) {
+        return strtolower($value);
+    }
+    return normalize_yuva_id($value);
+}
+
+function student_accounts(): array {
+    return read_json_file(student_accounts_file(), []);
+}
+
+function write_student_accounts(array $accounts): void {
+    write_json_file(student_accounts_file(), $accounts);
+}
+
+function create_student_account(string $yuvaId, string $studentEmail, string $parentEmail, string $password): void {
+    $yuvaId = normalize_yuva_id($yuvaId);
+    if ($yuvaId === '' || password_policy_error($password) !== '') {
+        return;
+    }
+
+    $accounts = student_accounts();
+    $accounts[$yuvaId] = [
+        'yuva_id' => $yuvaId,
+        'student_email' => strtolower(trim($studentEmail)),
+        'parent_email' => strtolower(trim($parentEmail)),
+        'password_hash' => password_hash($password, PASSWORD_DEFAULT),
+        'status' => 'active',
+        'email_verified' => false,
+        'created_at' => gmdate('c'),
+        'updated_at' => gmdate('c'),
+    ];
+    write_student_accounts($accounts);
+}
+
+function find_student_account_by_identifier(string $identifier): ?array {
+    $identifier = normalize_login_identifier($identifier);
+    foreach (student_accounts() as $account) {
+        $yuvaId = normalize_yuva_id((string) ($account['yuva_id'] ?? ''));
+        $studentEmail = strtolower((string) ($account['student_email'] ?? ''));
+        $parentEmail = strtolower((string) ($account['parent_email'] ?? ''));
+        if ($identifier === $yuvaId || $identifier === $studentEmail || $identifier === $parentEmail) {
+            return $account;
+        }
+    }
+    return null;
+}
+
+function login_rate_limited(string $identifier): bool {
+    $identifier = normalize_login_identifier($identifier);
+    $attempts = read_json_file(login_attempts_file(), []);
+    $record = $attempts[$identifier] ?? [];
+    $count = (int) ($record['count'] ?? 0);
+    $lastAt = (int) ($record['last_at'] ?? 0);
+    return $count >= 5 && (time() - $lastAt) < 900;
+}
+
+function record_login_attempt(string $identifier, bool $success): void {
+    $identifier = normalize_login_identifier($identifier);
+    $attempts = read_json_file(login_attempts_file(), []);
+    if ($success) {
+        unset($attempts[$identifier]);
+        write_json_file(login_attempts_file(), $attempts);
+        return;
+    }
+    $record = $attempts[$identifier] ?? ['count' => 0, 'last_at' => 0];
+    $lastAt = (int) ($record['last_at'] ?? 0);
+    $count = (time() - $lastAt) > 900 ? 0 : (int) ($record['count'] ?? 0);
+    $attempts[$identifier] = [
+        'count' => $count + 1,
+        'last_at' => time(),
+    ];
+    write_json_file(login_attempts_file(), $attempts);
 }
 
 function default_hub_settings(): array {
@@ -403,6 +525,8 @@ function registration_headers(): array {
     return [
         'Submitted At',
         'Yuva Club ID',
+        'Membership Type',
+        'Organization Code',
         'Student First Name',
         'Student Last Name',
         'Preferred Name',
@@ -578,6 +702,7 @@ function find_registration_row(string $studentId): ?array {
 
 function editable_registration_fields(): array {
     return [
+        'Membership' => ['Membership Type', 'Organization Code'],
         'Student Information & Contact' => ['Student First Name', 'Student Last Name', 'Preferred Name', 'Date of Birth', 'Age', 'Program Group', 'Grade', 'School', 'City/State', 'Student Email', 'Student Phone Number', 'WhatsApp Username / Number'],
         'Parent/Guardian Information' => ['Parent/Guardian Name', 'Relationship', 'Parent Email', 'Parent Phone Number'],
         'Participation' => ['Interests', 'Why Join', 'Presentation Experience', 'Presentation Topics', 'Preferred Schedule', 'Suggestions'],
@@ -1076,6 +1201,15 @@ function portal_header(string $title): void {
     echo '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">';
     echo '<title>' . e($title) . ' | Yuva Club</title>';
     echo '<meta name="description" content="Yuva Club student leadership portal.">';
+    echo '<link rel="canonical" href="https://www.yuvaclub.app">';
+    echo '<meta property="og:site_name" content="YUVA Club">';
+    echo '<meta property="og:url" content="https://www.yuvaclub.app">';
+    echo '<meta property="og:image" content="https://www.yuvaclub.app/assets/logo.png">';
+    echo '<meta name="twitter:card" content="summary_large_image">';
+    echo '<meta name="twitter:title" content="YUVA Club">';
+    echo '<meta name="twitter:description" content="Empowering Young Minds to Learn, Lead and Inspire.">';
+    echo '<meta name="twitter:image" content="https://www.yuvaclub.app/assets/logo.png">';
+    echo '<script type="application/ld+json">{"@context":"https://schema.org","@type":"EducationalOrganization","name":"YUVA Club","url":"https://www.yuvaclub.app","description":"Empowering Young Minds to Learn, Lead and Inspire."}</script>';
     echo '<link rel="icon" href="assets/logo.png" type="image/png">';
     echo '<link rel="apple-touch-icon" href="assets/app-icon-180.png">';
     echo '<link rel="manifest" href="manifest.webmanifest">';
@@ -1091,5 +1225,13 @@ function portal_header(string $title): void {
 }
 
 function portal_footer(): void {
-    echo '<footer class="site-footer"><div><strong>Yuva Club</strong><p>A youth leadership development platform that empowers students through research, presentations, discussion, critical thinking, and peer learning.</p><p><a href="https://www.karmabro.com/">www.karmabro.com</a></p><p>&copy; 2026 KarmaBro. All rights reserved.</p></div></footer></body></html>';
+    echo '
+  <footer class="site-footer">
+    <div>
+      <strong>YUVA Club</strong>
+      <p>Empowering Young Minds to Learn, Lead and Inspire.</p>
+      <p>&copy; 2026 YUVA Club. All Rights Reserved.</p>
+      <p><a href="privacy.html">Privacy Policy</a> <a href="terms.html">Terms of Service</a> <a href="contact.html">Contact</a></p>
+    </div>
+  </footer></body></html>';
 }

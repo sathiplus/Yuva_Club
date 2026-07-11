@@ -12,7 +12,7 @@ if (
     $newEmail === ''
     || $newPassword === ''
     || $newPassword !== $confirmPassword
-    || strlen($newPassword) < 8
+    || password_policy_error($newPassword) !== ''
     || !admin_password_matches($currentEmail, $currentPassword)
 ) {
     redirect_to('admin.php?status=password-error');

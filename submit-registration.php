@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 
+require_once __DIR__ . '/portal-lib.php';
 require_once __DIR__ . '/backend/database.php';
 require_once __DIR__ . '/backend/repositories.php';
 
@@ -39,14 +40,8 @@ if (isset($_GET['health'])) {
     exit;
 }
 
-$notificationEmail = 'yuvaclub@karmabro.com';
+$notificationEmail = 'support@yuvaclub.app';
 $studentIdYear = '2026';
-
-function clean_text(string $value): string {
-    $value = trim($value);
-    $value = str_replace(["\r", "\n"], ' ', $value);
-    return preg_replace('/\s+/', ' ', $value) ?? '';
-}
 
 function clean_email(string $value): string {
     return filter_var(trim($value), FILTER_SANITIZE_EMAIL) ?: '';
@@ -126,8 +121,15 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
+if (!verify_csrf_token($_POST['csrf_token'] ?? null)) {
+    header('Location: registration.php?status=security-error');
+    exit;
+}
+
 $studentFirstName = clean_text($_POST['student_first_name'] ?? '');
 $studentLastName = clean_text($_POST['student_last_name'] ?? '');
+$membershipType = clean_text($_POST['membership_type'] ?? 'individual');
+$organizationCode = strtoupper(clean_text($_POST['organization_code'] ?? ''));
 $preferredName = clean_text($_POST['preferred_name'] ?? '');
 $dateOfBirth = clean_text($_POST['date_of_birth'] ?? '');
 $age = clean_text($_POST['age'] ?? '');
@@ -144,6 +146,19 @@ $parentPhone = clean_text($_POST['parent_phone'] ?? '');
 $studentEmail = clean_email($_POST['student_email'] ?? '');
 $studentPhone = clean_text($_POST['student_phone'] ?? '');
 $whatsappContact = clean_text($_POST['whatsapp_contact'] ?? '');
+$accountPassword = (string) ($_POST['account_password'] ?? '');
+$accountPasswordConfirm = (string) ($_POST['account_password_confirm'] ?? '');
+$passwordError = password_policy_error($accountPassword);
+
+if ($passwordError !== '' || !hash_equals($accountPassword, $accountPasswordConfirm)) {
+    header('Location: registration.php?status=password-error');
+    exit;
+}
+
+if (!in_array($membershipType, ['individual', 'organization'], true) || ($membershipType === 'organization' && $organizationCode === '')) {
+    header('Location: registration.php?status=error');
+    exit;
+}
 
 $interestValues = $_POST['interests'] ?? [];
 $interests = [];
@@ -236,6 +251,8 @@ if (!is_dir($dataDir)) {
 $headers = [
     'Submitted At',
     'Yuva Club ID',
+    'Membership Type',
+    'Organization Code',
     'Student First Name',
     'Student Last Name',
     'Preferred Name',
@@ -267,6 +284,8 @@ $headers = [
 $row = [
     $submittedAt,
     '',
+    $membershipType === 'organization' ? 'Join Organization' : 'Individual Membership',
+    $organizationCode,
     $studentFirstName,
     $studentLastName,
     $preferredName,
@@ -350,6 +369,7 @@ if (!$storedInDatabase && $studentId === '') {
 if (!$storedInDatabase) {
     $row[1] = $studentId;
     append_registration_row($fullCsvPath, $headers, $row, $studentIdYear, $idScanPaths);
+    create_student_account($studentId, $studentEmail, $parentEmail, $accountPassword);
 }
 
 if ($notificationEmail !== '') {
@@ -358,6 +378,8 @@ if ($notificationEmail !== '') {
     $message = "New Yuva Club registration:\n\n"
         . ($storedInDatabase ? "Registration ID: $registrationId\n" : "Yuva Club ID: $studentId\n")
         . "Submitted At: $submittedAt\n\n"
+        . "Membership Type: " . ($membershipType === 'organization' ? 'Join Organization' : 'Individual Membership') . "\n"
+        . "Organization Code: $organizationCode\n\n"
         . "Student: $studentFirstName $studentLastName\n"
         . "Preferred Name: $preferredName\n"
         . "Date of Birth: $dateOfBirth\n"
@@ -382,7 +404,7 @@ if ($notificationEmail !== '') {
         . "Code of Conduct Agreement: $agreeCode\n"
         . "Recording Agreement: $agreeRecording\n"
         . "Parent Permission: $agreeParentPermission\n";
-    $headersText = "From: no-reply@yuvaclub.net\r\n"
+    $headersText = "From: noreply@yuvaclub.app\r\n"
         . "Reply-To: $parentEmail\r\n";
     @mail($notificationEmail, $subject, $message, $headersText);
 }

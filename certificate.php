@@ -43,7 +43,7 @@ $certificateName = rank_definitions()[$rank]['certificate'] ?? 'Certificate of P
         <p><strong>Total Sessions Attended:</strong> <?php echo e($record['attendance'] ?? '0'); ?></p>
         <p><strong>Total Volunteer/Leadership Hours:</strong> <?php echo e($record['service_hours'] ?? '0'); ?></p>
       </div>
-      <p class="certificate-footer">Yuva Club | KarmaBro | <?php echo date('Y'); ?></p>
+      <p class="certificate-footer">Yuva Club | YUVA Club | <?php echo date('Y'); ?></p>
       <button class="button primary" onclick="window.print()">Print Certificate</button>
     </section>
   </main>

@@ -38,6 +38,27 @@ $challengeStage = challenge_stage($record);
 $rubricScore = rubric_score($record);
 $rubricCompleted = rubric_completed_count($record);
 $nextRank = next_rank_name($level);
+$nextAction = [
+    'title' => 'Choose your first presentation topic',
+    'body' => 'Start by selecting a category, topic, date, and time so a mentor can review your plan.',
+    'href' => '#topic-selection',
+    'button' => 'Choose Topic',
+];
+if ($selection && !$research) {
+    $nextAction = [
+        'title' => 'Submit your research notes',
+        'body' => 'Your topic is selected. Add notes, sources, outline, and prepared questions before presenting.',
+        'href' => '#research-submission',
+        'button' => 'Submit Research',
+    ];
+} elseif ($selection && $research) {
+    $nextAction = [
+        'title' => 'Prepare for your next presentation',
+        'body' => 'Review your topic, check session details, and practice your speaking outline.',
+        'href' => '#presentations',
+        'button' => 'Review Presentation',
+    ];
+}
 
 portal_header('Student Dashboard');
 ?>
@@ -55,6 +76,15 @@ portal_header('Student Dashboard');
     <?php if ($status === 'research-saved'): ?><div class="form-status success">Research submission saved.</div><?php endif; ?>
     <?php if ($status === 'upload-error'): ?><div class="form-status error">Research saved, but the upload file type was not accepted.</div><?php endif; ?>
     <?php if ($status === 'report-sent'): ?><div class="form-status success">Your report was sent to the Yuva Club admin team.</div><?php endif; ?>
+    <?php if ($status === 'security-error'): ?><div class="form-status error">This form expired. Please try again.</div><?php endif; ?>
+    <?php if ($status === 'error'): ?><div class="form-status error">Please complete all required fields.</div><?php endif; ?>
+
+    <div class="form-card next-action-card">
+      <p class="eyebrow">Next Action</p>
+      <h2><?php echo e($nextAction['title']); ?></h2>
+      <p><?php echo e($nextAction['body']); ?></p>
+      <p><a class="button primary" href="<?php echo e($nextAction['href']); ?>"><?php echo e($nextAction['button']); ?></a></p>
+    </div>
 
     <div class="portal-stat-grid">
       <div class="feature"><strong>Yuva Club ID</strong><p><?php echo e($studentId); ?></p></div>
@@ -281,6 +311,7 @@ portal_header('Student Dashboard');
   <section class="band" id="topic-selection">
     <div class="two-grid">
       <form class="form-card" action="portal-submit-topic.php" method="post">
+        <?php echo csrf_field(); ?>
         <h2>Topic Selection</h2>
         <div class="field">
           <label for="topic_category">Topic Category *</label>
@@ -324,6 +355,7 @@ portal_header('Student Dashboard');
 
   <section class="band" id="research-submission">
     <form class="form-card" action="portal-submit-research.php" method="post" enctype="multipart/form-data">
+      <?php echo csrf_field(); ?>
       <h2>Research Submission</h2>
       <div class="field">
         <label for="research_notes">Research Notes *</label>
@@ -354,6 +386,7 @@ portal_header('Student Dashboard');
 
   <section class="band" id="safety-report">
     <form class="form-card" action="portal-report-issue.php" method="post">
+      <?php echo csrf_field(); ?>
       <h2>Report Issue</h2>
       <p class="form-note">Use this if you saw something unsafe, confusing, or uncomfortable. A Yuva Club admin will review it.</p>
       <div class="field">

@@ -1,4 +1,8 @@
 <?php
+declare(strict_types=1);
+
+require __DIR__ . '/portal-lib.php';
+
 $status = $_GET['status'] ?? '';
 $studentId = $_GET['id'] ?? '';
 $registrationId = $_GET['registration'] ?? '';
@@ -12,9 +16,15 @@ $registrationId = $_GET['registration'] ?? '';
   <meta name="description" content="Register for Yuva Club and select preferred class days and times.">
   <meta property="og:title" content="Register | Yuva Club">
   <meta property="og:description" content="Register for Yuva Club and select preferred class days and times.">
-  <meta property="og:image" content="https://yuvaclub.karmabro.com/assets/logo.png">
-  <meta property="og:url" content="https://yuvaclub.karmabro.com/registration.php">
+  <meta property="og:image" content="https://www.yuvaclub.app/assets/logo.png">
+  <meta property="og:url" content="https://www.yuvaclub.app/registration.php">
   <meta property="og:type" content="website">
+  <link rel="canonical" href="https://www.yuvaclub.app/registration.php">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="YUVA Club Registration">
+  <meta name="twitter:description" content="Create a YUVA Club student account.">
+  <meta name="twitter:image" content="https://www.yuvaclub.app/assets/logo.png">
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"EducationalOrganization","name":"YUVA Club","url":"https://www.yuvaclub.app","description":"Empowering Young Minds to Learn, Lead and Inspire."}</script>
   <link rel="icon" href="assets/logo.png" type="image/png">
   <link rel="stylesheet" href="assets/site.css?v=20260614-large-photos">
 </head>
@@ -44,8 +54,8 @@ $registrationId = $_GET['registration'] ?? '';
       <div class="form-shell">
         <div class="section-head">
           <p class="eyebrow">Yuva Club Registration</p>
-          <h1>Sign In Form</h1>
-          <p>Select up to three days and times that may work best for the student. We will use responses to choose the best class schedule.</p>
+          <h1>Create Your Yuva Club Account</h1>
+          <p>Register for a lifelong Yuva Club ID, create your student login, and select up to three class times that may work best.</p>
         </div>
 
         <?php if ($status === 'success'): ?>
@@ -56,10 +66,31 @@ $registrationId = $_GET['registration'] ?? '';
           <?php endif; ?>
         <?php elseif ($status === 'error'): ?>
           <div class="form-status error">Please complete the required fields, choose at least one day/time preference, and accept the agreements.</div>
+        <?php elseif ($status === 'password-error'): ?>
+          <div class="form-status error">Password must be at least 12 characters and include uppercase, lowercase, number, and special character.</div>
+        <?php elseif ($status === 'security-error'): ?>
+          <div class="form-status error">This form expired. Please try again.</div>
         <?php endif; ?>
 
         <form class="form-card" action="submit-registration.php" method="post">
+          <?php echo csrf_field(); ?>
           <input type="hidden" name="form_name" value="Yuva Club Registration">
+
+          <h2>Membership Path</h2>
+          <div class="field-grid">
+            <div class="field">
+              <label for="membership_type">How are you joining? *</label>
+              <select id="membership_type" name="membership_type" required>
+                <option value="individual">Individual Membership</option>
+                <option value="organization">Join an Organization</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="organization_code">Organization Invitation or Join Code</label>
+              <input id="organization_code" name="organization_code" type="text" placeholder="Enter code if provided">
+              <p class="form-note">Organization accounts are created by YUVA Club platform administrators. Students may join an organization only with an invitation or valid organization code.</p>
+            </div>
+          </div>
 
           <h2>Student Information & Contact</h2>
           <div class="field-grid">
@@ -121,6 +152,17 @@ $registrationId = $_GET['registration'] ?? '';
             <div class="field">
               <label for="student_email">Student Email</label>
               <input id="student_email" name="student_email" type="email" autocomplete="email">
+            </div>
+
+            <div class="field">
+              <label for="account_password">Create Password *</label>
+              <input id="account_password" name="account_password" type="password" minlength="12" required autocomplete="new-password" aria-describedby="password_help">
+              <p class="form-note" id="password_help">Use at least 12 characters with uppercase, lowercase, number, and special character.</p>
+            </div>
+
+            <div class="field">
+              <label for="account_password_confirm">Confirm Password *</label>
+              <input id="account_password_confirm" name="account_password_confirm" type="password" minlength="12" required autocomplete="new-password">
             </div>
 
             <div class="field">
@@ -296,12 +338,12 @@ $registrationId = $_GET['registration'] ?? '';
       </div>
     </section>
   </main>
-
   <footer class="site-footer">
     <div>
-      <strong>Yuva Club</strong>
-      <p>A youth leadership development platform that empowers students through research, presentations, discussion, critical thinking, and peer learning.</p>
-      <p>&copy; 2026 KarmaBro. All rights reserved.</p>
+      <strong>YUVA Club</strong>
+      <p>Empowering Young Minds to Learn, Lead and Inspire.</p>
+      <p>&copy; 2026 YUVA Club. All Rights Reserved.</p>
+      <p><a href="privacy.html">Privacy Policy</a> <a href="terms.html">Terms of Service</a> <a href="contact.html">Contact</a></p>
     </div>
   </footer>
   <script>

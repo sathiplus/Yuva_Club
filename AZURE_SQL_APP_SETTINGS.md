@@ -10,7 +10,10 @@ DB_DATABASE=yuva_club
 DB_USERNAME=yuvaadmin
 DB_PASSWORD=<your SQL admin password>
 APP_ENV=production
-APP_URL=https://www.yuvaclub.net
+APP_URL=https://www.yuvaclub.app
+MAIL_FROM_EMAIL=noreply@yuvaclub.app
+MAIL_FROM_NAME=YUVA Club
+ALLOWED_CORS_ORIGINS=https://www.yuvaclub.app
 ```
 
 Then open `/backend-health.php`.

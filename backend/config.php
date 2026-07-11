@@ -12,7 +12,7 @@ function env_value(string $name, string $default = ''): string {
 function app_config(): array {
     return [
         'app_env' => env_value('APP_ENV', 'production'),
-        'app_url' => rtrim(env_value('APP_URL', 'https://yuvaclub-dja9ckadbagedja4.eastus-01.azurewebsites.net'), '/'),
+        'app_url' => rtrim(env_value('APP_URL', 'https://www.yuvaclub.app'), '/'),
         'database' => [
             'driver' => env_value('DB_DRIVER', 'mysql'),
             'host' => env_value('DB_HOST'),
@@ -28,7 +28,7 @@ function app_config(): array {
             'connection_string' => env_value('AZURE_STORAGE_CONNECTION_STRING'),
         ],
         'mail' => [
-            'from_email' => env_value('MAIL_FROM_EMAIL', 'no-reply@yuvaclub.net'),
+            'from_email' => env_value('MAIL_FROM_EMAIL', 'noreply@yuvaclub.app'),
             'from_name' => env_value('MAIL_FROM_NAME', 'Yuva Club'),
             'provider' => env_value('MAIL_PROVIDER', 'azure'),
         ],

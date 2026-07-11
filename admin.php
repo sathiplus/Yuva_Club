@@ -65,15 +65,15 @@ foreach ($records as $recordStudentId => $record) {
     ];
 }
 
-portal_header('Admin Dashboard');
+portal_header('Platform Administrator Dashboard');
 ?>
 <main>
   <section class="band">
     <div class="section-head">
-      <p class="eyebrow">Admin Dashboard</p>
-      <h1>Yuva Club Records</h1>
-      <p>Approve students, review topics and research, track attendance, add service hours, and prepare certificates.</p>
-      <p><a class="button primary" href="admin-students.php">Signup Students</a> <a class="button ghost" href="portal-logout.php">Log Out</a></p>
+      <p class="eyebrow">Platform Administrator Dashboard</p>
+      <h1>YUVA Club Records</h1>
+      <p>Manage platform-level student approvals, topics, attendance, research, service hours, certificates, safety, and configuration.</p>
+      <p><a class="button primary" href="admin-students.php">Registered Students</a> <a class="button ghost" href="portal-logout.php">Log Out</a></p>
     </div>
 
     <?php if ($status === 'saved'): ?>
@@ -89,9 +89,9 @@ portal_header('Admin Dashboard');
     <?php elseif ($status === 'meeting-empty'): ?>
       <div class="form-status error">Select at least one student to remove from a scheduled meeting.</div>
     <?php elseif ($status === 'password-saved'): ?>
-      <div class="form-status success">Admin login updated.</div>
+      <div class="form-status success">Platform administrator login updated.</div>
     <?php elseif ($status === 'password-error'): ?>
-      <div class="form-status error">Admin login was not updated. Check current login, new email, and matching password fields.</div>
+      <div class="form-status error">Platform administrator login was not updated. Check current login, new email, and matching password fields.</div>
     <?php elseif ($status === 'ai-reviewed'): ?>
       <div class="form-status success">AI Coach draft review created. Please review and apply it before it becomes official.</div>
     <?php elseif ($status === 'ai-applied'): ?>
@@ -103,30 +103,30 @@ portal_header('Admin Dashboard');
     <?php endif; ?>
 
     <form class="form-card" action="admin-password-actions.php" method="post">
-      <h2>Admin Login Settings</h2>
+      <h2>Platform Administrator Login Settings</h2>
       <div class="field-grid">
         <div class="field">
-          <label for="current_email">Current Admin Email *</label>
-          <input id="current_email" name="current_email" type="email" required value="<?php echo e($_SESSION['admin_email'] ?? 'admin@karmabro.com'); ?>">
+          <label for="current_email">Current Platform Administrator Email *</label>
+          <input id="current_email" name="current_email" type="email" required value="<?php echo e($_SESSION['admin_email'] ?? 'admin@yuvaclub.app'); ?>">
         </div>
         <div class="field">
           <label for="current_password">Current Password *</label>
           <input id="current_password" name="current_password" type="password" required>
         </div>
         <div class="field">
-          <label for="new_email">New Admin Email *</label>
-          <input id="new_email" name="new_email" type="email" required value="<?php echo e($_SESSION['admin_email'] ?? 'admin@karmabro.com'); ?>">
+          <label for="new_email">New Platform Administrator Email *</label>
+          <input id="new_email" name="new_email" type="email" required value="<?php echo e($_SESSION['admin_email'] ?? 'admin@yuvaclub.app'); ?>">
         </div>
         <div class="field">
           <label for="new_password">New Password *</label>
-          <input id="new_password" name="new_password" type="password" required minlength="8">
+          <input id="new_password" name="new_password" type="password" required minlength="12">
         </div>
         <div class="field">
           <label for="confirm_password">Confirm New Password *</label>
-          <input id="confirm_password" name="confirm_password" type="password" required minlength="8">
+          <input id="confirm_password" name="confirm_password" type="password" required minlength="12">
         </div>
       </div>
-      <button class="button primary" type="submit">Update Admin Login</button>
+      <button class="button primary" type="submit">Update Platform Administrator Login</button>
     </form>
 
     <form class="form-card" action="admin-hub-actions.php" method="post">

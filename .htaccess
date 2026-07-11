@@ -5,8 +5,13 @@ RedirectMatch 404 ^/(backend|database|docs|tools)(/|$)
 <IfModule mod_rewrite.c>
   RewriteEngine On
   RewriteCond %{HTTPS} !=on [OR]
-  RewriteCond %{HTTP_HOST} !^www\.yuvaclub\.karmabro\.com$ [NC]
-  RewriteRule ^ https://www.yuvaclub.karmabro.com%{REQUEST_URI} [R=301,L]
+  RewriteCond %{HTTP_HOST} !^www\.yuvaclub\.app$ [NC]
+  RewriteRule ^ https://www.yuvaclub.app%{REQUEST_URI} [R=301,L]
+
+  RewriteRule ^login/?$ portal-login.php [L]
+  RewriteRule ^student/?$ portal.php [L]
+  RewriteRule ^admin/?$ admin-login.php [L]
+  RewriteRule ^organization/?$ organization.php [L]
 </IfModule>
 
 # Ensure PHP files are handled by PHP on common cPanel/Apache hosting.
