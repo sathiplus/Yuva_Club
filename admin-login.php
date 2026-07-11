@@ -21,7 +21,7 @@ portal_header('Platform Administrator Login');
       <div class="section-head">
         <p class="eyebrow">YUVA Club Platform Administration</p>
         <h1>Platform Administrator Login</h1>
-        <p>Only system-created platform administrators can access this area. The initial platform administrator account is admin@yuvaclub.app.</p>
+        <p>Only authorized platform administrators can access this area.</p>
       </div>
       <?php if ($status === 'error'): ?>
         <div class="form-status error">Incorrect platform administrator email or password.</div>
