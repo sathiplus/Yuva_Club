@@ -63,5 +63,11 @@ Assert-FileContains 'portal-lib.php' 'sync_parent_links_from_registrations' 'Exi
 Assert-FileContains 'parent-activate.php' 'If that email is connected' 'Parent activation request response must be generic.'
 Assert-FileContains 'parent-activate.php' 'verify_csrf_token' 'Parent activation forms must verify CSRF.'
 Assert-FileContains 'tools/phase-2a-parent-reconciliation.php' 'email_hash' 'Parent reconciliation must avoid exposing parent emails.'
+Assert-FileContains '.github/workflows/phase-2a-validation.yml' "php-version: '8.3'" 'Phase 2A PR validation must use PHP 8.3.'
+Assert-FileContains '.github/workflows/phase-2a-validation.yml' 'php -l' 'Phase 2A PR validation must run PHP syntax checks.'
+Assert-FileContains '.github/workflows/phase-2a-validation.yml' 'phase-2a-functional-security-tests.php' 'Phase 2A PR validation must run functional security tests.'
+Assert-FileContains 'tests/phase-2a-functional-security-tests.php' 'parent.activation.requested' 'Functional tests must verify parent activation audit logging.'
+Assert-FileContains 'tests/phase-2a-functional-security-tests.php' 'parent_can_access_student' 'Functional tests must verify parent authorization helpers.'
+Assert-FileContains 'tests/phase-2a-functional-security-tests.php' 'verify_csrf_token' 'Functional tests must verify CSRF behavior.'
 
 Write-Output 'Phase 2A static security checks passed.'

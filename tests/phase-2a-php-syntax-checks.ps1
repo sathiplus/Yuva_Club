@@ -24,6 +24,7 @@ $changedPhpFiles = @(
     'portal-lib.php',
     'portal-logout.php',
     'submit-registration.php',
+    'tests/phase-2a-functional-security-tests.php',
     'tools/phase-2a-parent-reconciliation.php'
 )
 
