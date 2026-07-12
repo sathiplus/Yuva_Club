@@ -298,10 +298,11 @@ Resolved in this branch:
 - Activation token capture is opt-in for development only through `YUVA_CAPTURE_PARENT_ACTIVATION_LINKS=1`.
 - Parent relationship reconciliation can now be counted without exposing email addresses.
 - PR validation workflow now runs PHP syntax, static checks, and functional security tests.
+- Functional test fixture rows were corrected to map values by `registration_headers()` name instead of fragile positional order.
 
 Remaining issues:
 
-- GitHub Actions workflow has not yet run after these latest additions.
+- GitHub Actions workflow failed once on branch `phase-2a-final-validation`; the visible annotation only showed exit code 1, not the failing step details.
 - PHP syntax is still unverified until CI runs.
 - SQL staging validation is blocked.
 - Full route/browser functional tests are pending.
@@ -319,6 +320,11 @@ Updated:
 
 - `tests/phase-2a-security-static-tests.ps1`
 - `tests/phase-2a-php-syntax-checks.ps1`
+- `tests/phase-2a-functional-security-tests.php`
+
+Latest correction:
+
+- Fixed the synthetic registration CSV fixture in `tests/phase-2a-functional-security-tests.php` so parent email, YUVA ID, and student fields are written by header name. This preserves the security assertions and removes a false failure caused by column-order mismatch.
 
 ## 14. Remaining Blockers
 
@@ -334,12 +340,12 @@ Blockers before merge:
 
 | Requirement | Status | Notes |
 | --- | --- | --- |
-| Check GitHub Actions results | Blocked | The available connector does not expose Actions run results, and normal GitHub network access is blocked from this sandbox. The workflow trigger update must be pushed, then checked in GitHub. |
-| Fix genuine Phase 2A validation failures | Pass/ongoing | A genuine validation gap was found: workflow only ran on PR/manual dispatch. Added `push` trigger for `phase-2a-final-validation`. |
+| Check GitHub Actions results | Fail/blocked detail | GitHub Actions shows the Phase 2A workflow failed on branch `phase-2a-final-validation`, but detailed step logs are not available from this sandbox. |
+| Fix genuine Phase 2A validation failures | Pass/ongoing | Added push trigger for `phase-2a-final-validation`; fixed a functional-test fixture bug where CSV values did not match `registration_headers()` order. |
 | Do not bypass/weaken security tests | Pass | Tests were expanded, not weakened. |
 | PHP 8.3 syntax checks pass | Blocked | Workflow exists but has not run after latest local trigger update. Local PHP CLI is unavailable. |
-| Parent activation tests pass | Blocked | Executable PHP test exists; must run in GitHub Actions PHP 8.3. |
-| Parent-student authorization tests pass | Blocked | Helper-level executable test exists; must run in GitHub Actions PHP 8.3. |
+| Parent activation tests pass | Pending rerun | Executable PHP test exists and fixture mapping was corrected; must rerun in GitHub Actions PHP 8.3. |
+| Parent-student authorization tests pass | Pending rerun | Helper-level executable test exists and fixture mapping was corrected; must rerun in GitHub Actions PHP 8.3. |
 | Master Admin, Organization Admin, and CSRF tests pass | Blocked | Static/helper tests exist; route-level tests still pending. |
 | SQL migration validated in staging/disposable Azure SQL | Blocked | No staging Azure SQL connection is available in this sandbox. |
 | Critical regression checks complete | Blocked | Requires PHP runtime/browser or staging environment. |
