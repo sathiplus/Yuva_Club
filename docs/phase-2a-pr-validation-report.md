@@ -12,10 +12,10 @@ Phase 2B status: Not started.
 
 ## 1. Pull Request Scope
 
-GitHub comparison result before adding this validation workflow:
+GitHub comparison result after the branch push:
 
 - `phase-2a-final-validation` was pushed to GitHub.
-- Branch was one commit ahead of `main`.
+- Branch was two commits ahead of `main`.
 - Branch was zero commits behind `main`.
 - Base commit was `540e3c00c23aaa9fa4ffb46f4fcedfb66b2bc118`.
 - Pull request target should be `main`.
@@ -26,6 +26,7 @@ This validation pass adds:
 - Executable parent activation and security fixture tests.
 - Updated static checks.
 - This PR validation report.
+- A `push` trigger for `phase-2a-final-validation` so validation runs even before/without a PR event.
 
 No merge was performed.
 
@@ -105,6 +106,7 @@ Workflow added:
 Workflow behavior:
 
 - Runs on pull requests targeting `main`.
+- Runs on pushes to `phase-2a-final-validation`.
 - Uses PHP 8.3.
 - Runs `php -l` on every PHP file in the repository, excluding `.git`, `portal-data`, and `portal-uploads`.
 - Runs Phase 2A static security tests.
@@ -118,10 +120,10 @@ Local PHP syntax result:
 
 Required PR result:
 
-- The workflow must run on GitHub after this branch is pushed again.
+- The workflow must run on GitHub after this branch is pushed again with the push trigger.
 - Merge must not be recommended until this workflow passes.
 
-Status: Workflow created; result pending.
+Status: Workflow created; GitHub Actions result blocked/pending because the latest trigger update is local and must be pushed.
 
 ## 5. Static Test Results
 
@@ -145,7 +147,7 @@ Coverage:
 - PHP 8.3 PR workflow presence.
 - Functional security test presence.
 
-Status: Passed locally.
+Status: Passed locally after adding the push-trigger assertion.
 
 ## 6. Parent Activation Test Results
 
@@ -177,7 +179,7 @@ Execution status:
 - Not executable locally because PHP CLI is unavailable.
 - Must pass in GitHub Actions PHP 8.3 workflow.
 
-Status: Test created; result pending.
+Status: Test created; execution blocked/pending until GitHub Actions runs in PHP 8.3.
 
 ## 7. Parent Authorization Results
 
@@ -195,7 +197,7 @@ Not fully automated yet:
 - Logged-out dashboard access.
 - Expired parent session redirect.
 
-Status: Helper-level tests created; full route tests pending.
+Status: Helper-level tests created; GitHub Actions execution pending. Full route tests remain blocked.
 
 ## 8. Admin and CSRF Results
 
@@ -217,7 +219,7 @@ Not fully automated yet:
 - Full route-level 403 tests for OrganizationAdmin, Parent, and Student sessions.
 - Full POST rejection tests without/with invalid CSRF against actual admin action endpoints.
 
-Status: Static and helper-level checks added; route-level tests pending.
+Status: Static and helper-level checks added; GitHub Actions execution pending. Route-level tests remain blocked.
 
 ## 9. Organization Isolation Results
 
@@ -328,6 +330,22 @@ Blockers before merge:
 - Run browser/route-level parent, admin, and regression checks.
 - Review production/staging logs for PHP fatal errors and auth failures.
 
+## 14A. Requirement Status Matrix
+
+| Requirement | Status | Notes |
+| --- | --- | --- |
+| Check GitHub Actions results | Blocked | The available connector does not expose Actions run results, and normal GitHub network access is blocked from this sandbox. The workflow trigger update must be pushed, then checked in GitHub. |
+| Fix genuine Phase 2A validation failures | Pass/ongoing | A genuine validation gap was found: workflow only ran on PR/manual dispatch. Added `push` trigger for `phase-2a-final-validation`. |
+| Do not bypass/weaken security tests | Pass | Tests were expanded, not weakened. |
+| PHP 8.3 syntax checks pass | Blocked | Workflow exists but has not run after latest local trigger update. Local PHP CLI is unavailable. |
+| Parent activation tests pass | Blocked | Executable PHP test exists; must run in GitHub Actions PHP 8.3. |
+| Parent-student authorization tests pass | Blocked | Helper-level executable test exists; must run in GitHub Actions PHP 8.3. |
+| Master Admin, Organization Admin, and CSRF tests pass | Blocked | Static/helper tests exist; route-level tests still pending. |
+| SQL migration validated in staging/disposable Azure SQL | Blocked | No staging Azure SQL connection is available in this sandbox. |
+| Critical regression checks complete | Blocked | Requires PHP runtime/browser or staging environment. |
+| PR validation report updated | Pass | This document was updated. |
+| Final Go/No-Go recommendation | Pass | Do Not Merge Yet. |
+
 ## 15. Rollback Considerations
 
 Application rollback:
@@ -362,4 +380,3 @@ Merge may be reconsidered only after:
 - Critical regression checks pass.
 - No secrets are committed.
 - Rollback procedure remains documented.
-

@@ -64,6 +64,7 @@ Assert-FileContains 'parent-activate.php' 'If that email is connected' 'Parent a
 Assert-FileContains 'parent-activate.php' 'verify_csrf_token' 'Parent activation forms must verify CSRF.'
 Assert-FileContains 'tools/phase-2a-parent-reconciliation.php' 'email_hash' 'Parent reconciliation must avoid exposing parent emails.'
 Assert-FileContains '.github/workflows/phase-2a-validation.yml' "php-version: '8.3'" 'Phase 2A PR validation must use PHP 8.3.'
+Assert-FileContains '.github/workflows/phase-2a-validation.yml' 'phase-2a-final-validation' 'Phase 2A PR validation must run on the review branch.'
 Assert-FileContains '.github/workflows/phase-2a-validation.yml' 'php -l' 'Phase 2A PR validation must run PHP syntax checks.'
 Assert-FileContains '.github/workflows/phase-2a-validation.yml' 'phase-2a-functional-security-tests.php' 'Phase 2A PR validation must run functional security tests.'
 Assert-FileContains 'tests/phase-2a-functional-security-tests.php' 'parent.activation.requested' 'Functional tests must verify parent activation audit logging.'

@@ -1,6 +1,9 @@
 name: Phase 2A PR Validation
 
 on:
+  push:
+    branches:
+      - phase-2a-final-validation
   pull_request:
     branches:
       - main
