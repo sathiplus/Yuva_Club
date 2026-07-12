@@ -1,82 +1,83 @@
-# YUVA Club Phase 2A Security Foundation Report
+# YUVA Club Phase 2A Security Foundation Verification Report
 
 Date: 2026-07-12
 
-Source baseline commit: `20b1824570034b71b842c5b3b6512d65c139f247`
+Repository: `https://github.com/sathiplus/Yuva_Club.git`
 
-Target branch requested: `phase-2a-security-foundation`
+Local path: `C:\Users\karma\Documents\Codex\2026-07-10\files-mentioned-by-the-user-chatgpt\yuva_admin_email_fix`
 
-Branch status: not created locally because Windows blocked writes inside `.git/refs/heads`. The implementation is present in the working tree and can be committed from Git Bash after marking the folder as safe or fixing ownership.
+Baseline commit: `20b1824570034b71b842c5b3b6512d65c139f247`
 
-Deployment status: not deployed.
+Phase 2A commit currently on `main`: `540e3c0`
 
-## Scope Completed
+Deployment note: Phase 2A was already pushed to `main` and GitHub Actions showed a successful Azure deployment before this verification pass. That is not the ideal controlled-deployment workflow requested here. This report treats that as an out-of-order deployment and recommends no further production changes until the remaining validation gaps are closed.
 
-Phase 2A focused only on the highest-priority security foundation items:
+## 1. Preservation and Recovery
 
-- Secure parent authentication
-- Server-side Master Admin authorization
-- Organization data-isolation foundation
-- Audit logging for sensitive access and updates
-- Static security validation
-- Database migration script
-- Rollback notes
+Completed:
 
-## Parent Authentication
+- Backup copy created at `C:\Users\karma\Documents\Codex\2026-07-10\files-mentioned-by-the-user-chatgpt\backups\yuva_admin_email_fix_phase2a_backup_20260712`.
+- Changed file list created at `docs/phase-2a-changed-files.txt`.
+- Recovery patch created at `docs/phase-2a-git-diff.patch`.
+- Original `.git` folder was not deleted or replaced.
+- No reset, clean, checkout, or discard command was used.
 
-Before Phase 2A, parent dashboard access depended on a student identifier and parent email. That allowed weak access control and made it easier to enumerate student records.
+The patch file contains the Phase 2A code changes plus verification additions created during this pass, excluding the patch/list artifacts themselves to avoid a circular patch.
 
-Phase 2A changes:
+## 2. Git Repository Recovery Result
 
-- Parent login now requires verified parent email and password.
-- Parent login uses CSRF validation.
-- Parent login uses existing rate limiting.
-- Parent sessions store `parent_email` and `parent_session_started_at`.
-- Parent sessions expire after two hours.
-- Parent dashboard access is checked server-side through `require_parent_for_student`.
-- Parent-to-student links are stored separately from the student record.
-- Parent login and student access attempts are audit logged.
-- Student login no longer accepts parent email as a student identifier.
+Current repository path:
 
-Files changed:
+`C:\Users\karma\Documents\Codex\2026-07-10\files-mentioned-by-the-user-chatgpt\yuva_admin_email_fix`
 
+Current Codex shell user:
+
+`blue-leno\codexsandboxoffline`
+
+`.git` owner:
+
+`Blue-Leno\CodexSandboxOnline`
+
+Git status at diagnosis:
+
+- Current branch: `main`
+- Toplevel: `C:/Users/karma/Documents/Codex/2026-07-10/files-mentioned-by-the-user-chatgpt/yuva_admin_email_fix`
+- Repository is configured as a Git safe directory.
+- Git did not report an unsafe/dubious directory during this pass.
+
+Exact branch creation error from Codex shell:
+
+`fatal: cannot lock ref 'refs/heads/phase-2a-security-foundation': Unable to create .../.git/refs/heads/phase-2a-security-foundation.lock: Permission denied`
+
+Cause:
+
+- The `.git` ACL contains deny-write entries that affect the Codex sandbox user.
+- The regular Windows/Git Bash user was able to commit and push successfully.
+- No evidence was found from local inspection that OneDrive, antivirus, synchronization, or Controlled Folder Access was the active cause. The confirmed blocker is `.git` ACL/ownership mismatch for the Codex sandbox user.
+
+Least disruptive solution used:
+
+- Do not change ownership or permissions from Codex.
+- Preserve recovery patch and changed-file list.
+- Use the normal Git Bash user for commit/push operations.
+
+Branch status:
+
+- Requested branch `phase-2a-security-foundation` was not created from Codex because of `.git` write denial.
+- Phase 2A was already committed directly to `main` as `540e3c0`.
+- A proper branch should still be created from `540e3c0` if the team wants to reconstruct the intended review workflow.
+
+## 3. Files Changed
+
+See `docs/phase-2a-changed-files.txt`.
+
+Major application files changed:
+
+- `portal-lib.php`
 - `parent-login.php`
 - `parent.php`
-- `portal-lib.php`
 - `portal-logout.php`
 - `submit-registration.php`
-
-Known limitation:
-
-- File-backed registrations create the parent account and student link after registration.
-- Azure SQL registration still needs a database-backed parent account/link creation flow in Phase 2B, because the current SQL registration path does not yet create the full student account and parent link at submit time.
-
-## Admin Authorization
-
-Before Phase 2A, admin access relied mainly on a generic session flag.
-
-Phase 2A changes:
-
-- Added explicit roles:
-  - `MasterAdmin`
-  - `OrganizationAdmin`
-  - `Parent`
-  - `Student`
-- Master Admin is restricted to `admin@yuvaclub.app`.
-- Admin session stores:
-  - admin email
-  - admin role
-  - organization ID
-  - session start time
-- Admin session expires after two hours.
-- Admin session ID regenerates after successful login.
-- Admin pages call `require_admin([YUVA_ROLE_MASTER_ADMIN])`.
-- Admin POST actions call `require_admin_post([YUVA_ROLE_MASTER_ADMIN])`.
-- Admin POST actions now require CSRF.
-- Organization admin dashboard access is intentionally disabled until tenant isolation is fully complete.
-
-Files changed:
-
 - `admin-login.php`
 - `admin.php`
 - `admin-actions.php`
@@ -87,136 +88,305 @@ Files changed:
 - `admin-meeting-actions.php`
 - `admin-password-actions.php`
 - `admin-student-edit.php`
-- `portal-lib.php`
-- `portal-logout.php`
 
-## Organization Isolation Foundation
+Major support files added:
 
-Phase 2A does not enable public organization administration. It creates the foundation needed to safely enable it later.
+- `database/02-phase-2a-security-foundation.sql`
+- `database/02-phase-2a-precheck.sql`
+- `database/02-phase-2a-verify.sql`
+- `database/02-phase-2a-rollback.sql`
+- `tests/phase-2a-security-static-tests.ps1`
+- `tests/phase-2a-php-syntax-checks.ps1`
+- `docs/phase-2a-functional-regression-test-plan.md`
 
-Implemented foundation:
+## 4. Code Review Findings
 
-- `organizations` table
-- `user_roles` table
-- `organization_memberships` table
-- `organization_id` columns on major student and operating tables
-- indexes for future tenant-filtered queries
-- seeded active `MasterAdmin` role for `admin@yuvaclub.app`
+Confirmed:
 
-Migration file:
+- No plaintext user passwords were added.
+- No API keys, database passwords, SMTP passwords, or connection strings were added in the Phase 2A diff.
+- Parent passwords use PHP `password_hash()` and `password_verify()`.
+- Parent dashboard access is enforced server-side through `require_parent_for_student()`.
+- Parent access checks validate a parent-student link before serving dashboard data.
+- Student login was not replaced by parent login.
+- Student login no longer accepts parent email as a student identifier.
+- Master Admin access is restricted to `admin@yuvaclub.app`.
+- Organization administrators are not granted MasterAdmin access.
+- Admin POST endpoints use server-side `require_admin_post([YUVA_ROLE_MASTER_ADMIN])`.
+- Sensitive admin forms include CSRF fields.
+- Audit logging records events without storing passwords, reset tokens, session tokens, or full request bodies.
+- Parent login errors are generic and do not disclose whether a parent/student account exists.
+- Newly reviewed database repository code uses prepared statements for user input.
+- Session cookie settings set `httponly`, `samesite=Lax`, and `secure` when HTTPS is detected.
+
+Findings / limitations:
+
+- Admin password hashing still uses an existing SHA-256 salted helper rather than PHP `password_hash()`. That was pre-existing and should be upgraded in a future security task.
+- Existing default Zoom passcodes are present in the broader codebase, but they were not introduced by Phase 2A.
+- Organization isolation is a foundation only. Organization admin access remains intentionally disabled until all organization-scoped queries are enforced.
+- Parent activation/password setup for existing parent records is incomplete.
+
+## 5. Parent Account Migration Strategy
+
+Current parent data locations:
+
+- Azure SQL schema has `parents` and `student_parents` tables.
+- Azure SQL `users` table has `password_hash`, `email_verified_at`, and password reset fields.
+- Current file-backed Phase 2A implementation writes parent accounts to `portal-data/parent-accounts.json`.
+- Current file-backed Phase 2A implementation writes parent-student links to `portal-data/parent-student-links.json`.
+- Current registration data also stores parent name/email/phone in registration records.
+
+Current behavior:
+
+- New file-backed registrations create a parent account using the registration password and link it to the student.
+- Duplicate parent emails reuse the existing parent account and add/update the student link.
+- One parent can link to multiple students because `parent-student-links.json` stores multiple student IDs under one parent email.
+- Two parents for one student are structurally possible if separate parent emails are linked to the same student, but the registration form currently collects one parent email.
+
+Incomplete:
+
+- Existing parent records do not automatically receive password hashes.
+- Existing parent-student links are not fully migrated into the new file-backed parent link format.
+- There is no complete parent account activation/password setup flow for existing parents.
+- There is no verified email activation flow for parent accounts.
+- There is no complete parent password reset flow in this Phase 2A implementation.
+- Azure SQL registration does not yet create database-backed parent user/link records.
+
+Security decision:
+
+- Do not assign default passwords.
+- Existing parents should use a secure activation/password-setup flow with expiring single-use tokens before parent login is considered complete.
+
+Status:
+
+- Parent authentication is improved for new file-backed registrations, but parent migration is incomplete for existing records and Azure SQL-backed records.
+
+## 6. SQL Migration Validation
+
+Migration reviewed:
 
 - `database/02-phase-2a-security-foundation.sql`
 
-Important:
+Safety additions created:
 
-- The migration is idempotent and written for Azure SQL review.
-- It has not been run automatically.
-- Before production use, run it first in a staging copy of the database.
+- `database/02-phase-2a-precheck.sql`
+- `database/02-phase-2a-verify.sql`
+- `database/02-phase-2a-rollback.sql`
 
-## Audit Logging
+Confirmed by review:
 
-Added JSONL audit logging for file-backed operations:
+- Migration is additive.
+- Existing records are not deleted.
+- Existing columns are not changed to destructive types.
+- Tables/columns are checked before creation where practical.
+- MasterAdmin seed uses `admin@yuvaclub.app`.
+- Main migration now uses `SET XACT_ABORT ON`, `BEGIN TRANSACTION`, `COMMIT`, and catch/rollback.
 
-- Admin login success/failure
-- Admin page access success/failure
-- Admin CSRF/method rejection
-- Admin password settings update
-- Admin student record update
-- Admin hub settings update
-- Admin AI review creation
-- Admin AI review apply
-- Admin bulk session update
-- Admin meeting clear
-- Admin registration update
-- Parent login success/failure
-- Parent student access success/failure
-- Parent session rejection
+Not executed:
 
-Audit file:
+- Migration was not applied to production.
+- Migration was not applied to staging from this shell.
+- Foreign key/index behavior must still be tested on a staging copy of the real Azure SQL database.
 
-- `portal-data/security-audit-log.jsonl`
+SQL status:
 
-Each event includes:
+- Review passed with staging execution still required.
 
-- timestamp
-- actor user ID
-- role
-- organization ID
-- action
-- target type
-- target ID
-- success flag
-- IP address
-- user agent
-- metadata
+## 7. PHP Syntax Test Results
 
-## Validation
+Helper added:
 
-Static security test added:
+- `tests/phase-2a-php-syntax-checks.ps1`
+
+Local execution result:
+
+- Failed because PHP CLI is not installed or not available on PATH.
+
+PHP version used:
+
+- None available locally.
+
+Production match:
+
+- Not verified from this shell.
+
+Files intended for syntax check:
+
+- `admin-actions.php`
+- `admin-ai-apply.php`
+- `admin-ai-review.php`
+- `admin-bulk-session-actions.php`
+- `admin-hub-actions.php`
+- `admin-login.php`
+- `admin-meeting-actions.php`
+- `admin-password-actions.php`
+- `admin-student-edit.php`
+- `admin.php`
+- `parent-login.php`
+- `parent.php`
+- `portal-lib.php`
+- `portal-logout.php`
+- `submit-registration.php`
+
+Status:
+
+- Not passed. Blocked by missing PHP CLI.
+
+## 8. Static Security Test Results
+
+Static test:
 
 - `tests/phase-2a-security-static-tests.ps1`
+
+Result:
+
+- Passed.
 
 Validated:
 
 - Parent login uses password authentication.
 - Parent login verifies CSRF.
 - Parent login is rate-limited.
-- Parent login no longer grants access by `parent_student_id`.
-- Parent dashboard enforces server-side authorization.
-- Master Admin role constant exists.
-- Admin identity is resolved server-side.
-- Admin guard enforces allowed roles.
-- Master Admin is restricted to `admin@yuvaclub.app`.
-- Admin login verifies CSRF.
-- Admin login regenerates session ID.
-- Admin action endpoints use the POST admin guard.
-- Admin forms include CSRF fields.
-- Migration creates role and organization tables.
-- Migration adds organization foundation.
+- Parent dashboard uses `require_parent_for_student`.
+- Admin guard and role constants exist.
+- MasterAdmin email restriction exists.
+- Admin login verifies CSRF and regenerates session IDs.
+- Sensitive admin POST endpoints use `require_admin_post`.
 - Audit logging helper exists.
-- Sensitive admin and parent actions are audited.
+- Parent/admin sensitive actions are audited.
 
-Latest result:
+## 9. Functional Security Test Results
 
-- `Phase 2A static security checks passed.`
+Test plan created:
 
-Not completed:
+- `docs/phase-2a-functional-regression-test-plan.md`
 
-- PHP syntax checks could not be run because PHP CLI is not installed in the local shell.
-- Browser/manual runtime QA was not completed in this local pass.
-- No deployment was performed.
+Execution:
 
-## Rollback Plan
+- Not executed locally. A PHP runtime, test accounts, and a staging environment are required.
+
+Parent access:
+
+- Not executed.
+
+Admin access:
+
+- Not executed.
+
+Organization isolation:
+
+- Blocked by design for org admins because organization admin dashboard access is intentionally disabled in Phase 2A.
+
+Status:
+
+- Not passed. Functional security tests remain required.
+
+## 10. Regression Test Results
+
+Regression test plan:
+
+- `docs/phase-2a-functional-regression-test-plan.md`
+
+Results:
+
+- Student registration: not executed
+- Student login: not executed
+- Student dashboard: not executed
+- Parent account activation: failing gap / not implemented for existing parents
+- Parent login: not executed
+- Parent dashboard: not executed
+- Master Admin login: not executed in this pass
+- Organization Admin login: blocked by design in Phase 2A
+- Logout: not executed
+- Password reset: not executed
+- Presentation access: not executed
+- Certificates: not executed
+- Volunteer hours: not executed
+- Portfolio: not executed
+- Existing admin actions: not executed
+
+Status:
+
+- Regression testing remains incomplete.
+
+## 11. Remaining Failures and Known Limitations
+
+Remaining failures:
+
+- PHP syntax checks could not run locally.
+- Functional security tests were not executed.
+- Regression tests were not executed.
+- Parent activation/password setup for existing parents is missing.
+- Azure SQL parent account/link creation is incomplete.
+- Requested feature branch was not created because Codex cannot write to `.git`.
+- Phase 2A was already pushed to `main` instead of being held on a review branch.
+
+Known limitations:
+
+- Organization data isolation is schema foundation only.
+- Organization admin access should stay disabled until organization-scoped query enforcement is implemented and tested.
+- File-backed parent account storage is not the final Azure SQL-backed model.
+- Admin password hashing should be upgraded later to PHP `password_hash()`.
+
+## 12. Staging Deployment Procedure
+
+Recommended before any additional production deployment:
+
+1. Create branch `phase-2a-security-foundation` from commit `540e3c0`.
+2. Commit the verification artifacts from this pass on that branch.
+3. Install PHP CLI or use CI with the Azure production PHP version.
+4. Run `tests/phase-2a-php-syntax-checks.ps1`.
+5. Run `tests/phase-2a-security-static-tests.ps1`.
+6. Restore a copy of production Azure SQL into staging.
+7. Run `database/02-phase-2a-precheck.sql`.
+8. Run `database/02-phase-2a-security-foundation.sql`.
+9. Run `database/02-phase-2a-verify.sql`.
+10. Create synthetic test student, parent, admin, and organization records.
+11. Execute `docs/phase-2a-functional-regression-test-plan.md`.
+12. Fix any failures before production approval.
+
+## 13. Production Deployment Procedure
+
+Do this only after staging passes:
+
+1. Confirm the production branch/commit to deploy.
+2. Back up production Azure SQL.
+3. Back up `portal-data` if file-backed records are still active.
+4. Deploy application code through GitHub Actions.
+5. Run production SQL pre-check.
+6. Run production SQL migration only if the pre-check is clean.
+7. Run production SQL verification.
+8. Smoke-test student login, parent login, parent dashboard, admin login, and admin POST actions.
+9. Monitor audit logs and application errors.
+
+## 14. Rollback Procedure
 
 Application rollback:
 
-1. Revert the Phase 2A changed PHP files to the previous deployed commit.
-2. Remove or ignore `tests/phase-2a-security-static-tests.ps1`.
-3. Remove or ignore this report if the implementation is abandoned.
+1. Revert the Phase 2A application commit or redeploy the prior known-good commit `20b1824`.
+2. Preserve audit files unless legal/privacy rules require deletion.
+3. Confirm student login and admin login return to prior behavior.
 
-Data rollback:
+Database rollback:
 
-1. Back up the database before running the migration.
-2. If the migration causes issues before production data depends on it, drop:
-   - `organization_memberships`
-   - `user_roles`
-   - `organizations`
-3. Remove `organization_id` columns and indexes only if no new code depends on them.
-4. Preserve `security-audit-log.jsonl` unless there is a legal or privacy reason to delete it.
+1. Prefer restoring the production database backup if the migration caused serious issues.
+2. If data has not started depending on Phase 2A schema, run `database/02-phase-2a-rollback.sql`.
+3. The rollback script refuses to drop organization tables if they contain non-seed data.
 
-Recommended safer rollback:
+## 15. Go / No-Go Recommendation
 
-- Revert application code first.
-- Leave additive database columns/tables in place until Phase 2B is planned.
+Recommendation: **No-Go for Phase 2B and no additional production changes yet.**
 
-## Phase 2B Recommendations
+Reason:
 
-Do next:
+- PHP syntax checks have not passed.
+- Functional security tests have not run.
+- Regression tests have not run.
+- Existing parent activation/password setup remains incomplete.
+- Azure SQL parent account migration remains incomplete.
+- The requested branch workflow was bypassed when Phase 2A was pushed directly to `main`.
 
-- Move parent account/link storage into Azure SQL tables.
-- Update SQL registration approval to create student, parent, and link records together.
-- Add organization admin login only after every organization query enforces `organization_id`.
-- Add database-backed audit logging into `activity_logs`.
-- Add manual test checklist for parent login, admin login, expired sessions, CSRF rejection, and tenant isolation.
-- Install PHP CLI locally or run syntax checks in CI.
+Recommended next action:
+
+- Recover the intended review workflow by creating `phase-2a-security-foundation`, adding this verification package, running PHP/staging tests, and only then deciding whether Phase 2A is production-ready.
 

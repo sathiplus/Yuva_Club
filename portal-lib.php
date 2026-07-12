@@ -129,6 +129,14 @@ function parent_student_links_file(): string {
     return portal_path('portal-data') . DIRECTORY_SEPARATOR . 'parent-student-links.json';
 }
 
+function parent_activation_tokens_file(): string {
+    return portal_path('portal-data') . DIRECTORY_SEPARATOR . 'parent-activation-tokens.json';
+}
+
+function parent_activation_delivery_file(): string {
+    return portal_path('portal-data') . DIRECTORY_SEPARATOR . 'parent-activation-delivery.jsonl';
+}
+
 function security_audit_file(): string {
     return portal_path('portal-data') . DIRECTORY_SEPARATOR . 'security-audit-log.jsonl';
 }
@@ -197,6 +205,14 @@ function write_parent_student_links(array $links): void {
     write_json_file(parent_student_links_file(), $links);
 }
 
+function parent_activation_tokens(): array {
+    return read_json_file(parent_activation_tokens_file(), []);
+}
+
+function write_parent_activation_tokens(array $tokens): void {
+    write_json_file(parent_activation_tokens_file(), $tokens);
+}
+
 function normalize_email(string $email): string {
     return strtolower(trim($email));
 }
@@ -239,6 +255,27 @@ function create_parent_account(string $parentEmail, string $password, string $st
     link_parent_to_student($email, $studentId, student_organization_id(find_student($studentId) ?? []));
 }
 
+function ensure_parent_account_placeholder(string $parentEmail): void {
+    $email = normalize_email($parentEmail);
+    if ($email === '') {
+        return;
+    }
+
+    $accounts = parent_accounts();
+    if (!isset($accounts[$email]) || !is_array($accounts[$email])) {
+        $accounts[$email] = [
+            'email' => $email,
+            'password_hash' => '',
+            'status' => 'activation_pending',
+            'email_verified' => false,
+            'role' => YUVA_ROLE_PARENT,
+            'created_at' => gmdate('c'),
+            'updated_at' => gmdate('c'),
+        ];
+        write_parent_accounts($accounts);
+    }
+}
+
 function link_parent_to_student(string $parentEmail, string $studentId, string $organizationId = YUVA_PLATFORM_ORGANIZATION_ID): void {
     $email = normalize_email($parentEmail);
     $studentId = normalize_yuva_id($studentId);
@@ -257,6 +294,42 @@ function link_parent_to_student(string $parentEmail, string $studentId, string $
     write_parent_student_links($links);
 }
 
+function sync_parent_links_from_registrations(string $parentEmail): int {
+    $email = normalize_email($parentEmail);
+    if ($email === '') {
+        return 0;
+    }
+
+    $linked = 0;
+    foreach (registration_rows()['rows'] as $row) {
+        if (normalize_email((string) ($row['Parent Email'] ?? '')) !== $email) {
+            continue;
+        }
+        $studentId = normalize_yuva_id((string) ($row['Yuva Club ID'] ?? ''));
+        if ($studentId === '') {
+            continue;
+        }
+        $student = find_student($studentId);
+        if ($student === null) {
+            continue;
+        }
+        link_parent_to_student($email, $studentId, student_organization_id($student));
+        $linked++;
+    }
+    return $linked;
+}
+
+function parent_has_existing_relationship(string $parentEmail): bool {
+    $email = normalize_email($parentEmail);
+    if ($email === '') {
+        return false;
+    }
+    if (parent_linked_students($email) !== []) {
+        return true;
+    }
+    return sync_parent_links_from_registrations($email) > 0;
+}
+
 function parent_account_by_email(string $email): ?array {
     $accounts = parent_accounts();
     $account = $accounts[normalize_email($email)] ?? null;
@@ -271,6 +344,134 @@ function parent_password_matches(string $email, string $password): bool {
         && !empty($account['email_verified'])
         && $hash !== ''
         && password_verify($password, $hash);
+}
+
+function create_parent_activation_token(string $parentEmail): ?string {
+    $email = normalize_email($parentEmail);
+    if ($email === '' || !parent_has_existing_relationship($email)) {
+        return null;
+    }
+
+    ensure_parent_account_placeholder($email);
+
+    $token = bin2hex(random_bytes(32));
+    $tokenId = bin2hex(random_bytes(16));
+    $tokens = parent_activation_tokens();
+    $tokens[$tokenId] = [
+        'token_hash' => hash('sha256', $token),
+        'parent_email' => $email,
+        'purpose' => 'parent_password_setup',
+        'created_at' => gmdate('c'),
+        'expires_at' => gmdate('c', time() + 3600),
+        'used_at' => null,
+    ];
+    write_parent_activation_tokens($tokens);
+
+    audit_log_event(parent_actor_id($email), YUVA_ROLE_PARENT, null, 'parent.activation.requested', 'parent', $email, true);
+    return $tokenId . '.' . $token;
+}
+
+function parent_activation_record(string $activationToken): ?array {
+    $parts = explode('.', $activationToken, 2);
+    if (count($parts) !== 2) {
+        return null;
+    }
+
+    [$tokenId, $token] = $parts;
+    $tokens = parent_activation_tokens();
+    $record = $tokens[$tokenId] ?? null;
+    if (!is_array($record)) {
+        return null;
+    }
+    if (($record['used_at'] ?? null) !== null) {
+        return null;
+    }
+    if (strtotime((string) ($record['expires_at'] ?? '')) < time()) {
+        return null;
+    }
+    if (!hash_equals((string) ($record['token_hash'] ?? ''), hash('sha256', $token))) {
+        return null;
+    }
+
+    $record['token_id'] = $tokenId;
+    return $record;
+}
+
+function complete_parent_activation(string $activationToken, string $password): bool {
+    $record = parent_activation_record($activationToken);
+    $email = normalize_email((string) ($record['parent_email'] ?? ''));
+    if ($record === null || $email === '' || password_policy_error($password) !== '' || !parent_has_existing_relationship($email)) {
+        audit_log_event($email !== '' ? parent_actor_id($email) : null, YUVA_ROLE_PARENT, null, 'parent.activation.completed', 'parent', $email !== '' ? $email : null, false);
+        return false;
+    }
+
+    $accounts = parent_accounts();
+    $existing = is_array($accounts[$email] ?? null) ? $accounts[$email] : [];
+    $accounts[$email] = array_merge($existing, [
+        'email' => $email,
+        'password_hash' => password_hash($password, PASSWORD_DEFAULT),
+        'status' => 'active',
+        'email_verified' => true,
+        'role' => YUVA_ROLE_PARENT,
+        'activated_at' => gmdate('c'),
+        'updated_at' => gmdate('c'),
+    ]);
+    if (empty($accounts[$email]['created_at'])) {
+        $accounts[$email]['created_at'] = gmdate('c');
+    }
+    write_parent_accounts($accounts);
+
+    $tokens = parent_activation_tokens();
+    $tokenId = (string) ($record['token_id'] ?? '');
+    if ($tokenId !== '' && isset($tokens[$tokenId])) {
+        $tokens[$tokenId]['used_at'] = gmdate('c');
+        write_parent_activation_tokens($tokens);
+    }
+
+    audit_log_event(parent_actor_id($email), YUVA_ROLE_PARENT, null, 'parent.activation.completed', 'parent', $email, true);
+    return true;
+}
+
+function public_base_url(): string {
+    $host = clean_text((string) ($_SERVER['HTTP_HOST'] ?? ''));
+    if ($host === '') {
+        return 'https://www.yuvaclub.app';
+    }
+    $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+        || (($_SERVER['SERVER_PORT'] ?? '') === '443')
+        || (strtolower((string) ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '')) === 'https');
+    return ($isHttps ? 'https://' : 'http://') . $host;
+}
+
+function parent_activation_url(string $activationToken): string {
+    return public_base_url() . '/parent-activate.php?token=' . rawurlencode($activationToken);
+}
+
+function send_parent_activation_email(string $parentEmail, string $activationUrl): bool {
+    $email = normalize_email($parentEmail);
+    if ($email === '') {
+        return false;
+    }
+
+    $subject = 'Set up your YUVA Club parent account';
+    $message = "Hello,\n\n"
+        . "Use this secure link to set up your YUVA Club parent account password:\n\n"
+        . $activationUrl . "\n\n"
+        . "This link expires in 60 minutes. If you did not request this, you can ignore this email.\n\n"
+        . "YUVA Club";
+    $headers = "From: noreply@yuvaclub.app\r\n"
+        . "Reply-To: support@yuvaclub.app\r\n";
+
+    $sent = @mail($email, $subject, $message, $headers);
+    if ((getenv('YUVA_CAPTURE_PARENT_ACTIVATION_LINKS') ?: '') === '1') {
+        file_put_contents(parent_activation_delivery_file(), json_encode([
+            'created_at' => gmdate('c'),
+            'parent_email_hash' => hash('sha256', $email),
+            'delivery' => $sent ? 'mail_and_development_file' : 'development_file',
+            'activation_url' => $activationUrl,
+        ]) . PHP_EOL, FILE_APPEND | LOCK_EX);
+    }
+    return $sent;
 }
 
 function parent_linked_students(string $parentEmail): array {

@@ -1,6 +1,11 @@
 -- YUVA Club Phase 2A Security Foundation migration.
 -- Idempotent Azure SQL script. Review before running in production.
 
+SET XACT_ABORT ON;
+
+BEGIN TRY
+BEGIN TRANSACTION;
+
 IF OBJECT_ID('organizations', 'U') IS NULL
 BEGIN
   CREATE TABLE organizations (
@@ -124,3 +129,12 @@ BEGIN
   INSERT INTO user_roles (user_id, role_name, organization_id, status)
   VALUES (@MasterAdminUserId, 'MasterAdmin', NULL, 'active');
 END;
+
+COMMIT TRANSACTION;
+END TRY
+BEGIN CATCH
+  IF @@TRANCOUNT > 0
+    ROLLBACK TRANSACTION;
+
+  THROW;
+END CATCH;
