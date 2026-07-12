@@ -1,6 +1,6 @@
 <?php
 require __DIR__ . '/portal-lib.php';
-require_admin();
+$admin = require_admin_post([YUVA_ROLE_MASTER_ADMIN]);
 
 $studentId = normalize_yuva_id($_POST['student_id'] ?? '');
 if ($studentId === '') {
@@ -52,6 +52,7 @@ foreach (array_keys(rubric_categories()) as $key) {
 
 $records[$studentId] = $updatedRecord;
 write_json_file(portal_records_file(), $records);
+audit_log_event($admin['id'], $admin['role'], $admin['organization_id'], 'admin.student_record.update', 'student', $studentId, true);
 
 $selections = read_json_file(topic_selections_file());
 if (isset($selections[$studentId])) {

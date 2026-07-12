@@ -1,6 +1,6 @@
 <?php
 require __DIR__ . '/portal-lib.php';
-require_admin();
+$admin = require_admin([YUVA_ROLE_MASTER_ADMIN]);
 
 $students = portal_students();
 $selections = read_json_file(topic_selections_file());
@@ -91,7 +91,9 @@ portal_header('Platform Administrator Dashboard');
     <?php elseif ($status === 'password-saved'): ?>
       <div class="form-status success">Platform administrator login updated.</div>
     <?php elseif ($status === 'password-error'): ?>
-      <div class="form-status error">Platform administrator login was not updated. Check current login, new email, and matching password fields.</div>
+      <div class="form-status error">Platform administrator password was not updated. Check the current login and matching password fields.</div>
+    <?php elseif ($status === 'security-error'): ?>
+      <div class="form-status error">This admin form expired. Please try again.</div>
     <?php elseif ($status === 'ai-reviewed'): ?>
       <div class="form-status success">AI Coach draft review created. Please review and apply it before it becomes official.</div>
     <?php elseif ($status === 'ai-applied'): ?>
@@ -103,19 +105,16 @@ portal_header('Platform Administrator Dashboard');
     <?php endif; ?>
 
     <form class="form-card" action="admin-password-actions.php" method="post">
+      <?php echo csrf_field(); ?>
       <h2>Platform Administrator Login Settings</h2>
       <div class="field-grid">
         <div class="field">
           <label for="current_email">Current Platform Administrator Email *</label>
-          <input id="current_email" name="current_email" type="email" required value="<?php echo e($_SESSION['admin_email'] ?? 'admin@yuvaclub.app'); ?>">
+          <input id="current_email" name="current_email" type="email" required value="<?php echo e(YUVA_PLATFORM_ADMIN_EMAIL); ?>" readonly>
         </div>
         <div class="field">
           <label for="current_password">Current Password *</label>
           <input id="current_password" name="current_password" type="password" required>
-        </div>
-        <div class="field">
-          <label for="new_email">New Platform Administrator Email *</label>
-          <input id="new_email" name="new_email" type="email" required value="<?php echo e($_SESSION['admin_email'] ?? 'admin@yuvaclub.app'); ?>">
         </div>
         <div class="field">
           <label for="new_password">New Password *</label>
@@ -130,6 +129,7 @@ portal_header('Platform Administrator Dashboard');
     </form>
 
     <form class="form-card" action="admin-hub-actions.php" method="post">
+      <?php echo csrf_field(); ?>
       <h2>Portal Hub Settings</h2>
       <h2>School Yuva Session (Ages 13-17)</h2>
       <div class="field-grid">
@@ -234,6 +234,7 @@ portal_header('Platform Administrator Dashboard');
 
     <div class="two-grid">
       <form class="form-card" action="admin-bulk-session-actions.php" method="post">
+        <?php echo csrf_field(); ?>
         <h2>Bulk Assign School Yuva Zoom Slot</h2>
         <div class="field-grid">
           <div class="field">
@@ -286,6 +287,7 @@ portal_header('Platform Administrator Dashboard');
       </form>
 
       <form class="form-card" action="admin-bulk-session-actions.php" method="post">
+        <?php echo csrf_field(); ?>
         <h2>Bulk Assign College Yuva Zoom Slot</h2>
         <div class="field-grid">
           <div class="field">
@@ -347,6 +349,7 @@ portal_header('Platform Administrator Dashboard');
         <div class="meeting-list">
           <?php foreach ($scheduledMeetings as $meeting): ?>
             <form class="meeting-card" action="admin-meeting-actions.php" method="post">
+              <?php echo csrf_field(); ?>
               <h3><?php echo e($meeting['title'] ?: 'Yuva Club Session'); ?></h3>
               <p><strong>Date:</strong> <?php echo e($meeting['date'] ?: 'Not set'); ?></p>
               <p><strong>Time:</strong> <?php echo e($meeting['start'] ?: '--:--'); ?> - <?php echo e($meeting['end'] ?: '--:--'); ?></p>
@@ -465,11 +468,13 @@ portal_header('Platform Administrator Dashboard');
                 <td>
                   <?php if ($selection && $research): ?>
                     <form action="admin-ai-review.php" method="post">
+                      <?php echo csrf_field(); ?>
                       <input type="hidden" name="student_id" value="<?php echo e($studentId); ?>">
                       <button class="button ghost" type="submit">Run AI Coach Review</button>
                     </form>
                     <?php if ($aiDraft): ?>
                       <form action="admin-ai-apply.php" method="post">
+                        <?php echo csrf_field(); ?>
                         <input type="hidden" name="student_id" value="<?php echo e($studentId); ?>">
                         <button class="button primary" type="submit">Apply AI Draft</button>
                       </form>
@@ -518,6 +523,7 @@ portal_header('Platform Administrator Dashboard');
               </td>
               <td>
                 <form id="admin-form-<?php echo e($studentId); ?>" action="admin-actions.php" method="post">
+                  <?php echo csrf_field(); ?>
                   <input type="hidden" name="student_id" value="<?php echo e($studentId); ?>">
                   <div class="field">
                     <label>Topic Status</label>
@@ -553,6 +559,7 @@ portal_header('Platform Administrator Dashboard');
                       <p><a href="portal-download.php?id=<?php echo e($studentId); ?>"><?php echo e($research['file_original']); ?></a></p>
                     <?php endif; ?>
                     <form action="admin-ai-review.php" method="post">
+                      <?php echo csrf_field(); ?>
                       <input type="hidden" name="student_id" value="<?php echo e($studentId); ?>">
                       <button class="button ghost" type="submit">Run AI Coach Review</button>
                     </form>
@@ -574,6 +581,7 @@ portal_header('Platform Administrator Dashboard');
                             <p><strong>Improvements:</strong> <?php echo e(implode(', ', $aiDraft['improvements'])); ?></p>
                           <?php endif; ?>
                           <form action="admin-ai-apply.php" method="post">
+                            <?php echo csrf_field(); ?>
                             <input type="hidden" name="student_id" value="<?php echo e($studentId); ?>">
                             <button class="button primary" type="submit">Apply AI Draft</button>
                           </form>

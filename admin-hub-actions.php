@@ -1,6 +1,6 @@
 <?php
 require __DIR__ . '/portal-lib.php';
-require_admin();
+$admin = require_admin_post([YUVA_ROLE_MASTER_ADMIN]);
 
 $settings = [
     'junior_session_title' => clean_text($_POST['junior_session_title'] ?? 'School Yuva Session'),
@@ -28,4 +28,5 @@ $settings = [
 ];
 
 write_json_file(hub_settings_file(), $settings);
+audit_log_event($admin['id'], $admin['role'], $admin['organization_id'], 'admin.hub_settings.update', 'hub_settings', YUVA_PLATFORM_ORGANIZATION_ID, true);
 redirect_to('admin.php?status=hub-saved');

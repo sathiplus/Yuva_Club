@@ -1,11 +1,10 @@
 <?php
 require __DIR__ . '/portal-lib.php';
 
-$studentId = normalize_yuva_id($_SESSION['parent_student_id'] ?? '');
-$student = $studentId !== '' ? find_student($studentId) : null;
-if ($student === null) {
-    redirect_to('parent-login.php');
-}
+$parentContext = require_parent_for_student($_GET['id'] ?? null);
+$studentId = $parentContext['student_id'];
+$student = $parentContext['student'];
+$linkedStudents = $parentContext['students'];
 
 $selection = read_json_file(topic_selections_file())[$studentId] ?? [];
 $research = read_json_file(research_file())[$studentId] ?? [];
@@ -29,6 +28,13 @@ portal_header('Parent Dashboard');
       <h1><?php echo e(student_display_name($student)); ?></h1>
       <p>View your student's Yuva Club progress and upcoming presentation details.</p>
       <p><a class="button ghost" href="portal-logout.php">Log Out</a></p>
+      <?php if (count($linkedStudents) > 1): ?>
+        <p>
+          <?php foreach ($linkedStudents as $linkedStudentId => $linkedStudent): ?>
+            <a class="button ghost" href="parent.php?id=<?php echo e($linkedStudentId); ?>"><?php echo e(student_display_name($linkedStudent)); ?></a>
+          <?php endforeach; ?>
+        </p>
+      <?php endif; ?>
     </div>
     <div class="portal-stat-grid">
       <div class="feature"><strong>Membership Group</strong><p><?php echo e(membership_group_label($student)); ?></p></div>

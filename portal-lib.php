@@ -19,6 +19,13 @@ const YUVA_ADMIN_SALT = 'yuva-club-admin-v1';
 const YUVA_PLATFORM_ADMIN_EMAIL = 'admin@yuvaclub.app';
 const YUVA_ADMIN_EMAIL = YUVA_PLATFORM_ADMIN_EMAIL;
 const YUVA_ADMIN_PASSWORD_HASH = '8028e3a1b67db0e8f715a09c54f460c6449f1f091f065a28be74e6879b5b78b3';
+const YUVA_ROLE_MASTER_ADMIN = 'MasterAdmin';
+const YUVA_ROLE_ORGANIZATION_ADMIN = 'OrganizationAdmin';
+const YUVA_ROLE_PARENT = 'Parent';
+const YUVA_ROLE_STUDENT = 'Student';
+const YUVA_PLATFORM_ORGANIZATION_ID = 'platform';
+const YUVA_PARENT_SESSION_TTL_SECONDS = 7200;
+const YUVA_ADMIN_SESSION_TTL_SECONDS = 7200;
 
 function e(string $value): string {
     return htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
@@ -114,15 +121,208 @@ function admin_credentials_file(): string {
     return portal_path('portal-data') . DIRECTORY_SEPARATOR . 'admin-credentials.json';
 }
 
+function parent_accounts_file(): string {
+    return portal_path('portal-data') . DIRECTORY_SEPARATOR . 'parent-accounts.json';
+}
+
+function parent_student_links_file(): string {
+    return portal_path('portal-data') . DIRECTORY_SEPARATOR . 'parent-student-links.json';
+}
+
+function security_audit_file(): string {
+    return portal_path('portal-data') . DIRECTORY_SEPARATOR . 'security-audit-log.jsonl';
+}
+
 function admin_credentials(): array {
     return array_merge([
         'email' => YUVA_ADMIN_EMAIL,
         'password_hash' => YUVA_ADMIN_PASSWORD_HASH,
+        'role' => YUVA_ROLE_MASTER_ADMIN,
+        'organization_id' => YUVA_PLATFORM_ORGANIZATION_ID,
     ], read_json_file(admin_credentials_file(), []));
 }
 
 function password_hash_for_admin(string $password): string {
     return hash('sha256', YUVA_ADMIN_SALT . $password);
+}
+
+function request_ip(): string {
+    return substr((string) ($_SERVER['REMOTE_ADDR'] ?? ''), 0, 64);
+}
+
+function request_user_agent(): string {
+    return substr((string) ($_SERVER['HTTP_USER_AGENT'] ?? ''), 0, 500);
+}
+
+function audit_log_event(
+    ?string $actorUserId,
+    string $role,
+    ?string $organizationId,
+    string $action,
+    string $targetType,
+    ?string $targetId,
+    bool $success,
+    array $metadata = []
+): void {
+    ensure_portal_dirs();
+    $entry = [
+        'timestamp' => gmdate('c'),
+        'actor_user_id' => $actorUserId,
+        'role' => $role,
+        'organization_id' => $organizationId,
+        'action' => $action,
+        'target_type' => $targetType,
+        'target_id' => $targetId,
+        'success' => $success,
+        'ip' => request_ip(),
+        'user_agent' => request_user_agent(),
+        'metadata' => $metadata,
+    ];
+    file_put_contents(security_audit_file(), json_encode($entry) . PHP_EOL, FILE_APPEND | LOCK_EX);
+}
+
+function parent_accounts(): array {
+    return read_json_file(parent_accounts_file(), []);
+}
+
+function write_parent_accounts(array $accounts): void {
+    write_json_file(parent_accounts_file(), $accounts);
+}
+
+function parent_student_links(): array {
+    return read_json_file(parent_student_links_file(), []);
+}
+
+function write_parent_student_links(array $links): void {
+    write_json_file(parent_student_links_file(), $links);
+}
+
+function normalize_email(string $email): string {
+    return strtolower(trim($email));
+}
+
+function parent_actor_id(string $email): string {
+    return 'parent:' . hash('sha256', normalize_email($email));
+}
+
+function admin_actor_id(string $email): string {
+    return 'admin:' . hash('sha256', normalize_email($email));
+}
+
+function student_organization_id(array $student): string {
+    $code = clean_text((string) ($student['Organization Code'] ?? ''));
+    return $code !== '' ? strtoupper($code) : YUVA_PLATFORM_ORGANIZATION_ID;
+}
+
+function create_parent_account(string $parentEmail, string $password, string $studentId): void {
+    $email = normalize_email($parentEmail);
+    $studentId = normalize_yuva_id($studentId);
+    if ($email === '' || $studentId === '' || password_policy_error($password) !== '') {
+        return;
+    }
+
+    $accounts = parent_accounts();
+    $existing = $accounts[$email] ?? [];
+    if (($existing['password_hash'] ?? '') === '') {
+        $accounts[$email] = [
+            'email' => $email,
+            'password_hash' => password_hash($password, PASSWORD_DEFAULT),
+            'status' => 'active',
+            'email_verified' => true,
+            'role' => YUVA_ROLE_PARENT,
+            'created_at' => gmdate('c'),
+            'updated_at' => gmdate('c'),
+        ];
+        write_parent_accounts($accounts);
+    }
+
+    link_parent_to_student($email, $studentId, student_organization_id(find_student($studentId) ?? []));
+}
+
+function link_parent_to_student(string $parentEmail, string $studentId, string $organizationId = YUVA_PLATFORM_ORGANIZATION_ID): void {
+    $email = normalize_email($parentEmail);
+    $studentId = normalize_yuva_id($studentId);
+    if ($email === '' || $studentId === '') {
+        return;
+    }
+
+    $links = parent_student_links();
+    $links[$email] ??= [];
+    $links[$email][$studentId] = [
+        'student_id' => $studentId,
+        'organization_id' => $organizationId !== '' ? $organizationId : YUVA_PLATFORM_ORGANIZATION_ID,
+        'status' => 'active',
+        'linked_at' => gmdate('c'),
+    ];
+    write_parent_student_links($links);
+}
+
+function parent_account_by_email(string $email): ?array {
+    $accounts = parent_accounts();
+    $account = $accounts[normalize_email($email)] ?? null;
+    return is_array($account) ? $account : null;
+}
+
+function parent_password_matches(string $email, string $password): bool {
+    $account = parent_account_by_email($email);
+    $hash = (string) ($account['password_hash'] ?? '');
+    return $account !== null
+        && ($account['status'] ?? '') === 'active'
+        && !empty($account['email_verified'])
+        && $hash !== ''
+        && password_verify($password, $hash);
+}
+
+function parent_linked_students(string $parentEmail): array {
+    $email = normalize_email($parentEmail);
+    $links = parent_student_links()[$email] ?? [];
+    $students = [];
+    if (!is_array($links)) {
+        return $students;
+    }
+    foreach ($links as $studentId => $link) {
+        if (($link['status'] ?? '') !== 'active') {
+            continue;
+        }
+        $student = find_student((string) $studentId);
+        if ($student !== null) {
+            $students[normalize_yuva_id((string) $studentId)] = $student;
+        }
+    }
+    return $students;
+}
+
+function parent_can_access_student(string $parentEmail, string $studentId): bool {
+    $email = normalize_email($parentEmail);
+    $studentId = normalize_yuva_id($studentId);
+    $link = parent_student_links()[$email][$studentId] ?? null;
+    return is_array($link) && ($link['status'] ?? '') === 'active';
+}
+
+function require_parent_for_student(?string $requestedStudentId = null): array {
+    $email = normalize_email((string) ($_SESSION['parent_email'] ?? ''));
+    $startedAt = (int) ($_SESSION['parent_session_started_at'] ?? 0);
+    if ($email === '' || $startedAt <= 0 || (time() - $startedAt) > YUVA_PARENT_SESSION_TTL_SECONDS) {
+        audit_log_event(null, YUVA_ROLE_PARENT, null, 'parent.session.rejected', 'student', $requestedStudentId, false, ['reason' => 'missing_or_expired']);
+        unset($_SESSION['parent_email'], $_SESSION['parent_session_started_at']);
+        redirect_to('parent-login.php?status=expired');
+    }
+
+    $students = parent_linked_students($email);
+    $studentId = normalize_yuva_id($requestedStudentId ?? ($_GET['id'] ?? ''));
+    if ($studentId === '') {
+        $studentId = (string) array_key_first($students);
+    }
+
+    if ($studentId === '' || !isset($students[$studentId]) || !parent_can_access_student($email, $studentId)) {
+        audit_log_event(parent_actor_id($email), YUVA_ROLE_PARENT, null, 'parent.student_access', 'student', $studentId, false);
+        http_response_code(403);
+        exit('Access denied.');
+    }
+
+    $_SESSION['parent_session_started_at'] = time();
+    audit_log_event(parent_actor_id($email), YUVA_ROLE_PARENT, student_organization_id($students[$studentId]), 'parent.student_access', 'student', $studentId, true);
+    return ['email' => $email, 'student_id' => $studentId, 'student' => $students[$studentId], 'students' => $students];
 }
 
 function csrf_token(): string {
@@ -203,8 +403,7 @@ function find_student_account_by_identifier(string $identifier): ?array {
     foreach (student_accounts() as $account) {
         $yuvaId = normalize_yuva_id((string) ($account['yuva_id'] ?? ''));
         $studentEmail = strtolower((string) ($account['student_email'] ?? ''));
-        $parentEmail = strtolower((string) ($account['parent_email'] ?? ''));
-        if ($identifier === $yuvaId || $identifier === $studentEmail || $identifier === $parentEmail) {
+        if ($identifier === $yuvaId || $identifier === $studentEmail) {
             return $account;
         }
     }
@@ -841,14 +1040,65 @@ function require_student(): array {
 
 function admin_password_matches(string $email, string $password): bool {
     $credentials = admin_credentials();
-    return strtolower($email) === strtolower((string) ($credentials['email'] ?? ''))
+    $email = normalize_email($email);
+    return $email === YUVA_PLATFORM_ADMIN_EMAIL
+        && $email === normalize_email((string) ($credentials['email'] ?? ''))
         && hash_equals((string) ($credentials['password_hash'] ?? ''), password_hash_for_admin($password));
 }
 
-function require_admin(): void {
+function current_admin_identity(): ?array {
     if (($_SESSION['admin_logged_in'] ?? false) !== true) {
+        return null;
+    }
+
+    $email = normalize_email((string) ($_SESSION['admin_email'] ?? ''));
+    $role = (string) ($_SESSION['admin_role'] ?? '');
+    $organizationId = (string) ($_SESSION['admin_organization_id'] ?? YUVA_PLATFORM_ORGANIZATION_ID);
+    $startedAt = (int) ($_SESSION['admin_session_started_at'] ?? 0);
+    if ($email === '' || $role === '' || $startedAt <= 0 || (time() - $startedAt) > YUVA_ADMIN_SESSION_TTL_SECONDS) {
+        return null;
+    }
+
+    return [
+        'id' => admin_actor_id($email),
+        'email' => $email,
+        'role' => $role,
+        'organization_id' => $organizationId,
+    ];
+}
+
+function require_admin(array $allowedRoles = [YUVA_ROLE_MASTER_ADMIN]): array {
+    $admin = current_admin_identity();
+    if ($admin === null) {
+        audit_log_event(null, 'Unknown', null, 'admin.access', basename((string) ($_SERVER['SCRIPT_NAME'] ?? 'admin')), null, false, ['reason' => 'missing_or_expired_session']);
+        unset($_SESSION['admin_logged_in'], $_SESSION['admin_email'], $_SESSION['admin_role'], $_SESSION['admin_organization_id'], $_SESSION['admin_session_started_at']);
         redirect_to('admin-login.php');
     }
+
+    if (!in_array($admin['role'], $allowedRoles, true)) {
+        audit_log_event($admin['id'], $admin['role'], $admin['organization_id'], 'admin.access', basename((string) ($_SERVER['SCRIPT_NAME'] ?? 'admin')), null, false, ['reason' => 'role_denied']);
+        http_response_code(403);
+        exit('Access denied.');
+    }
+
+    if ($admin['role'] === YUVA_ROLE_MASTER_ADMIN && $admin['email'] !== YUVA_PLATFORM_ADMIN_EMAIL) {
+        audit_log_event($admin['id'], $admin['role'], $admin['organization_id'], 'admin.access', 'master_admin', $admin['email'], false, ['reason' => 'invalid_master_admin_email']);
+        http_response_code(403);
+        exit('Access denied.');
+    }
+
+    $_SESSION['admin_session_started_at'] = time();
+    audit_log_event($admin['id'], $admin['role'], $admin['organization_id'], 'admin.access', basename((string) ($_SERVER['SCRIPT_NAME'] ?? 'admin')), null, true);
+    return $admin;
+}
+
+function require_admin_post(array $allowedRoles = [YUVA_ROLE_MASTER_ADMIN]): array {
+    $admin = require_admin($allowedRoles);
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !verify_csrf_token($_POST['csrf_token'] ?? null)) {
+        audit_log_event($admin['id'], $admin['role'], $admin['organization_id'], 'admin.post.rejected', basename((string) ($_SERVER['SCRIPT_NAME'] ?? 'admin')), null, false, ['reason' => 'csrf_or_method']);
+        redirect_to('admin.php?status=security-error');
+    }
+    return $admin;
 }
 
 function yuva_topic_categories(): array {

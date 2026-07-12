@@ -369,6 +369,7 @@ if (!$storedInDatabase) {
     $row[1] = $studentId;
     append_registration_row($fullCsvPath, $headers, $row, $studentIdYear, $idScanPaths);
     create_student_account($studentId, $studentEmail, $parentEmail, $accountPassword);
+    create_parent_account($parentEmail, $accountPassword, $studentId);
 }
 
 if ($notificationEmail !== '') {

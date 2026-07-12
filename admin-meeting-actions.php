@@ -1,9 +1,10 @@
 <?php
 require __DIR__ . '/portal-lib.php';
-require_admin();
+$admin = require_admin_post([YUVA_ROLE_MASTER_ADMIN]);
 
 $selectedStudents = $_POST['selected_students'] ?? [];
 if (!is_array($selectedStudents) || $selectedStudents === []) {
+    audit_log_event($admin['id'], $admin['role'], $admin['organization_id'], 'admin.meeting.clear', 'student', null, false, ['reason' => 'empty_selection']);
     redirect_to('admin.php?status=meeting-empty');
 }
 
@@ -30,4 +31,5 @@ foreach ($selectedStudents as $studentId) {
 }
 
 write_json_file(portal_records_file(), $records);
+audit_log_event($admin['id'], $admin['role'], $admin['organization_id'], 'admin.meeting.clear', 'student', null, true, ['count' => count($selectedStudents)]);
 redirect_to('admin.php?status=meeting-updated');

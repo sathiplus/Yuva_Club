@@ -1,12 +1,13 @@
 <?php
 require __DIR__ . '/portal-lib.php';
-require_admin();
+$admin = require_admin_post([YUVA_ROLE_MASTER_ADMIN]);
 
 $studentId = normalize_yuva_id($_POST['student_id'] ?? '');
 $reviews = ai_reviews();
 $draft = $reviews[$studentId]['review'] ?? [];
 
 if ($studentId === '' || $draft === []) {
+    audit_log_event($admin['id'], $admin['role'], $admin['organization_id'], 'admin.ai_review.apply', 'student', $studentId, false, ['reason' => 'missing_draft']);
     redirect_to('admin.php?status=ai-missing');
 }
 
@@ -31,5 +32,6 @@ write_json_file(portal_records_file(), $records);
 $reviews[$studentId]['status'] = 'Applied by Admin';
 $reviews[$studentId]['applied_at'] = date('Y-m-d H:i:s');
 write_json_file(ai_reviews_file(), $reviews);
+audit_log_event($admin['id'], $admin['role'], $admin['organization_id'], 'admin.ai_review.apply', 'student', $studentId, true);
 
 redirect_to('admin.php?status=ai-applied');

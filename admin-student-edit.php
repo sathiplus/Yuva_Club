@@ -1,6 +1,6 @@
 <?php
 require __DIR__ . '/portal-lib.php';
-require_admin();
+$admin = require_admin([YUVA_ROLE_MASTER_ADMIN]);
 
 $studentId = normalize_yuva_id($_GET['id'] ?? $_POST['student_id'] ?? '');
 $student = $studentId !== '' ? find_registration_row($studentId) : null;
@@ -13,6 +13,11 @@ if ($student === null) {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!verify_csrf_token($_POST['csrf_token'] ?? null)) {
+        audit_log_event($admin['id'], $admin['role'], $admin['organization_id'], 'admin.registration.update', 'student', $studentId, false, ['reason' => 'csrf']);
+        redirect_to('admin-students.php?status=security-error');
+    }
+
     $updates = [];
     foreach (editable_registration_fields() as $fields) {
         foreach ($fields as $field) {
@@ -21,6 +26,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     $saved = update_registration_row($studentId, $updates);
+    audit_log_event($admin['id'], $admin['role'], $admin['organization_id'], 'admin.registration.update', 'student', $studentId, $saved);
     redirect_to('admin-students.php?status=' . ($saved ? 'student-saved' : 'student-error'));
 }
 
@@ -37,6 +43,7 @@ portal_header('Edit Signup');
       </div>
 
       <form class="form-card" method="post">
+        <?php echo csrf_field(); ?>
         <input type="hidden" name="student_id" value="<?php echo e($studentId); ?>">
         <?php foreach (editable_registration_fields() as $group => $fields): ?>
           <h2><?php echo e($group); ?></h2>
