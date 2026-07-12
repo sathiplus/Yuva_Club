@@ -202,7 +202,7 @@ for ($i = 1; $i <= 3; $i++) {
     $time = clean_text($_POST["preferred_time_$i"] ?? '');
 
     if ($day !== '' && $time !== '') {
-        $schedule[] = "Choice $i: $day at $time";
+        $schedule[] = "Availability $i: $day at $time";
     } elseif ($day !== '' || $time !== '') {
         header('Location: registration.php?status=error');
         exit;
@@ -231,7 +231,6 @@ if (
     in_array('', $requiredFields, true)
     || (int) $age < 13
     || (int) $age > 21
-    || count($schedule) === 0
     || $agreeCode !== 'Yes'
     || $agreeRecording !== 'Yes'
     || $agreeParentPermission !== 'Yes'
@@ -273,7 +272,7 @@ $headers = [
     'Why Join',
     'Presentation Experience',
     'Presentation Topics',
-    'Preferred Schedule',
+    'Availability Preferences',
     'Suggestions',
     'Code of Conduct Agreement',
     'Recording Agreement',
@@ -399,7 +398,7 @@ if ($notificationEmail !== '') {
         . "Why Join: $joinReason\n"
         . "Presentation Experience: $presentationExperience\n"
         . "Presentation Topics: $presentationTopics\n"
-        . "Preferred Schedule: $scheduleText\n"
+        . "Availability Preferences: $scheduleText\n"
         . "Suggestions: $suggestions\n\n"
         . "Code of Conduct Agreement: $agreeCode\n"
         . "Recording Agreement: $agreeRecording\n"

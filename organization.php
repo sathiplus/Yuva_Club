@@ -15,7 +15,7 @@ portal_header('Organization Access');
       <div class="form-card">
         <h2>Organization Administrator Workflow</h2>
         <p>Master Admin creates the organization, assigns an organization administrator, and sends an email invitation. The invited administrator activates the account and sets a password.</p>
-        <p><a class="button primary" href="contact.html">Contact YUVA Club</a> <a class="button ghost" href="admin-login.php">Platform Administrator Login</a></p>
+        <p><a class="button primary" href="contact.html">Contact YUVA Club</a> <a class="button ghost" href="admin-login.php">Admin Login</a></p>
       </div>
     </div>
   </section>

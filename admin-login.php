@@ -13,22 +13,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     redirect_to('admin-login.php?status=error');
 }
 
-portal_header('Platform Administrator Login');
+portal_header('Admin Login');
 ?>
 <main>
   <section class="band">
     <div class="form-shell portal-narrow">
       <div class="section-head">
-        <p class="eyebrow">YUVA Club Platform Administration</p>
-        <h1>Platform Administrator Login</h1>
-        <p>Only authorized platform administrators can access this area.</p>
+        <p class="eyebrow">YUVA Club Administration</p>
+        <h1>Admin Login</h1>
+        <p>Authorized YUVA Club and organization administrators can sign in here. Access is limited by each administrator's role and organization permissions.</p>
       </div>
       <?php if ($status === 'error'): ?>
         <div class="form-status error">Incorrect platform administrator email or password.</div>
       <?php endif; ?>
       <form class="form-card" method="post">
         <div class="field">
-          <label for="email">Platform Administrator Email *</label>
+          <label for="email">Admin Email *</label>
           <input id="email" name="email" type="email" required autocomplete="email">
         </div>
         <div class="field">

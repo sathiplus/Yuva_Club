@@ -13,9 +13,9 @@ $registrationId = $_GET['registration'] ?? '';
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Register | Yuva Club</title>
-  <meta name="description" content="Register for Yuva Club and select preferred class days and times.">
+  <meta name="description" content="Create a YUVA Club student account and choose learning interests, presentation goals, and optional availability preferences.">
   <meta property="og:title" content="Register | Yuva Club">
-  <meta property="og:description" content="Register for Yuva Club and select preferred class days and times.">
+  <meta property="og:description" content="Create a YUVA Club student account and choose learning interests, presentation goals, and optional availability preferences.">
   <meta property="og:image" content="https://www.yuvaclub.app/assets/logo.png">
   <meta property="og:url" content="https://www.yuvaclub.app/registration.php">
   <meta property="og:type" content="website">
@@ -55,7 +55,7 @@ $registrationId = $_GET['registration'] ?? '';
         <div class="section-head">
           <p class="eyebrow">Yuva Club Registration</p>
           <h1>Create Your Yuva Club Account</h1>
-          <p>Register for a lifelong Yuva Club ID, create your student login, and select up to three class times that may work best.</p>
+          <p>Register for a lifelong Yuva Club ID, create your student login, and tell us about your learning interests and presentation goals.</p>
         </div>
 
         <?php if ($status === 'success'): ?>
@@ -65,7 +65,7 @@ $registrationId = $_GET['registration'] ?? '';
             <div class="form-status success">Thank you. Your registration was submitted successfully<?php echo $studentId !== '' ? ' with Yuva Club ID ' . htmlspecialchars($studentId, ENT_QUOTES, 'UTF-8') : ''; ?>.</div>
           <?php endif; ?>
         <?php elseif ($status === 'error'): ?>
-          <div class="form-status error">Please complete the required fields, choose at least one day/time preference, and accept the agreements.</div>
+          <div class="form-status error">Please complete the required fields and accept the agreements.</div>
         <?php elseif ($status === 'password-error'): ?>
           <div class="form-status error">Password must be at least 12 characters and include uppercase, lowercase, number, and special character.</div>
         <?php elseif ($status === 'security-error'): ?>
@@ -254,12 +254,12 @@ $registrationId = $_GET['registration'] ?? '';
           </div>
 
           <fieldset class="choice-group">
-            <legend>Preferred Class Days and Times *</legend>
-            <p class="form-note">Enter up to three preferences. At least one day and time is required.</p>
+            <legend>Availability Preferences</legend>
+            <p class="form-note">Optional. Share general availability so YUVA Club or your organization can recommend events, mentor sessions, and presentation opportunities later.</p>
             <div class="preference-grid">
               <div class="preference-row">
                 <div class="field">
-                  <label for="preferred_day_1">First Choice Day *</label>
+                  <label for="preferred_day_1">First Availability Day</label>
                   <select id="preferred_day_1" name="preferred_day_1">
                     <option value="">Select day</option>
                     <option>Monday</option>
@@ -272,14 +272,14 @@ $registrationId = $_GET['registration'] ?? '';
                   </select>
                 </div>
                 <div class="field">
-                  <label for="preferred_time_1">First Choice Time *</label>
+                  <label for="preferred_time_1">First Availability Time</label>
                   <input id="preferred_time_1" name="preferred_time_1" type="time">
                 </div>
               </div>
 
               <div class="preference-row">
                 <div class="field">
-                  <label for="preferred_day_2">Second Choice Day</label>
+                  <label for="preferred_day_2">Second Availability Day</label>
                   <select id="preferred_day_2" name="preferred_day_2">
                     <option value="">Select day</option>
                     <option>Monday</option>
@@ -292,14 +292,14 @@ $registrationId = $_GET['registration'] ?? '';
                   </select>
                 </div>
                 <div class="field">
-                  <label for="preferred_time_2">Second Choice Time</label>
+                  <label for="preferred_time_2">Second Availability Time</label>
                   <input id="preferred_time_2" name="preferred_time_2" type="time">
                 </div>
               </div>
 
               <div class="preference-row">
                 <div class="field">
-                  <label for="preferred_day_3">Third Choice Day</label>
+                  <label for="preferred_day_3">Third Availability Day</label>
                   <select id="preferred_day_3" name="preferred_day_3">
                     <option value="">Select day</option>
                     <option>Monday</option>
@@ -312,7 +312,7 @@ $registrationId = $_GET['registration'] ?? '';
                   </select>
                 </div>
                 <div class="field">
-                  <label for="preferred_time_3">Third Choice Time</label>
+                  <label for="preferred_time_3">Third Availability Time</label>
                   <input id="preferred_time_3" name="preferred_time_3" type="time">
                 </div>
               </div>
