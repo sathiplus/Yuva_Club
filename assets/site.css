@@ -890,7 +890,12 @@ h3 { font-size: 22px; }
 }
 
 .site-footer p { margin: 4px 0 0; color: rgba(255,255,255,.76); }
-.site-footer a { color: #ffe69b; font-weight: 800; }
+.site-footer a {
+  color: #ffe69b;
+  display: inline-block;
+  font-weight: 800;
+  margin: 4px 14px 4px 0;
+}
 
 .footer-links {
   display: grid;
