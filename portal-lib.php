@@ -133,6 +133,14 @@ function organization_admin_invitation_delivery_file(): string {
     return portal_path('portal-data') . DIRECTORY_SEPARATOR . 'organization-admin-invitation-delivery.jsonl';
 }
 
+function organization_student_memberships_file(): string {
+    return portal_path('portal-data') . DIRECTORY_SEPARATOR . 'organization-student-memberships.json';
+}
+
+function organization_student_invitation_delivery_file(): string {
+    return portal_path('portal-data') . DIRECTORY_SEPARATOR . 'organization-student-invitation-delivery.jsonl';
+}
+
 function parent_accounts_file(): string {
     return portal_path('portal-data') . DIRECTORY_SEPARATOR . 'parent-accounts.json';
 }
@@ -770,6 +778,247 @@ function record_organization_admin_login(string $email): void {
     $accounts[$email]['last_login_at'] = gmdate('c');
     $accounts[$email]['updated_at'] = gmdate('c');
     write_organization_admin_accounts($accounts);
+}
+
+function organization_membership_statuses(): array {
+    return ['Invited', 'Active', 'Inactive', 'Transferred', 'Archived'];
+}
+
+function normalize_membership_status(string $status): string {
+    $status = clean_text($status);
+    foreach (organization_membership_statuses() as $allowed) {
+        if (strcasecmp($status, $allowed) === 0) {
+            return $allowed;
+        }
+    }
+    return 'Invited';
+}
+
+function organization_student_memberships(): array {
+    return read_json_file(organization_student_memberships_file(), []);
+}
+
+function write_organization_student_memberships(array $memberships): void {
+    write_json_file(organization_student_memberships_file(), $memberships);
+}
+
+function organization_student_membership_key(string $organizationId, string $studentId = '', string $studentEmail = ''): string {
+    $organizationId = normalize_organization_id($organizationId);
+    $studentId = normalize_yuva_id($studentId);
+    $studentEmail = normalize_email($studentEmail);
+    $target = $studentId !== '' ? $studentId : ('EMAIL-' . hash('sha256', $studentEmail));
+    return $organizationId . ':' . $target;
+}
+
+function organization_student_membership_defaults(string $organizationId, string $studentId = '', string $studentEmail = ''): array {
+    return [
+        'organization_id' => normalize_organization_id($organizationId),
+        'student_id' => normalize_yuva_id($studentId),
+        'student_email' => normalize_email($studentEmail),
+        'status' => 'Invited',
+        'group' => '',
+        'coach' => '',
+        'teacher' => '',
+        'moderator' => '',
+        'source' => 'organization',
+        'created_at' => gmdate('c'),
+        'updated_at' => gmdate('c'),
+        'invited_at' => '',
+        'activated_at' => '',
+        'archived_at' => '',
+        'transferred_to_organization_id' => '',
+        'notes' => '',
+    ];
+}
+
+function organization_student_memberships_for_org(string $organizationId): array {
+    $organizationId = normalize_organization_id($organizationId);
+    if ($organizationId === YUVA_PLATFORM_ORGANIZATION_ID) {
+        return [];
+    }
+
+    $memberships = [];
+    foreach (organization_student_memberships() as $key => $membership) {
+        if (!is_array($membership) || normalize_organization_id((string) ($membership['organization_id'] ?? '')) !== $organizationId) {
+            continue;
+        }
+        $memberships[$key] = array_merge(organization_student_membership_defaults($organizationId), $membership);
+    }
+
+    foreach (portal_students() as $studentId => $student) {
+        if (student_organization_id($student) !== $organizationId) {
+            continue;
+        }
+        $key = organization_student_membership_key($organizationId, (string) $studentId);
+        if (!isset($memberships[$key])) {
+            $memberships[$key] = array_merge(organization_student_membership_defaults($organizationId, (string) $studentId, (string) ($student['Student Email'] ?? '')), [
+                'status' => 'Active',
+                'source' => 'registration',
+                'activated_at' => (string) ($student['Submitted At'] ?? ''),
+            ]);
+        }
+    }
+
+    uasort($memberships, static function (array $a, array $b): int {
+        return strcmp((string) ($a['student_id'] ?: $a['student_email']), (string) ($b['student_id'] ?: $b['student_email']));
+    });
+    return $memberships;
+}
+
+function organization_student_membership(string $organizationId, string $membershipKey): ?array {
+    $organizationId = normalize_organization_id($organizationId);
+    $memberships = organization_student_memberships_for_org($organizationId);
+    $membership = $memberships[$membershipKey] ?? null;
+    return is_array($membership) ? $membership : null;
+}
+
+function organization_student_can_access(string $organizationId, string $studentId): bool {
+    $organizationId = normalize_organization_id($organizationId);
+    $studentId = normalize_yuva_id($studentId);
+    if ($organizationId === YUVA_PLATFORM_ORGANIZATION_ID || $studentId === '') {
+        return false;
+    }
+    foreach (organization_student_memberships_for_org($organizationId) as $membership) {
+        if (($membership['student_id'] ?? '') === $studentId && ($membership['status'] ?? '') !== 'Archived') {
+            return true;
+        }
+    }
+    return false;
+}
+
+function send_organization_student_invitation_email(string $studentEmail, string $organizationId): bool {
+    $studentEmail = normalize_email($studentEmail);
+    $organizationId = normalize_organization_id($organizationId);
+    if ($studentEmail === '' || $organizationId === YUVA_PLATFORM_ORGANIZATION_ID) {
+        return false;
+    }
+
+    $subject = 'You are invited to join YUVA Club';
+    $message = "Hello,\n\n"
+        . "You have been invited to join YUVA Club through organization {$organizationId}.\n\n"
+        . "Visit " . public_base_url() . "/registration.php to create or connect your student account. Keep this organization code: {$organizationId}.\n\n"
+        . "YUVA Club";
+    $headers = "From: noreply@yuvaclub.app\r\n"
+        . "Reply-To: support@yuvaclub.app\r\n";
+
+    $sent = @mail($studentEmail, $subject, $message, $headers);
+    if ((getenv('YUVA_CAPTURE_STUDENT_INVITATION_LINKS') ?: '') === '1') {
+        file_put_contents(organization_student_invitation_delivery_file(), json_encode([
+            'created_at' => gmdate('c'),
+            'student_email_hash' => hash('sha256', $studentEmail),
+            'organization_id' => $organizationId,
+            'delivery' => $sent ? 'mail_and_development_file' : 'development_file',
+            'registration_url' => public_base_url() . '/registration.php',
+        ]) . PHP_EOL, FILE_APPEND | LOCK_EX);
+        return true;
+    }
+    return $sent;
+}
+
+function upsert_organization_student_membership(array $admin, array $input): array {
+    $organizationId = normalize_organization_id((string) ($admin['organization_id'] ?? ''));
+    $studentId = normalize_yuva_id((string) ($input['student_id'] ?? ''));
+    $studentEmail = normalize_email((string) ($input['student_email'] ?? ''));
+    $status = normalize_membership_status((string) ($input['status'] ?? 'Invited'));
+    if ($organizationId === YUVA_PLATFORM_ORGANIZATION_ID || ($studentId === '' && $studentEmail === '')) {
+        return ['ok' => false, 'error' => 'Invalid organization membership request.'];
+    }
+    if ($studentId !== '' && find_student($studentId) === null) {
+        return ['ok' => false, 'error' => 'YUVA ID was not found. Invite the student by email first.'];
+    }
+    if ($studentId !== '') {
+        $student = find_student($studentId);
+        $studentEmail = $studentEmail !== '' ? $studentEmail : normalize_email((string) ($student['Student Email'] ?? ''));
+    }
+
+    $memberships = organization_student_memberships();
+    $key = organization_student_membership_key($organizationId, $studentId, $studentEmail);
+    $existing = is_array($memberships[$key] ?? null) ? $memberships[$key] : organization_student_membership_defaults($organizationId, $studentId, $studentEmail);
+    $memberships[$key] = array_merge($existing, [
+        'organization_id' => $organizationId,
+        'student_id' => $studentId,
+        'student_email' => $studentEmail,
+        'status' => $status,
+        'group' => clean_text((string) ($input['group'] ?? ($existing['group'] ?? ''))),
+        'coach' => clean_text((string) ($input['coach'] ?? ($existing['coach'] ?? ''))),
+        'teacher' => clean_text((string) ($input['teacher'] ?? ($existing['teacher'] ?? ''))),
+        'moderator' => clean_text((string) ($input['moderator'] ?? ($existing['moderator'] ?? ''))),
+        'notes' => clean_text((string) ($input['notes'] ?? ($existing['notes'] ?? ''))),
+        'source' => clean_text((string) ($input['source'] ?? ($existing['source'] ?? 'organization'))),
+        'updated_at' => gmdate('c'),
+    ]);
+    if ($status === 'Invited' && empty($memberships[$key]['invited_at'])) {
+        $memberships[$key]['invited_at'] = gmdate('c');
+    }
+    if ($status === 'Active' && empty($memberships[$key]['activated_at'])) {
+        $memberships[$key]['activated_at'] = gmdate('c');
+    }
+    if ($status === 'Archived' && empty($memberships[$key]['archived_at'])) {
+        $memberships[$key]['archived_at'] = gmdate('c');
+    }
+    if ($status === 'Transferred') {
+        $memberships[$key]['transferred_to_organization_id'] = normalize_organization_id((string) ($input['transferred_to_organization_id'] ?? ''));
+    }
+
+    write_organization_student_memberships($memberships);
+    if (($input['send_invite'] ?? false) && $studentEmail !== '') {
+        send_organization_student_invitation_email($studentEmail, $organizationId);
+    }
+    audit_log_event($admin['id'], $admin['role'], $organizationId, 'organization_student.membership.upsert', 'student_membership', $key, true, [
+        'student_id' => $studentId,
+        'student_email_hash' => $studentEmail !== '' ? hash('sha256', $studentEmail) : '',
+        'status' => $status,
+    ]);
+    return ['ok' => true, 'key' => $key, 'membership' => $memberships[$key]];
+}
+
+function update_organization_student_membership(array $admin, string $membershipKey, array $updates): bool {
+    $organizationId = normalize_organization_id((string) ($admin['organization_id'] ?? ''));
+    $membership = organization_student_membership($organizationId, $membershipKey);
+    if ($membership === null) {
+        audit_log_event($admin['id'], $admin['role'], $organizationId, 'organization_student.membership.update', 'student_membership', $membershipKey, false, ['reason' => 'cross_org_or_missing']);
+        return false;
+    }
+    $memberships = organization_student_memberships();
+    $existing = is_array($memberships[$membershipKey] ?? null) ? $memberships[$membershipKey] : $membership;
+    $status = array_key_exists('status', $updates) ? normalize_membership_status((string) $updates['status']) : (string) ($existing['status'] ?? 'Active');
+    $memberships[$membershipKey] = array_merge($existing, [
+        'status' => $status,
+        'group' => clean_text((string) ($updates['group'] ?? ($existing['group'] ?? ''))),
+        'coach' => clean_text((string) ($updates['coach'] ?? ($existing['coach'] ?? ''))),
+        'teacher' => clean_text((string) ($updates['teacher'] ?? ($existing['teacher'] ?? ''))),
+        'moderator' => clean_text((string) ($updates['moderator'] ?? ($existing['moderator'] ?? ''))),
+        'notes' => clean_text((string) ($updates['notes'] ?? ($existing['notes'] ?? ''))),
+        'updated_at' => gmdate('c'),
+    ]);
+    if ($status === 'Archived' && empty($memberships[$membershipKey]['archived_at'])) {
+        $memberships[$membershipKey]['archived_at'] = gmdate('c');
+    }
+    if ($status === 'Transferred') {
+        $memberships[$membershipKey]['transferred_to_organization_id'] = normalize_organization_id((string) ($updates['transferred_to_organization_id'] ?? ($existing['transferred_to_organization_id'] ?? '')));
+    }
+    write_organization_student_memberships($memberships);
+    audit_log_event($admin['id'], $admin['role'], $organizationId, 'organization_student.membership.update', 'student_membership', $membershipKey, true, ['status' => $status]);
+    return true;
+}
+
+function organization_student_progress_summary(string $studentId): array {
+    $studentId = normalize_yuva_id($studentId);
+    $record = student_record($studentId);
+    $selection = read_json_file(topic_selections_file())[$studentId] ?? [];
+    $research = read_json_file(research_file())[$studentId] ?? [];
+    $aiReview = read_json_file(ai_reviews_file())[$studentId] ?? [];
+    return [
+        'approved' => (string) ($record['approved'] ?? 'Pending'),
+        'presentations' => (string) ($record['presentations'] ?? '0'),
+        'certificates' => (string) ($record['certificate_status'] ?? 'Not Ready'),
+        'volunteer_hours' => (string) ($record['service_hours'] ?? '0'),
+        'portfolio' => implode(', ', earned_badges($record)) ?: 'No badges yet',
+        'assigned_activities' => (string) ($record['student_session_title'] ?? ''),
+        'topic' => (string) ($selection['topic_title'] ?? 'No topic selected'),
+        'research' => (string) ($research['status'] ?? 'No research submitted'),
+        'ai_review' => (string) ($aiReview['summary'] ?? ($record['ai_feedback_summary'] ?? '')),
+    ];
 }
 
 function parent_linked_students(string $parentEmail): array {

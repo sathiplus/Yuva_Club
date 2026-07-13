@@ -30,6 +30,8 @@ function reset_test_environment(): void {
         portal_path('portal-data') . DIRECTORY_SEPARATOR . 'organization-admin-accounts.json',
         portal_path('portal-data') . DIRECTORY_SEPARATOR . 'organization-admin-invitation-tokens.json',
         portal_path('portal-data') . DIRECTORY_SEPARATOR . 'organization-admin-invitation-delivery.jsonl',
+        portal_path('portal-data') . DIRECTORY_SEPARATOR . 'organization-student-memberships.json',
+        portal_path('portal-data') . DIRECTORY_SEPARATOR . 'organization-student-invitation-delivery.jsonl',
         portal_path('portal-data') . DIRECTORY_SEPARATOR . 'security-audit-log.jsonl',
         portal_path('portal-data') . DIRECTORY_SEPARATOR . 'login-attempts.json',
         portal_path('submissions') . DIRECTORY_SEPARATOR . 'registrations-current.csv',
@@ -84,6 +86,7 @@ function write_test_registrations(): void {
                 'Submitted At' => gmdate('c'),
                 'Yuva Club ID' => 'YC2026002',
                 'Membership Type' => 'Individual',
+                'Organization Code' => 'SSP-NY',
                 'Student First Name' => 'Second',
                 'Student Last Name' => 'Student',
                 'Date of Birth' => '2011-01-01',
@@ -111,6 +114,7 @@ function write_test_registrations(): void {
                 'Submitted At' => gmdate('c'),
                 'Yuva Club ID' => 'YC2026003',
                 'Membership Type' => 'Individual',
+                'Organization Code' => 'TEAK-NY',
                 'Student First Name' => 'Unlinked',
                 'Student Last Name' => 'Student',
                 'Date of Birth' => '2010-01-01',
@@ -264,6 +268,61 @@ assert_true(update_organization_admin_status($masterAdmin, $orgAdminEmail, 'acti
 assert_true(update_organization_admin_assignment($masterAdmin, $orgAdminEmail, 'TEAK-NY'), 'master admin should change organization assignment');
 assert_true((organization_admin_by_email($orgAdminEmail)['organization_id'] ?? '') === 'TEAK-NY', 'organization assignment should update');
 
+$sspAdmin = [
+    'id' => admin_actor_id('ssp.admin@example.test'),
+    'email' => 'ssp.admin@example.test',
+    'role' => YUVA_ROLE_ORGANIZATION_ADMIN,
+    'organization_id' => 'SSP-NY',
+];
+$teakAdmin = [
+    'id' => admin_actor_id('teak.admin@example.test'),
+    'email' => 'teak.admin@example.test',
+    'role' => YUVA_ROLE_ORGANIZATION_ADMIN,
+    'organization_id' => 'TEAK-NY',
+];
+putenv('YUVA_CAPTURE_STUDENT_INVITATION_LINKS=1');
+assert_true(
+    upsert_organization_student_membership($sspAdmin, [
+        'student_email' => 'new.student@example.test',
+        'status' => 'Invited',
+        'group' => 'Leadership A',
+        'coach' => 'Coach One',
+        'send_invite' => true,
+    ])['ok'],
+    'organization admin should invite a new student membership'
+);
+assert_true(
+    upsert_organization_student_membership($sspAdmin, [
+        'student_id' => 'YC2026002',
+        'status' => 'Active',
+        'group' => 'Leadership A',
+        'teacher' => 'Teacher One',
+    ])['ok'],
+    'organization admin should link an existing YUVA student to the assigned organization'
+);
+$sspMemberships = organization_student_memberships_for_org('SSP-NY');
+assert_true(count($sspMemberships) >= 2, 'SSP organization memberships should include explicit and registration-linked records');
+assert_true(organization_student_can_access('SSP-NY', 'YC2026002'), 'organization admin should access students in assigned organization');
+assert_false(organization_student_can_access('SSP-NY', 'YC2026003'), 'organization admin must not access another organization student');
+$sspKey = organization_student_membership_key('SSP-NY', 'YC2026002');
+$teakKey = organization_student_membership_key('TEAK-NY', 'YC2026003');
+assert_true(
+    update_organization_student_membership($sspAdmin, $sspKey, ['status' => 'Active', 'group' => 'Leadership B', 'coach' => 'Coach Two']),
+    'organization admin should update own organization membership assignments'
+);
+assert_false(
+    update_organization_student_membership($sspAdmin, $teakKey, ['status' => 'Archived']),
+    'organization admin must not update cross-organization memberships'
+);
+assert_true(
+    update_organization_student_membership($sspAdmin, $sspKey, ['status' => 'Archived']),
+    'organization admin should archive membership without deleting global student identity'
+);
+assert_true(find_student('YC2026002') !== null, 'archiving organization membership must not delete global student record');
+assert_false(organization_student_can_access('SSP-NY', 'YC2026002'), 'archived organization membership should no longer grant organization access');
+$studentInviteLog = file_exists(organization_student_invitation_delivery_file()) ? file_get_contents(organization_student_invitation_delivery_file()) : '';
+assert_true(is_string($studentInviteLog) && str_contains($studentInviteLog, 'registration.php'), 'student invitation should capture registration URL in test mode');
+
 $csrf = csrf_token();
 assert_true(verify_csrf_token($csrf), 'valid CSRF token should verify');
 assert_false(verify_csrf_token('invalid-token'), 'invalid CSRF token should fail');
@@ -273,6 +332,8 @@ assert_true(is_string($audit) && str_contains($audit, 'parent.activation.request
 assert_true(str_contains($audit, 'parent.activation.completed'), 'activation completion should be audited');
 assert_true(str_contains($audit, 'organization_admin.invitation.send'), 'organization admin invitation should be audited');
 assert_true(str_contains($audit, 'organization_admin.invitation.complete'), 'organization admin activation should be audited');
+assert_true(str_contains($audit, 'organization_student.membership.upsert'), 'organization student membership changes should be audited');
+assert_true(str_contains($audit, 'organization_student.membership.update'), 'organization student membership updates should be audited');
 assert_false(str_contains($audit, 'SecureParent@123'), 'audit log must not contain passwords');
 assert_false(str_contains($audit, 'SecureOrgAdmin@123'), 'audit log must not contain organization admin passwords');
 assert_false(str_contains($audit, explode('.', $token, 2)[1]), 'audit log must not contain raw activation token');
