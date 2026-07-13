@@ -272,7 +272,7 @@ $headers = [
     'Why Join',
     'Presentation Experience',
     'Presentation Topics',
-    'Availability Preferences',
+    'Preferred Schedule',
     'Suggestions',
     'Code of Conduct Agreement',
     'Recording Agreement',
@@ -350,6 +350,14 @@ if (database_settings_present()) {
             'parent_permission_granted' => checked_bool('agree_parent_permission'),
             'ip_address' => $ipAddress,
         ]);
+        $studentId = append_registration_row($csvPath, $headers, $row, $studentIdYear, $idScanPaths);
+        if ($studentId === '') {
+            throw new RuntimeException('Portal registration sync failed.');
+        }
+        $row[1] = $studentId;
+        append_registration_row($fullCsvPath, $headers, $row, $studentIdYear, $idScanPaths);
+        create_student_account($studentId, $studentEmail, $parentEmail, $accountPassword);
+        create_parent_account($parentEmail, $accountPassword, $studentId);
         $storedInDatabase = true;
     } catch (Throwable $error) {
         error_log('Yuva Club database registration failed: ' . $error->getMessage());
@@ -360,7 +368,7 @@ if (database_settings_present()) {
     $studentId = append_registration_row($csvPath, $headers, $row, $studentIdYear, $idScanPaths);
 }
 
-if (!$storedInDatabase && $studentId === '') {
+if ($studentId === '') {
     header('Location: registration.php?status=error');
     exit;
 }
@@ -373,10 +381,11 @@ if (!$storedInDatabase) {
 }
 
 if ($notificationEmail !== '') {
-    $registrationReference = $storedInDatabase ? ('Registration #' . (string) $registrationId) : $studentId;
+    $registrationReference = $storedInDatabase ? ($studentId . ' / Registration #' . (string) $registrationId) : $studentId;
     $subject = "New Yuva Club Registration: $registrationReference";
     $message = "New Yuva Club registration:\n\n"
-        . ($storedInDatabase ? "Registration ID: $registrationId\n" : "Yuva Club ID: $studentId\n")
+        . "Yuva Club ID: $studentId\n"
+        . ($storedInDatabase ? "Database Registration ID: $registrationId\n" : '')
         . "Submitted At: $submittedAt\n\n"
         . "Membership Type: " . ($membershipType === 'organization' ? 'Join Organization' : 'Individual Membership') . "\n"
         . "Organization Code: $organizationCode\n\n"
@@ -410,7 +419,7 @@ if ($notificationEmail !== '') {
 }
 
 $query = $storedInDatabase
-    ? 'status=success&registration=' . urlencode((string) $registrationId)
+    ? 'status=success&id=' . urlencode($studentId) . '&registration=' . urlencode((string) $registrationId)
     : 'status=success&id=' . urlencode($studentId);
 header('Location: registration.php?' . $query);
 exit;
