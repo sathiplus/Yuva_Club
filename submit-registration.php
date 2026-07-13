@@ -413,9 +413,7 @@ if ($notificationEmail !== '') {
         . "Code of Conduct Agreement: $agreeCode\n"
         . "Recording Agreement: $agreeRecording\n"
         . "Parent Permission: $agreeParentPermission\n";
-    $headersText = "From: noreply@yuvaclub.app\r\n"
-        . "Reply-To: $parentEmail\r\n";
-    @mail($notificationEmail, $subject, $message, $headersText);
+    send_yuva_email($notificationEmail, $subject, $message, $parentEmail);
 }
 
 $query = $storedInDatabase

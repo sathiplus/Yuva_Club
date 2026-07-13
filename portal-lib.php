@@ -473,6 +473,125 @@ function parent_activation_url(string $activationToken): string {
     return public_base_url() . '/parent-activate.php?token=' . rawurlencode($activationToken);
 }
 
+function yuva_email_from_address(): string {
+    $from = trim((string) (getenv('YUVA_EMAIL_FROM') ?: 'DoNotReply@yuvaclub.app'));
+    return filter_var($from, FILTER_VALIDATE_EMAIL) ? $from : 'DoNotReply@yuvaclub.app';
+}
+
+function yuva_email_reply_to_address(): string {
+    $replyTo = trim((string) (getenv('YUVA_EMAIL_REPLY_TO') ?: 'support@yuvaclub.app'));
+    return filter_var($replyTo, FILTER_VALIDATE_EMAIL) ? $replyTo : 'support@yuvaclub.app';
+}
+
+function yuva_email_connection_parts(string $connectionString): array {
+    $parts = [];
+    foreach (explode(';', $connectionString) as $part) {
+        if (strpos($part, '=') === false) {
+            continue;
+        }
+        [$key, $value] = explode('=', $part, 2);
+        $parts[strtolower(trim($key))] = trim($value);
+    }
+    return $parts;
+}
+
+function send_yuva_email_via_azure(string $to, string $subject, string $plainText, string $html = ''): bool {
+    $connectionString = trim((string) (getenv('YUVA_EMAIL_CONNECTION_STRING') ?: ''));
+    if ($connectionString === '' || !function_exists('curl_init')) {
+        return false;
+    }
+
+    $parts = yuva_email_connection_parts($connectionString);
+    $endpoint = rtrim((string) ($parts['endpoint'] ?? ''), '/');
+    $accessKey = (string) ($parts['accesskey'] ?? '');
+    if ($endpoint === '' || $accessKey === '') {
+        error_log('Yuva Club Azure email is not configured correctly.');
+        return false;
+    }
+
+    $url = $endpoint . '/emails:send?api-version=2023-03-31';
+    $payload = [
+        'senderAddress' => yuva_email_from_address(),
+        'recipients' => [
+            'to' => [
+                ['address' => $to],
+            ],
+        ],
+        'content' => [
+            'subject' => $subject,
+            'plainText' => $plainText,
+        ],
+    ];
+    if ($html !== '') {
+        $payload['content']['html'] = $html;
+    }
+
+    $body = json_encode($payload, JSON_UNESCAPED_SLASHES);
+    if ($body === false) {
+        return false;
+    }
+
+    $urlParts = parse_url($url);
+    $host = (string) ($urlParts['host'] ?? '');
+    $path = (string) ($urlParts['path'] ?? '');
+    $query = isset($urlParts['query']) ? '?' . $urlParts['query'] : '';
+    $pathAndQuery = $path . $query;
+    $date = gmdate('D, d M Y H:i:s') . ' GMT';
+    $contentHash = base64_encode(hash('sha256', $body, true));
+    $decodedKey = base64_decode($accessKey, true);
+    if ($host === '' || $pathAndQuery === '' || $decodedKey === false) {
+        return false;
+    }
+    $stringToSign = "POST\n{$pathAndQuery}\n{$date};{$host};{$contentHash}";
+    $signature = base64_encode(hash_hmac('sha256', $stringToSign, $decodedKey, true));
+    $authorization = 'HMAC-SHA256 SignedHeaders=x-ms-date;host;x-ms-content-sha256&Signature=' . $signature;
+
+    $curl = curl_init($url);
+    if ($curl === false) {
+        return false;
+    }
+    curl_setopt_array($curl, [
+        CURLOPT_POST => true,
+        CURLOPT_POSTFIELDS => $body,
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_TIMEOUT => 20,
+        CURLOPT_HTTPHEADER => [
+            'Content-Type: application/json',
+            'x-ms-date: ' . $date,
+            'x-ms-content-sha256: ' . $contentHash,
+            'Authorization: ' . $authorization,
+        ],
+    ]);
+    curl_exec($curl);
+    $status = (int) curl_getinfo($curl, CURLINFO_RESPONSE_CODE);
+    $error = curl_error($curl);
+    curl_close($curl);
+
+    if ($status >= 200 && $status < 300) {
+        return true;
+    }
+    error_log('Yuva Club Azure email send failed. HTTP status: ' . $status . ($error !== '' ? ' Error: ' . $error : ''));
+    return false;
+}
+
+function send_yuva_email(string $to, string $subject, string $plainText, string $replyTo = '', string $html = ''): bool {
+    $to = normalize_email($to);
+    if ($to === '' || !filter_var($to, FILTER_VALIDATE_EMAIL)) {
+        return false;
+    }
+
+    $provider = strtolower(trim((string) (getenv('YUVA_EMAIL_PROVIDER') ?: '')));
+    if ($provider === 'azure_communication_services' || $provider === 'azure') {
+        return send_yuva_email_via_azure($to, $subject, $plainText, $html);
+    }
+
+    $from = yuva_email_from_address();
+    $replyToAddress = filter_var($replyTo, FILTER_VALIDATE_EMAIL) ? $replyTo : yuva_email_reply_to_address();
+    $headers = "From: {$from}\r\n"
+        . "Reply-To: {$replyToAddress}\r\n";
+    return @mail($to, $subject, $plainText, $headers);
+}
+
 function send_parent_activation_email(string $parentEmail, string $activationUrl): bool {
     $email = normalize_email($parentEmail);
     if ($email === '') {
@@ -485,10 +604,8 @@ function send_parent_activation_email(string $parentEmail, string $activationUrl
         . $activationUrl . "\n\n"
         . "This link expires in 60 minutes. If you did not request this, you can ignore this email.\n\n"
         . "YUVA Club";
-    $headers = "From: noreply@yuvaclub.app\r\n"
-        . "Reply-To: support@yuvaclub.app\r\n";
 
-    $sent = @mail($email, $subject, $message, $headers);
+    $sent = send_yuva_email($email, $subject, $message);
     if ((getenv('YUVA_CAPTURE_PARENT_ACTIVATION_LINKS') ?: '') === '1') {
         file_put_contents(parent_activation_delivery_file(), json_encode([
             'created_at' => gmdate('c'),
@@ -561,10 +678,8 @@ function send_organization_admin_invitation_email(string $email, string $fullNam
         . $invitationUrl . "\n\n"
         . "This link is single-use and expires in 72 hours. If you did not expect this invitation, please contact YUVA Club support.\n\n"
         . "YUVA Club";
-    $headers = "From: noreply@yuvaclub.app\r\n"
-        . "Reply-To: support@yuvaclub.app\r\n";
 
-    $sent = @mail($email, $subject, $message, $headers);
+    $sent = send_yuva_email($email, $subject, $message);
     if ((getenv('YUVA_CAPTURE_ADMIN_INVITATION_LINKS') ?: '') === '1') {
         file_put_contents(organization_admin_invitation_delivery_file(), json_encode([
             'created_at' => gmdate('c'),
@@ -902,10 +1017,8 @@ function send_organization_student_invitation_email(string $studentEmail, string
         . "You have been invited to join YUVA Club through organization {$organizationId}.\n\n"
         . "Visit " . public_base_url() . "/registration.php to create or connect your student account. Keep this organization code: {$organizationId}.\n\n"
         . "YUVA Club";
-    $headers = "From: noreply@yuvaclub.app\r\n"
-        . "Reply-To: support@yuvaclub.app\r\n";
 
-    $sent = @mail($studentEmail, $subject, $message, $headers);
+    $sent = send_yuva_email($studentEmail, $subject, $message);
     if ((getenv('YUVA_CAPTURE_STUDENT_INVITATION_LINKS') ?: '') === '1') {
         file_put_contents(organization_student_invitation_delivery_file(), json_encode([
             'created_at' => gmdate('c'),
