@@ -4,9 +4,7 @@ require __DIR__ . '/portal-lib.php';
 $isAdmin = ($_SESSION['admin_logged_in'] ?? false) === true;
 $isStudent = logged_in_student_id() !== null;
 $isParent = normalize_yuva_id($_SESSION['parent_student_id'] ?? '') !== '';
-if (!$isAdmin && !$isStudent && !$isParent) {
-    redirect_to('portal-login.php');
-}
+$canViewStudentIds = $isAdmin || $isStudent || $isParent;
 
 $programFilter = clean_text($_GET['program'] ?? '');
 $stageFilter = clean_text($_GET['stage'] ?? '');
@@ -107,7 +105,12 @@ portal_header('Challenge Leaderboard');
           <?php foreach ($rows as $index => $row): ?>
             <tr>
               <td><?php echo e((string) ($index + 1)); ?></td>
-              <td><?php echo e($row['name']); ?><br><small><?php echo e($row['student_id']); ?></small></td>
+              <td>
+                <?php echo e($row['name']); ?>
+                <?php if ($canViewStudentIds): ?>
+                  <br><small><?php echo e($row['student_id']); ?></small>
+                <?php endif; ?>
+              </td>
               <td><?php echo e($row['program']); ?></td>
               <td><?php echo e($row['rank']); ?></td>
               <td><?php echo e($row['stage']); ?></td>
