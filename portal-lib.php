@@ -660,6 +660,7 @@ function provision_organization_admin_invitation(array $admin, string $organizat
         return true;
     }
 
+    audit_log_event($admin['id'], $admin['role'], $admin['organization_id'], 'organization_admin.invitation.create', 'organization_admin', $email, true, ['organization_id' => $organizationId, 'status' => $status]);
     return send_organization_admin_invitation($admin, $email, 'invitation');
 }
 
@@ -684,8 +685,11 @@ function send_organization_admin_invitation(array $admin, string $email, string 
     $accounts[$email]['updated_at'] = gmdate('c');
     write_organization_admin_accounts($accounts);
 
-    audit_log_event($admin['id'], $admin['role'], $admin['organization_id'], $purpose === 'password_reset' ? 'organization_admin.password_reset.send' : 'organization_admin.invitation.send', 'organization_admin', $email, $sent, ['organization_id' => $account['organization_id'] ?? null]);
-    return $sent;
+    audit_log_event($admin['id'], $admin['role'], $admin['organization_id'], $purpose === 'password_reset' ? 'organization_admin.password_reset.send' : 'organization_admin.invitation.send', 'organization_admin', $email, true, [
+        'organization_id' => $account['organization_id'] ?? null,
+        'email_delivery' => $sent ? 'sent' : 'failed',
+    ]);
+    return true;
 }
 
 function complete_organization_admin_invitation(string $token, string $password): bool {

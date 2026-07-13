@@ -118,7 +118,7 @@ portal_header('Platform Administrator Dashboard');
     <?php elseif ($status === 'ai-missing'): ?>
       <div class="form-status error">AI Coach needs a student with a selected topic and submitted research.</div>
     <?php elseif ($status === 'org-admin-invited'): ?>
-      <div class="form-status success">Organization administrator invitation was created.</div>
+      <div class="form-status success">Organization administrator invitation was created. Check the invitation status below to confirm email delivery.</div>
     <?php elseif ($status === 'org-admin-updated'): ?>
       <div class="form-status success">Organization administrator account was updated.</div>
     <?php elseif ($status === 'org-admin-error'): ?>

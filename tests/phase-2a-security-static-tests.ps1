@@ -80,6 +80,7 @@ Assert-FileContains 'portal-lib.php' 'PASSWORD_DEFAULT' 'Parent activation must 
 Assert-FileContains 'portal-lib.php' 'organization_admin_invitation_tokens_file' 'Organization admin invitation tokens must have dedicated storage.'
 Assert-FileContains 'portal-lib.php' 'complete_organization_admin_invitation' 'Organization admin invitation completion helper must exist.'
 Assert-FileContains 'portal-lib.php' 'organization_admin_password_matches' 'Organization admin login must verify activated hashed passwords.'
+Assert-FileContains 'portal-lib.php' 'email_delivery' 'Organization admin invitation creation must record email delivery status without failing account creation.'
 Assert-FileContains 'portal-lib.php' 'email === YUVA_PLATFORM_ADMIN_EMAIL' 'Organization users must not be allowed to become the platform MasterAdmin.'
 Assert-FileContains 'portal-lib.php' 'sync_parent_links_from_registrations' 'Existing parent relationships must be reconciled from registration records.'
 Assert-FileContains 'parent-activate.php' 'If that email is connected' 'Parent activation request response must be generic.'
