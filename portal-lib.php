@@ -121,6 +121,18 @@ function admin_credentials_file(): string {
     return portal_path('portal-data') . DIRECTORY_SEPARATOR . 'admin-credentials.json';
 }
 
+function organization_admin_accounts_file(): string {
+    return portal_path('portal-data') . DIRECTORY_SEPARATOR . 'organization-admin-accounts.json';
+}
+
+function organization_admin_invitation_tokens_file(): string {
+    return portal_path('portal-data') . DIRECTORY_SEPARATOR . 'organization-admin-invitation-tokens.json';
+}
+
+function organization_admin_invitation_delivery_file(): string {
+    return portal_path('portal-data') . DIRECTORY_SEPARATOR . 'organization-admin-invitation-delivery.jsonl';
+}
+
 function parent_accounts_file(): string {
     return portal_path('portal-data') . DIRECTORY_SEPARATOR . 'parent-accounts.json';
 }
@@ -225,9 +237,15 @@ function admin_actor_id(string $email): string {
     return 'admin:' . hash('sha256', normalize_email($email));
 }
 
+function normalize_organization_id(string $value): string {
+    $value = strtoupper(clean_text($value));
+    $value = preg_replace('/[^A-Z0-9_-]/', '', $value) ?? '';
+    return $value !== '' ? $value : YUVA_PLATFORM_ORGANIZATION_ID;
+}
+
 function student_organization_id(array $student): string {
     $code = clean_text((string) ($student['Organization Code'] ?? ''));
-    return $code !== '' ? strtoupper($code) : YUVA_PLATFORM_ORGANIZATION_ID;
+    return $code !== '' ? normalize_organization_id($code) : YUVA_PLATFORM_ORGANIZATION_ID;
 }
 
 function create_parent_account(string $parentEmail, string $password, string $studentId): void {
@@ -472,6 +490,286 @@ function send_parent_activation_email(string $parentEmail, string $activationUrl
         ]) . PHP_EOL, FILE_APPEND | LOCK_EX);
     }
     return $sent;
+}
+
+function organization_admin_accounts(): array {
+    return read_json_file(organization_admin_accounts_file(), []);
+}
+
+function write_organization_admin_accounts(array $accounts): void {
+    write_json_file(organization_admin_accounts_file(), $accounts);
+}
+
+function organization_admin_invitation_tokens(): array {
+    return read_json_file(organization_admin_invitation_tokens_file(), []);
+}
+
+function write_organization_admin_invitation_tokens(array $tokens): void {
+    write_json_file(organization_admin_invitation_tokens_file(), $tokens);
+}
+
+function organization_admin_by_email(string $email): ?array {
+    $account = organization_admin_accounts()[normalize_email($email)] ?? null;
+    return is_array($account) ? $account : null;
+}
+
+function organization_admin_public_view(array $account): array {
+    unset($account['password_hash']);
+    return $account;
+}
+
+function organization_options(): array {
+    $options = [];
+    foreach (portal_students() as $student) {
+        $orgId = student_organization_id($student);
+        if ($orgId !== YUVA_PLATFORM_ORGANIZATION_ID) {
+            $options[$orgId] = $orgId;
+        }
+    }
+    foreach (organization_admin_accounts() as $account) {
+        $orgId = normalize_organization_id((string) ($account['organization_id'] ?? ''));
+        if ($orgId !== YUVA_PLATFORM_ORGANIZATION_ID) {
+            $options[$orgId] = $orgId;
+        }
+    }
+    ksort($options);
+    return $options;
+}
+
+function organization_admin_invitation_url(string $token): string {
+    return public_base_url() . '/organization-admin-activate.php?token=' . rawurlencode($token);
+}
+
+function send_organization_admin_invitation_email(string $email, string $fullName, string $invitationUrl, string $purpose = 'invitation'): bool {
+    $email = normalize_email($email);
+    if ($email === '') {
+        return false;
+    }
+
+    $subject = $purpose === 'password_reset' ? 'Reset your YUVA Club organization admin password' : 'Activate your YUVA Club organization admin account';
+    $greeting = $fullName !== '' ? "Hello {$fullName}," : 'Hello,';
+    $message = $greeting . "\n\n"
+        . "Use this secure link to set up your YUVA Club organization administrator password:\n\n"
+        . $invitationUrl . "\n\n"
+        . "This link is single-use and expires in 72 hours. If you did not expect this invitation, please contact YUVA Club support.\n\n"
+        . "YUVA Club";
+    $headers = "From: noreply@yuvaclub.app\r\n"
+        . "Reply-To: support@yuvaclub.app\r\n";
+
+    $sent = @mail($email, $subject, $message, $headers);
+    if ((getenv('YUVA_CAPTURE_ADMIN_INVITATION_LINKS') ?: '') === '1') {
+        file_put_contents(organization_admin_invitation_delivery_file(), json_encode([
+            'created_at' => gmdate('c'),
+            'admin_email_hash' => hash('sha256', $email),
+            'delivery' => $sent ? 'mail_and_development_file' : 'development_file',
+            'purpose' => $purpose,
+            'activation_url' => $invitationUrl,
+        ]) . PHP_EOL, FILE_APPEND | LOCK_EX);
+        return true;
+    }
+
+    return $sent;
+}
+
+function create_organization_admin_token(string $email, string $purpose = 'invitation'): ?string {
+    $email = normalize_email($email);
+    $account = organization_admin_by_email($email);
+    if ($email === '' || $account === null || ($account['role'] ?? '') !== YUVA_ROLE_ORGANIZATION_ADMIN) {
+        return null;
+    }
+
+    $token = bin2hex(random_bytes(32));
+    $tokenId = bin2hex(random_bytes(16));
+    $tokens = organization_admin_invitation_tokens();
+    $tokens[$tokenId] = [
+        'token_hash' => hash('sha256', $token),
+        'admin_email' => $email,
+        'purpose' => $purpose,
+        'created_at' => gmdate('c'),
+        'expires_at' => gmdate('c', time() + 259200),
+        'used_at' => null,
+    ];
+    write_organization_admin_invitation_tokens($tokens);
+    return $tokenId . '.' . $token;
+}
+
+function organization_admin_token_record(string $token): ?array {
+    $parts = explode('.', $token, 2);
+    if (count($parts) !== 2) {
+        return null;
+    }
+    [$tokenId, $secret] = $parts;
+    $tokens = organization_admin_invitation_tokens();
+    $record = $tokens[$tokenId] ?? null;
+    if (!is_array($record) || !empty($record['used_at'])) {
+        return null;
+    }
+    if (strtotime((string) ($record['expires_at'] ?? '')) < time()) {
+        return null;
+    }
+    if (!hash_equals((string) ($record['token_hash'] ?? ''), hash('sha256', $secret))) {
+        return null;
+    }
+    $record['token_id'] = $tokenId;
+    return $record;
+}
+
+function provision_organization_admin_invitation(array $admin, string $organizationId, string $fullName, string $email, string $role, string $status): bool {
+    $email = normalize_email($email);
+    $organizationId = normalize_organization_id($organizationId);
+    $fullName = clean_text($fullName);
+    $status = in_array($status, ['pending_invitation', 'suspended'], true) ? $status : 'pending_invitation';
+    if ($email === '' || $organizationId === YUVA_PLATFORM_ORGANIZATION_ID || $fullName === '' || $role !== YUVA_ROLE_ORGANIZATION_ADMIN) {
+        audit_log_event($admin['id'], $admin['role'], $admin['organization_id'], 'organization_admin.invitation.create', 'organization_admin', $email, false, ['reason' => 'invalid_input']);
+        return false;
+    }
+    if ($email === YUVA_PLATFORM_ADMIN_EMAIL) {
+        audit_log_event($admin['id'], $admin['role'], $admin['organization_id'], 'organization_admin.invitation.create', 'organization_admin', $email, false, ['reason' => 'master_admin_reserved']);
+        return false;
+    }
+
+    $accounts = organization_admin_accounts();
+    $existing = is_array($accounts[$email] ?? null) ? $accounts[$email] : [];
+    $accounts[$email] = array_merge($existing, [
+        'email' => $email,
+        'full_name' => $fullName,
+        'role' => YUVA_ROLE_ORGANIZATION_ADMIN,
+        'organization_id' => $organizationId,
+        'status' => $status,
+        'email_verified' => false,
+        'invitation_status' => $status === 'suspended' ? 'not_sent_suspended' : 'pending',
+        'invited_at' => $existing['invited_at'] ?? gmdate('c'),
+        'updated_at' => gmdate('c'),
+        'last_login_at' => $existing['last_login_at'] ?? '',
+    ]);
+    if (!array_key_exists('password_hash', $accounts[$email])) {
+        $accounts[$email]['password_hash'] = '';
+    }
+    write_organization_admin_accounts($accounts);
+
+    if ($status === 'suspended') {
+        audit_log_event($admin['id'], $admin['role'], $admin['organization_id'], 'organization_admin.invitation.create', 'organization_admin', $email, true, ['organization_id' => $organizationId, 'status' => $status]);
+        return true;
+    }
+
+    return send_organization_admin_invitation($admin, $email, 'invitation');
+}
+
+function send_organization_admin_invitation(array $admin, string $email, string $purpose = 'invitation'): bool {
+    $email = normalize_email($email);
+    $accounts = organization_admin_accounts();
+    $account = is_array($accounts[$email] ?? null) ? $accounts[$email] : null;
+    if ($account === null || ($account['role'] ?? '') !== YUVA_ROLE_ORGANIZATION_ADMIN || ($account['status'] ?? '') === 'suspended') {
+        audit_log_event($admin['id'], $admin['role'], $admin['organization_id'], 'organization_admin.invitation.send', 'organization_admin', $email, false, ['reason' => 'not_invitable']);
+        return false;
+    }
+
+    $token = create_organization_admin_token($email, $purpose);
+    if ($token === null) {
+        return false;
+    }
+    $url = organization_admin_invitation_url($token);
+    $sent = send_organization_admin_invitation_email($email, (string) ($account['full_name'] ?? ''), $url, $purpose);
+
+    $accounts[$email]['invitation_status'] = $sent ? 'sent' : 'delivery_failed';
+    $accounts[$email]['invitation_sent_at'] = gmdate('c');
+    $accounts[$email]['updated_at'] = gmdate('c');
+    write_organization_admin_accounts($accounts);
+
+    audit_log_event($admin['id'], $admin['role'], $admin['organization_id'], $purpose === 'password_reset' ? 'organization_admin.password_reset.send' : 'organization_admin.invitation.send', 'organization_admin', $email, $sent, ['organization_id' => $account['organization_id'] ?? null]);
+    return $sent;
+}
+
+function complete_organization_admin_invitation(string $token, string $password): bool {
+    $record = organization_admin_token_record($token);
+    $email = normalize_email((string) ($record['admin_email'] ?? ''));
+    if ($record === null || $email === '' || password_policy_error($password) !== '') {
+        audit_log_event($email !== '' ? admin_actor_id($email) : null, YUVA_ROLE_ORGANIZATION_ADMIN, null, 'organization_admin.invitation.complete', 'organization_admin', $email !== '' ? $email : null, false);
+        return false;
+    }
+
+    $accounts = organization_admin_accounts();
+    $account = is_array($accounts[$email] ?? null) ? $accounts[$email] : null;
+    if ($account === null || ($account['role'] ?? '') !== YUVA_ROLE_ORGANIZATION_ADMIN || ($account['status'] ?? '') === 'suspended') {
+        audit_log_event(admin_actor_id($email), YUVA_ROLE_ORGANIZATION_ADMIN, null, 'organization_admin.invitation.complete', 'organization_admin', $email, false, ['reason' => 'invalid_account']);
+        return false;
+    }
+
+    $accounts[$email] = array_merge($account, [
+        'password_hash' => password_hash($password, PASSWORD_DEFAULT),
+        'status' => 'active',
+        'email_verified' => true,
+        'invitation_status' => 'accepted',
+        'activated_at' => gmdate('c'),
+        'updated_at' => gmdate('c'),
+    ]);
+    write_organization_admin_accounts($accounts);
+
+    $tokens = organization_admin_invitation_tokens();
+    $tokenId = (string) ($record['token_id'] ?? '');
+    if ($tokenId !== '' && isset($tokens[$tokenId])) {
+        $tokens[$tokenId]['used_at'] = gmdate('c');
+        write_organization_admin_invitation_tokens($tokens);
+    }
+
+    audit_log_event(admin_actor_id($email), YUVA_ROLE_ORGANIZATION_ADMIN, (string) ($account['organization_id'] ?? ''), 'organization_admin.invitation.complete', 'organization_admin', $email, true);
+    return true;
+}
+
+function update_organization_admin_status(array $admin, string $email, string $status): bool {
+    $email = normalize_email($email);
+    $status = in_array($status, ['active', 'suspended'], true) ? $status : '';
+    $accounts = organization_admin_accounts();
+    if ($email === '' || $status === '' || !is_array($accounts[$email] ?? null)) {
+        return false;
+    }
+    $accounts[$email]['status'] = $status;
+    $accounts[$email]['updated_at'] = gmdate('c');
+    write_organization_admin_accounts($accounts);
+    audit_log_event($admin['id'], $admin['role'], $admin['organization_id'], 'organization_admin.status.update', 'organization_admin', $email, true, ['status' => $status]);
+    return true;
+}
+
+function update_organization_admin_assignment(array $admin, string $email, string $organizationId): bool {
+    $email = normalize_email($email);
+    $organizationId = normalize_organization_id($organizationId);
+    $accounts = organization_admin_accounts();
+    if ($email === '' || $organizationId === YUVA_PLATFORM_ORGANIZATION_ID || !is_array($accounts[$email] ?? null)) {
+        return false;
+    }
+    $accounts[$email]['organization_id'] = $organizationId;
+    $accounts[$email]['updated_at'] = gmdate('c');
+    write_organization_admin_accounts($accounts);
+    audit_log_event($admin['id'], $admin['role'], $admin['organization_id'], 'organization_admin.assignment.update', 'organization_admin', $email, true, ['organization_id' => $organizationId]);
+    return true;
+}
+
+function organization_admin_password_matches(string $email, string $password): ?array {
+    $email = normalize_email($email);
+    $account = organization_admin_by_email($email);
+    $hash = (string) ($account['password_hash'] ?? '');
+    if (
+        $account === null
+        || ($account['role'] ?? '') !== YUVA_ROLE_ORGANIZATION_ADMIN
+        || ($account['status'] ?? '') !== 'active'
+        || empty($account['email_verified'])
+        || $hash === ''
+        || !password_verify($password, $hash)
+    ) {
+        return null;
+    }
+    return $account;
+}
+
+function record_organization_admin_login(string $email): void {
+    $email = normalize_email($email);
+    $accounts = organization_admin_accounts();
+    if (!is_array($accounts[$email] ?? null)) {
+        return;
+    }
+    $accounts[$email]['last_login_at'] = gmdate('c');
+    $accounts[$email]['updated_at'] = gmdate('c');
+    write_organization_admin_accounts($accounts);
 }
 
 function parent_linked_students(string $parentEmail): array {
@@ -1247,6 +1545,32 @@ function admin_password_matches(string $email, string $password): bool {
         && hash_equals((string) ($credentials['password_hash'] ?? ''), password_hash_for_admin($password));
 }
 
+function authenticate_admin_account(string $email, string $password): ?array {
+    $email = normalize_email($email);
+    if (admin_password_matches($email, $password)) {
+        return [
+            'id' => admin_actor_id(YUVA_PLATFORM_ADMIN_EMAIL),
+            'email' => YUVA_PLATFORM_ADMIN_EMAIL,
+            'role' => YUVA_ROLE_MASTER_ADMIN,
+            'organization_id' => YUVA_PLATFORM_ORGANIZATION_ID,
+            'redirect' => 'admin.php',
+        ];
+    }
+
+    $organizationAdmin = organization_admin_password_matches($email, $password);
+    if ($organizationAdmin !== null) {
+        return [
+            'id' => admin_actor_id($email),
+            'email' => $email,
+            'role' => YUVA_ROLE_ORGANIZATION_ADMIN,
+            'organization_id' => normalize_organization_id((string) ($organizationAdmin['organization_id'] ?? '')),
+            'redirect' => 'organization-admin.php',
+        ];
+    }
+
+    return null;
+}
+
 function current_admin_identity(): ?array {
     if (($_SESSION['admin_logged_in'] ?? false) !== true) {
         return null;
@@ -1258,6 +1582,14 @@ function current_admin_identity(): ?array {
     $startedAt = (int) ($_SESSION['admin_session_started_at'] ?? 0);
     if ($email === '' || $role === '' || $startedAt <= 0 || (time() - $startedAt) > YUVA_ADMIN_SESSION_TTL_SECONDS) {
         return null;
+    }
+
+    if ($role === YUVA_ROLE_ORGANIZATION_ADMIN) {
+        $account = organization_admin_by_email($email);
+        if ($account === null || ($account['status'] ?? '') !== 'active' || empty($account['email_verified'])) {
+            return null;
+        }
+        $organizationId = normalize_organization_id((string) ($account['organization_id'] ?? $organizationId));
     }
 
     return [

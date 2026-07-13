@@ -13,6 +13,21 @@ $collegeSession = group_session($hub, 'senior');
 $reports = safety_reports();
 $status = $_GET['status'] ?? '';
 $scheduledMeetings = [];
+$organizationAdmins = array_map('organization_admin_public_view', organization_admin_accounts());
+$organizationOptions = organization_options();
+$organizationAuditLines = [];
+if (file_exists(security_audit_file())) {
+    $lines = file(security_audit_file(), FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) ?: [];
+    foreach (array_reverse($lines) as $line) {
+        $entry = json_decode($line, true);
+        if (is_array($entry) && (($entry['target_type'] ?? '') === 'organization_admin' || str_starts_with((string) ($entry['action'] ?? ''), 'organization_admin.'))) {
+            $organizationAuditLines[] = $entry;
+        }
+        if (count($organizationAuditLines) >= 12) {
+            break;
+        }
+    }
+}
 
 foreach ($records as $recordStudentId => $record) {
     $recordStudentId = normalize_yuva_id((string) $recordStudentId);
@@ -102,6 +117,12 @@ portal_header('Platform Administrator Dashboard');
       <div class="form-status error">AI Coach could not run. Check that OPENAI_API_KEY is configured on the server.</div>
     <?php elseif ($status === 'ai-missing'): ?>
       <div class="form-status error">AI Coach needs a student with a selected topic and submitted research.</div>
+    <?php elseif ($status === 'org-admin-invited'): ?>
+      <div class="form-status success">Organization administrator invitation was created.</div>
+    <?php elseif ($status === 'org-admin-updated'): ?>
+      <div class="form-status success">Organization administrator account was updated.</div>
+    <?php elseif ($status === 'org-admin-error'): ?>
+      <div class="form-status error">Organization administrator request could not be completed.</div>
     <?php endif; ?>
 
     <form class="form-card" action="admin-password-actions.php" method="post">
@@ -127,6 +148,136 @@ portal_header('Platform Administrator Dashboard');
       </div>
       <button class="button primary" type="submit">Update Platform Administrator Login</button>
     </form>
+
+    <section class="form-card">
+      <h2>Organization Administrator Invitations</h2>
+      <p>Create and manage invitation-only organization administrator accounts. Passwords are created only by invited administrators through secure email links.</p>
+      <form action="admin-organization-admin-actions.php" method="post">
+        <?php echo csrf_field(); ?>
+        <input type="hidden" name="action" value="invite">
+        <div class="field-grid">
+          <div class="field">
+            <label for="organization_id">Organization *</label>
+            <input id="organization_id" name="organization_id" type="text" required list="organization_ids" placeholder="Example: SSP-NY">
+            <datalist id="organization_ids">
+              <?php foreach ($organizationOptions as $option): ?>
+                <option value="<?php echo e($option); ?>"></option>
+              <?php endforeach; ?>
+            </datalist>
+          </div>
+          <div class="field">
+            <label for="org_admin_full_name">Admin Full Name *</label>
+            <input id="org_admin_full_name" name="full_name" type="text" required maxlength="160">
+          </div>
+          <div class="field">
+            <label for="org_admin_email">Admin Email *</label>
+            <input id="org_admin_email" name="email" type="email" required autocomplete="off">
+          </div>
+          <div class="field">
+            <label for="org_admin_role">Role *</label>
+            <select id="org_admin_role" name="role" required>
+              <option value="<?php echo e(YUVA_ROLE_ORGANIZATION_ADMIN); ?>">Organization Admin</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="org_admin_status">Status *</label>
+            <select id="org_admin_status" name="status" required>
+              <option value="pending_invitation">Pending Invitation</option>
+              <option value="suspended">Suspended</option>
+            </select>
+          </div>
+        </div>
+        <button class="button primary" type="submit">Send Invitation</button>
+      </form>
+    </section>
+
+    <section class="form-card">
+      <h2>Organization Administrator Accounts</h2>
+      <?php if ($organizationAdmins === []): ?>
+        <p>No organization administrator accounts have been invited yet.</p>
+      <?php else: ?>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Organization</th>
+                <th>Status</th>
+                <th>Invitation</th>
+                <th>Last Login</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <?php foreach ($organizationAdmins as $account): ?>
+                <?php $accountEmail = normalize_email((string) ($account['email'] ?? '')); ?>
+                <tr>
+                  <td><?php echo e((string) ($account['full_name'] ?? '')); ?></td>
+                  <td><?php echo e($accountEmail); ?></td>
+                  <td><?php echo e((string) ($account['organization_id'] ?? '')); ?></td>
+                  <td><?php echo e((string) ($account['status'] ?? '')); ?></td>
+                  <td><?php echo e((string) ($account['invitation_status'] ?? '')); ?></td>
+                  <td><?php echo e((string) ($account['last_login_at'] ?? 'Never')); ?></td>
+                  <td>
+                    <form action="admin-organization-admin-actions.php" method="post" class="inline-form">
+                      <?php echo csrf_field(); ?>
+                      <input type="hidden" name="email" value="<?php echo e($accountEmail); ?>">
+                      <button class="button ghost" name="action" value="resend" type="submit">Resend</button>
+                      <button class="button ghost" name="action" value="password_reset" type="submit">Reset Link</button>
+                      <?php if (($account['status'] ?? '') === 'suspended'): ?>
+                        <button class="button ghost" name="action" value="reactivate" type="submit">Reactivate</button>
+                      <?php else: ?>
+                        <button class="button ghost" name="action" value="suspend" type="submit">Suspend</button>
+                      <?php endif; ?>
+                    </form>
+                    <form action="admin-organization-admin-actions.php" method="post" class="inline-form">
+                      <?php echo csrf_field(); ?>
+                      <input type="hidden" name="action" value="assignment">
+                      <input type="hidden" name="email" value="<?php echo e($accountEmail); ?>">
+                      <input name="organization_id" type="text" required value="<?php echo e((string) ($account['organization_id'] ?? '')); ?>" list="organization_ids">
+                      <button class="button ghost" type="submit">Change Org</button>
+                    </form>
+                  </td>
+                </tr>
+              <?php endforeach; ?>
+            </tbody>
+          </table>
+        </div>
+      <?php endif; ?>
+    </section>
+
+    <section class="form-card">
+      <h2>Organization Administrator Audit History</h2>
+      <?php if ($organizationAuditLines === []): ?>
+        <p>No organization administrator audit events have been recorded yet.</p>
+      <?php else: ?>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Time</th>
+                <th>Actor</th>
+                <th>Action</th>
+                <th>Target</th>
+                <th>Result</th>
+              </tr>
+            </thead>
+            <tbody>
+              <?php foreach ($organizationAuditLines as $entry): ?>
+                <tr>
+                  <td><?php echo e((string) ($entry['timestamp'] ?? '')); ?></td>
+                  <td><?php echo e((string) ($entry['actor_user_id'] ?? '')); ?></td>
+                  <td><?php echo e((string) ($entry['action'] ?? '')); ?></td>
+                  <td><?php echo e((string) ($entry['target_id'] ?? '')); ?></td>
+                  <td><?php echo !empty($entry['success']) ? 'Success' : 'Failed'; ?></td>
+                </tr>
+              <?php endforeach; ?>
+            </tbody>
+          </table>
+        </div>
+      <?php endif; ?>
+    </section>
 
     <form class="form-card" action="admin-hub-actions.php" method="post">
       <?php echo csrf_field(); ?>

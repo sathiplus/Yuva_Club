@@ -15,7 +15,7 @@ Phase 2B status: Not started.
 GitHub comparison result after the branch push:
 
 - `phase-2a-final-validation` was pushed to GitHub.
-- Branch was two commits ahead of `main`.
+- Branch was four commits ahead of `main` at baseline commit `7571154`.
 - Branch was zero commits behind `main`.
 - Base commit was `540e3c00c23aaa9fa4ffb46f4fcedfb66b2bc118`.
 - Pull request target should be `main`.
@@ -114,6 +114,12 @@ Workflow behavior:
 - Does not use production secrets.
 - Does not connect to production database resources.
 
+GitHub Actions result:
+
+- Passed on commit `7571154`.
+- Workflow: `Phase 2A PR Validation`.
+- Branch: `phase-2a-final-validation`.
+
 Local PHP syntax result:
 
 - Blocked because PHP CLI is not installed locally.
@@ -123,7 +129,7 @@ Required PR result:
 - The workflow must run on GitHub after this branch is pushed again with the push trigger.
 - Merge must not be recommended until this workflow passes.
 
-Status: Workflow created; GitHub Actions result blocked/pending because the latest trigger update is local and must be pushed.
+Status: Passed in GitHub Actions.
 
 ## 5. Static Test Results
 
@@ -176,10 +182,9 @@ It validates:
 
 Execution status:
 
-- Not executable locally because PHP CLI is unavailable.
-- Must pass in GitHub Actions PHP 8.3 workflow.
+- Passed in GitHub Actions PHP 8.3 workflow on commit `7571154`.
 
-Status: Test created; execution blocked/pending until GitHub Actions runs in PHP 8.3.
+Status: Passed in CI.
 
 ## 7. Parent Authorization Results
 
@@ -197,7 +202,7 @@ Not fully automated yet:
 - Logged-out dashboard access.
 - Expired parent session redirect.
 
-Status: Helper-level tests created; GitHub Actions execution pending. Full route tests remain blocked.
+Status: Helper-level tests passed in CI. Full browser route tests remain blocked.
 
 ## 8. Admin and CSRF Results
 
@@ -219,7 +224,7 @@ Not fully automated yet:
 - Full route-level 403 tests for OrganizationAdmin, Parent, and Student sessions.
 - Full POST rejection tests without/with invalid CSRF against actual admin action endpoints.
 
-Status: Static and helper-level checks added; GitHub Actions execution pending. Route-level tests remain blocked.
+Status: Static and helper-level checks passed. Route-level browser tests remain blocked.
 
 ## 9. Organization Isolation Results
 
@@ -244,10 +249,21 @@ Scripts available:
 - `database/02-phase-2a-verify.sql`
 - `database/02-phase-2a-rollback.sql`
 
+Staging environment report:
+
+- `docs/phase-2a-azure-staging-environment-report.md`
+
 Local/staging execution:
 
 - Not executed from this environment.
 - No staging Azure SQL connection was available.
+- Azure CLI and PHP CLI were not available in this sandbox.
+- This is an infrastructure-access blocker, not a Phase 2A code defect.
+- User stated that an isolated Azure staging environment is now available, connected only to staging data, and that production was not modified.
+- Candidate staging URL provided: `https://yuvaclub-dja9ckadbagedja4.eastus-01.azurewebsites.net`.
+- This URL was previously observed as the Azure-hosted live app endpoint, so it must be confirmed as an isolated staging slot/app before authenticated regression tests are run against it.
+- The staging database name was not provided in the validation message; placeholder was left as `[INSERT DATABASE NAME ONLY]`.
+- SQL validation still requires the actual staging database target and an approved execution path through Azure Portal, Azure CLI, SQL Query Editor, or another staging-safe SQL runner.
 
 Required before merge:
 
@@ -265,21 +281,31 @@ Regression plan exists:
 
 - `docs/phase-2a-functional-regression-test-plan.md`
 
+Executed from the live Azure site:
+
+- Public homepage loads.
+- Public student registration page loads and posts to `submit-registration.php`.
+- Student login page loads at `portal-login.php`.
+- Unauthenticated student dashboard access redirects to `portal-login.php`.
+- Parent login page loads.
+- Unauthenticated parent dashboard access redirects to `parent-login.php?status=expired`.
+- Admin login page loads.
+- Unauthenticated admin dashboard access redirects to `admin-login.php`.
+- Organization page confirms organization accounts are invitation-only and has no public self-registration form.
+- Checked pages did not show `KarmaBro` text.
+
 Executed locally:
 
 - Static tests only.
 
 Not executed:
 
-- Public homepage.
-- Registration.
-- Student login.
-- Student dashboard.
+- Student registration submission.
+- Student authenticated dashboard.
 - Parent activation browser flow.
-- Parent login.
-- Parent dashboard.
-- Master Admin login.
-- Organization Admin login.
+- Parent authenticated dashboard.
+- Master Admin authenticated login.
+- Organization Admin authenticated login.
 - Password reset.
 - Logout.
 - Presentation access.
@@ -288,7 +314,7 @@ Not executed:
 - Portfolio.
 - Existing admin POST actions.
 
-Status: Blocked pending PHP runtime and staging/browser testing.
+Status: Partial pass for safe public/unauthenticated browser checks. Full authenticated regression remains blocked pending staging test accounts and SQL validation.
 
 ## 12. Security Issues Discovered
 
@@ -302,8 +328,7 @@ Resolved in this branch:
 
 Remaining issues:
 
-- GitHub Actions workflow failed once on branch `phase-2a-final-validation`; the visible annotation only showed exit code 1, not the failing step details.
-- PHP syntax is still unverified until CI runs.
+- Browser-based staging regression tests are still blocked.
 - SQL staging validation is blocked.
 - Full route/browser functional tests are pending.
 - Organization isolation is foundation-only while org admin access remains disabled.
@@ -330,27 +355,41 @@ Latest correction:
 
 Blockers before merge:
 
-- Push this validation update to `phase-2a-final-validation`.
-- Confirm GitHub Actions workflow passes.
+- Commit and push this documentation-only validation report update, if the team wants the PR report to reflect the latest CI evidence.
+- Keep GitHub Actions green after any additional documentation-only report update.
 - Run Azure SQL staging validation.
+- Confirm whether `https://yuvaclub-dja9ckadbagedja4.eastus-01.azurewebsites.net` is the isolated staging app or the production app.
+- Provide the staging database name, without credentials.
+- Complete the staging environment setup documented in `docs/phase-2a-azure-staging-environment-report.md`.
 - Run browser/route-level parent, admin, and regression checks.
 - Review production/staging logs for PHP fatal errors and auth failures.
 
-## 14A. Requirement Status Matrix
+## 14A. Final Requirement Status Matrix
 
 | Requirement | Status | Notes |
 | --- | --- | --- |
-| Check GitHub Actions results | Fail/blocked detail | GitHub Actions shows the Phase 2A workflow failed on branch `phase-2a-final-validation`, but detailed step logs are not available from this sandbox. |
-| Fix genuine Phase 2A validation failures | Pass/ongoing | Added push trigger for `phase-2a-final-validation`; fixed a functional-test fixture bug where CSV values did not match `registration_headers()` order. |
+| GitHub Actions | Pass | Workflow passed on commit `7571154` according to the GitHub Actions screenshot. |
+| PHP 8.3 syntax | Pass | Covered by the green `Phase 2A PR Validation` workflow. |
+| Static security checks | Pass | Passed locally and in the green CI workflow. |
+| Check GitHub Actions results | Pass | Latest shown run is green for `Fix Phase 2A parent activation test fixture`. |
+| Fix genuine Phase 2A validation failures | Pass | Added push trigger for `phase-2a-final-validation`; fixed a functional-test fixture bug where CSV values did not match `registration_headers()` order. |
 | Do not bypass/weaken security tests | Pass | Tests were expanded, not weakened. |
-| PHP 8.3 syntax checks pass | Blocked | Workflow exists but has not run after latest local trigger update. Local PHP CLI is unavailable. |
-| Parent activation tests pass | Pending rerun | Executable PHP test exists and fixture mapping was corrected; must rerun in GitHub Actions PHP 8.3. |
-| Parent-student authorization tests pass | Pending rerun | Helper-level executable test exists and fixture mapping was corrected; must rerun in GitHub Actions PHP 8.3. |
-| Master Admin, Organization Admin, and CSRF tests pass | Blocked | Static/helper tests exist; route-level tests still pending. |
-| SQL migration validated in staging/disposable Azure SQL | Blocked | No staging Azure SQL connection is available in this sandbox. |
-| Critical regression checks complete | Blocked | Requires PHP runtime/browser or staging environment. |
+| Parent activation | Pass | Fixture-based activation/security test passed in CI. Browser activation test remains blocked. |
+| Parent authorization | Pass/partial | Helper-level parent-student authorization test passed in CI. Browser route test remains blocked. |
+| Student regression | Pass/partial | `portal-login.php` loads and unauthenticated `portal.php` redirects to login. Authenticated dashboard test remains blocked. |
+| Master Admin regression | Pass/partial | `admin-login.php` loads and unauthenticated `admin.php` redirects to login. Authenticated admin login test remains blocked. |
+| Organization Admin regression | Blocked | Requires synthetic org-admin staging account; org admin access is intentionally limited in Phase 2A. |
+| Master Admin, Organization Admin, and CSRF tests pass | Pass/partial | Static/helper checks passed; route-level browser checks remain blocked. |
+| CSRF | Pass/partial | Static/helper CSRF checks passed; browser POST checks remain blocked. |
+| Audit logging | Pass/partial | Activation audit assertions passed in CI; staging log review remains blocked. |
+| Staging environment availability | Blocked/needs details | Candidate URL provided, but it matches the previously observed live Azure endpoint and must be confirmed as isolated staging. Database name is still missing. |
+| SQL migration validated in staging/disposable Azure SQL | Blocked | No staging Azure SQL connection or SQL runner is available in this sandbox. |
+| SQL verification | Blocked | Verification script exists but was not run against staging Azure SQL. |
+| Log review | Blocked | No staging/Azure log access in this sandbox. |
+| Pull request scope review | Pass | Diff from `main` contains Phase 2A validation/stabilization files only; no unrelated feature changes found. |
+| Critical regression checks complete | Blocked | Safe public/unauthenticated browser checks passed; authenticated flows require staging test accounts and SQL validation. |
 | PR validation report updated | Pass | This document was updated. |
-| Final Go/No-Go recommendation | Pass | Do Not Merge Yet. |
+| Final Go/No-Go recommendation | Pass | Do Not Merge Yet because SQL staging and browser regressions are blocked. |
 
 ## 15. Rollback Considerations
 
@@ -371,8 +410,8 @@ Recommendation: **Do Not Merge Yet.**
 
 Reason:
 
-- PHP 8.3 syntax checks are configured but have not run after this validation update.
-- Parent activation tests are created but not yet executed in CI.
+- PHP 8.3 syntax checks passed in CI.
+- Parent activation/security tests passed in CI.
 - SQL staging validation is blocked.
 - Full route-level security and regression tests are pending.
 

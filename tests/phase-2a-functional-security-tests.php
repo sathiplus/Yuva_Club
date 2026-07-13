@@ -6,6 +6,7 @@ $_SERVER['SERVER_PORT'] = '443';
 $_SERVER['HTTP_HOST'] = 'ci.yuvaclub.test';
 $_SERVER['REMOTE_ADDR'] = '127.0.0.1';
 $_SERVER['HTTP_USER_AGENT'] = 'Phase2AFunctionalSecurityTests';
+putenv('YUVA_CAPTURE_ADMIN_INVITATION_LINKS=1');
 
 require __DIR__ . '/../portal-lib.php';
 
@@ -26,6 +27,9 @@ function reset_test_environment(): void {
         portal_path('portal-data') . DIRECTORY_SEPARATOR . 'parent-student-links.json',
         portal_path('portal-data') . DIRECTORY_SEPARATOR . 'parent-activation-tokens.json',
         portal_path('portal-data') . DIRECTORY_SEPARATOR . 'parent-activation-delivery.jsonl',
+        portal_path('portal-data') . DIRECTORY_SEPARATOR . 'organization-admin-accounts.json',
+        portal_path('portal-data') . DIRECTORY_SEPARATOR . 'organization-admin-invitation-tokens.json',
+        portal_path('portal-data') . DIRECTORY_SEPARATOR . 'organization-admin-invitation-delivery.jsonl',
         portal_path('portal-data') . DIRECTORY_SEPARATOR . 'security-audit-log.jsonl',
         portal_path('portal-data') . DIRECTORY_SEPARATOR . 'login-attempts.json',
         portal_path('submissions') . DIRECTORY_SEPARATOR . 'registrations-current.csv',
@@ -197,11 +201,68 @@ $_SESSION['admin_session_started_at'] = time();
 $admin = current_admin_identity();
 assert_true(is_array($admin) && $admin['role'] === YUVA_ROLE_MASTER_ADMIN, 'master admin identity should resolve from server session');
 
-$_SESSION['admin_email'] = 'org.admin@example.test';
+$masterAdmin = [
+    'id' => admin_actor_id(YUVA_PLATFORM_ADMIN_EMAIL),
+    'email' => YUVA_PLATFORM_ADMIN_EMAIL,
+    'role' => YUVA_ROLE_MASTER_ADMIN,
+    'organization_id' => YUVA_PLATFORM_ORGANIZATION_ID,
+];
+$orgAdminEmail = 'chapter.admin@example.test';
+assert_true(
+    provision_organization_admin_invitation($masterAdmin, 'SSP-NY', 'Chapter Admin', $orgAdminEmail, YUVA_ROLE_ORGANIZATION_ADMIN, 'pending_invitation'),
+    'master admin should create organization admin invitation'
+);
+assert_false(
+    provision_organization_admin_invitation($masterAdmin, 'SSP-NY', 'Bad Admin', 'bad.master@example.test', YUVA_ROLE_MASTER_ADMIN, 'pending_invitation'),
+    'master admin must not grant MasterAdmin role to organization users'
+);
+
+$orgAccount = organization_admin_by_email($orgAdminEmail);
+assert_true(is_array($orgAccount), 'pending organization admin account should exist');
+assert_true(($orgAccount['role'] ?? '') === YUVA_ROLE_ORGANIZATION_ADMIN, 'organization admin role should be stored');
+assert_true(($orgAccount['organization_id'] ?? '') === 'SSP-NY', 'organization assignment should be stored');
+assert_true(($orgAccount['status'] ?? '') === 'pending_invitation', 'organization admin should start pending');
+assert_true(($orgAccount['password_hash'] ?? '') === '', 'master admin must not assign organization admin password');
+
+$orgTokens = organization_admin_invitation_tokens();
+assert_true(count($orgTokens) === 1, 'one organization admin invitation token should be stored');
+$orgTokenRecord = reset($orgTokens);
+assert_true(is_array($orgTokenRecord), 'organization admin token record should be an array');
+assert_true(($orgTokenRecord['token_hash'] ?? '') !== '', 'organization admin token hash should be stored');
+$delivery = file_get_contents(organization_admin_invitation_delivery_file());
+assert_true(is_string($delivery) && str_contains($delivery, 'organization-admin-activate.php'), 'invitation delivery should capture staging-safe activation URL in test mode');
+$invitationUrl = json_decode(trim((string) $delivery), true)['activation_url'] ?? '';
+parse_str((string) parse_url((string) $invitationUrl, PHP_URL_QUERY), $query);
+$orgToken = (string) ($query['token'] ?? '');
+assert_true($orgToken !== '' && str_contains($orgToken, '.'), 'organization admin activation token should be present in captured URL');
+assert_false(str_contains(json_encode($orgTokens), explode('.', $orgToken, 2)[1]), 'raw organization admin token must not be stored');
+
+assert_true(complete_organization_admin_invitation($orgToken, 'SecureOrgAdmin@123'), 'organization admin should activate with valid token and password');
+assert_false(complete_organization_admin_invitation($orgToken, 'SecureOrgAdmin@123'), 'organization admin invitation token must be single use');
+$activatedOrgAccount = organization_admin_by_email($orgAdminEmail);
+assert_true(is_array($activatedOrgAccount), 'activated organization admin account should exist');
+assert_true(($activatedOrgAccount['status'] ?? '') === 'active', 'organization admin should become active after password setup');
+assert_true(($activatedOrgAccount['email_verified'] ?? false) === true, 'organization admin email should be verified after activation');
+assert_true(password_get_info((string) ($activatedOrgAccount['password_hash'] ?? ''))['algo'] !== 0, 'organization admin password must use PHP password hashing');
+
+$authenticatedOrgAdmin = authenticate_admin_account($orgAdminEmail, 'SecureOrgAdmin@123');
+assert_true(is_array($authenticatedOrgAdmin), 'activated organization admin should authenticate through shared admin login');
+assert_true($authenticatedOrgAdmin['role'] === YUVA_ROLE_ORGANIZATION_ADMIN, 'shared admin login should preserve OrganizationAdmin role');
+assert_true($authenticatedOrgAdmin['organization_id'] === 'SSP-NY', 'shared admin login should preserve organization assignment');
+$_SESSION['admin_email'] = $orgAdminEmail;
 $_SESSION['admin_role'] = YUVA_ROLE_ORGANIZATION_ADMIN;
+$_SESSION['admin_organization_id'] = 'SSP-NY';
+$_SESSION['admin_session_started_at'] = time();
 $orgAdmin = current_admin_identity();
 assert_true(is_array($orgAdmin) && $orgAdmin['role'] === YUVA_ROLE_ORGANIZATION_ADMIN, 'organization admin role should remain distinct from MasterAdmin');
 assert_false($orgAdmin['role'] === YUVA_ROLE_MASTER_ADMIN, 'organization admin must not become MasterAdmin');
+assert_false(authenticate_admin_account($orgAdminEmail, 'WrongOrgAdmin@123') !== null, 'wrong organization admin password should fail');
+assert_false(authenticate_admin_account(YUVA_PLATFORM_ADMIN_EMAIL, 'SecureOrgAdmin@123') !== null, 'organization admin password must not authenticate MasterAdmin');
+assert_true(update_organization_admin_status($masterAdmin, $orgAdminEmail, 'suspended'), 'master admin should suspend organization admin');
+assert_false(authenticate_admin_account($orgAdminEmail, 'SecureOrgAdmin@123') !== null, 'suspended organization admin should not authenticate');
+assert_true(update_organization_admin_status($masterAdmin, $orgAdminEmail, 'active'), 'master admin should reactivate organization admin');
+assert_true(update_organization_admin_assignment($masterAdmin, $orgAdminEmail, 'TEAK-NY'), 'master admin should change organization assignment');
+assert_true((organization_admin_by_email($orgAdminEmail)['organization_id'] ?? '') === 'TEAK-NY', 'organization assignment should update');
 
 $csrf = csrf_token();
 assert_true(verify_csrf_token($csrf), 'valid CSRF token should verify');
@@ -210,7 +271,11 @@ assert_false(verify_csrf_token('invalid-token'), 'invalid CSRF token should fail
 $audit = file_exists(security_audit_file()) ? file_get_contents(security_audit_file()) : '';
 assert_true(is_string($audit) && str_contains($audit, 'parent.activation.requested'), 'activation request should be audited');
 assert_true(str_contains($audit, 'parent.activation.completed'), 'activation completion should be audited');
+assert_true(str_contains($audit, 'organization_admin.invitation.send'), 'organization admin invitation should be audited');
+assert_true(str_contains($audit, 'organization_admin.invitation.complete'), 'organization admin activation should be audited');
 assert_false(str_contains($audit, 'SecureParent@123'), 'audit log must not contain passwords');
+assert_false(str_contains($audit, 'SecureOrgAdmin@123'), 'audit log must not contain organization admin passwords');
 assert_false(str_contains($audit, explode('.', $token, 2)[1]), 'audit log must not contain raw activation token');
+assert_false(str_contains($audit, explode('.', $orgToken, 2)[1]), 'audit log must not contain raw organization admin invitation token');
 
 echo "Phase 2A functional security checks passed.\n";
