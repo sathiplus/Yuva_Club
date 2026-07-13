@@ -343,7 +343,7 @@ $registrationId = $_GET['registration'] ?? '';
       <strong>YUVA Club</strong>
       <p>Empowering Young Minds to Learn, Lead and Inspire.</p>
       <p>&copy; 2026 YUVA Club. All Rights Reserved.</p>
-      <p><a href="privacy.html">Privacy Policy</a> <a href="terms.html">Terms of Service</a> <a href="contact.html">Contact</a></p>
+      <p><a href="privacy.html">Privacy Policy</a> <a href="terms.html">Terms of Service</a> <a href="consent.html">Consent Policy</a> <a href="safety.html">Safety Guidelines</a> <a href="contact.html">Contact</a></p>
     </div>
   </footer>
   <script>
