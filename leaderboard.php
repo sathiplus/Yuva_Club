@@ -60,6 +60,11 @@ portal_header('Challenge Leaderboard');
       <h1>Challenge Leaderboard</h1>
       <p>Track approved student progress by program, challenge stage, points, tokens, and presentation rubric score.</p>
     </div>
+    <div class="form-card">
+      <h2>What this leaderboard shows</h2>
+      <p>The YUVA Club leaderboard highlights approved student progress in leadership challenges. It celebrates participation, presentations, learning milestones, rubric scores, points, tokens, finalist status, and awards.</p>
+      <p>Public visitors can view achievement standings, while private student identifiers remain visible only to authorized students, parents, and administrators.</p>
+    </div>
     <form class="form-card" method="get">
       <div class="field-grid">
         <div class="field">
