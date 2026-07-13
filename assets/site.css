@@ -872,11 +872,24 @@ h3 { font-size: 22px; }
 }
 
 .journey-list li {
-  padding: 13px 14px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: rgba(255, 255, 255, .82);
   font-weight: 800;
+  overflow: hidden;
+}
+
+.journey-list a {
+  display: block;
+  padding: 13px 14px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.journey-list a:hover,
+.journey-list a:focus-visible {
+  background: rgba(15, 118, 110, .08);
+  color: #0f766e;
 }
 
 .site-footer {
