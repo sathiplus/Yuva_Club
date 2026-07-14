@@ -83,14 +83,24 @@ foreach ($records as $recordStudentId => $record) {
 
 portal_header('Platform Administrator Dashboard');
 ?>
-<main>
-  <section class="band">
+<main class="admin-dashboard">
+  <section class="band admin-dashboard-band">
     <div class="section-head">
       <p class="eyebrow">Platform Administrator Dashboard</p>
       <h1>YUVA Club Records</h1>
       <p>Manage platform-level student approvals, topics, attendance, research, service hours, certificates, safety, and configuration.</p>
       <p><a class="button primary" href="admin-students.php">Registered Students</a> <a class="button ghost" href="portal-logout.php">Log Out</a></p>
     </div>
+
+    <nav class="admin-section-nav" aria-label="Admin dashboard sections">
+      <a href="#platform-login-settings">Login Settings</a>
+      <a href="#organization-admins">Organization Admins</a>
+      <a href="#organization-students">Organization Students</a>
+      <a href="#hub-settings">Hub Settings</a>
+      <a href="#zoom-slots">Zoom Slots</a>
+      <a href="#safety-ai">Safety & AI</a>
+      <a href="#student-records">Student Records</a>
+    </nav>
 
     <?php if ($status === 'saved'): ?>
       <div class="form-status success">Student record saved.</div>
@@ -128,7 +138,7 @@ portal_header('Platform Administrator Dashboard');
       <div class="form-status error">Organization administrator request could not be completed.</div>
     <?php endif; ?>
 
-    <form class="form-card" action="admin-password-actions.php" method="post">
+    <form id="platform-login-settings" class="form-card" action="admin-password-actions.php" method="post">
       <?php echo csrf_field(); ?>
       <h2>Platform Administrator Login Settings</h2>
       <div class="field-grid">
@@ -152,7 +162,7 @@ portal_header('Platform Administrator Dashboard');
       <button class="button primary" type="submit">Update Platform Administrator Login</button>
     </form>
 
-    <section class="form-card">
+    <section id="organization-admins" class="form-card">
       <h2>Organization Administrator Invitations</h2>
       <p>Create and manage invitation-only organization administrator accounts. Passwords are created only by invited administrators through secure email links.</p>
       <form action="admin-organization-admin-actions.php" method="post">
@@ -255,7 +265,7 @@ portal_header('Platform Administrator Dashboard');
       <?php endif; ?>
     </section>
 
-    <section class="form-card">
+    <section id="organization-students" class="form-card">
       <h2>Organization Student Membership Cleanup</h2>
       <p class="form-note">Use this to remove test students from an organization. This archives only the organization membership and does not delete the student's global YUVA account, YUVA ID, certificates, portfolio, or history.</p>
       <?php if ($organizationMemberships === []): ?>
@@ -345,7 +355,7 @@ portal_header('Platform Administrator Dashboard');
       <?php endif; ?>
     </section>
 
-    <form class="form-card" action="admin-hub-actions.php" method="post">
+    <form id="hub-settings" class="form-card" action="admin-hub-actions.php" method="post">
       <?php echo csrf_field(); ?>
       <h2>Portal Hub Settings</h2>
       <h2>School Yuva Session (Ages 13-17)</h2>
@@ -449,7 +459,7 @@ portal_header('Platform Administrator Dashboard');
       <button class="button primary" type="submit">Save Hub Settings</button>
     </form>
 
-    <div class="two-grid">
+    <div id="zoom-slots" class="two-grid">
       <form class="form-card" action="admin-bulk-session-actions.php" method="post">
         <?php echo csrf_field(); ?>
         <h2>Bulk Assign School Yuva Zoom Slot</h2>
@@ -593,7 +603,7 @@ portal_header('Platform Administrator Dashboard');
       <?php endif; ?>
     </section>
 
-    <section class="form-card">
+    <section id="safety-ai" class="form-card">
       <h2>Safety Reports</h2>
       <p class="form-note">Reports submitted from the student app dashboard. Follow up with the parent or student outside the app as needed.</p>
       <?php if ($reports === []): ?>
@@ -710,7 +720,7 @@ portal_header('Platform Administrator Dashboard');
       </div>
     </section>
 
-    <div class="portal-table-wrap">
+    <div id="student-records" class="portal-table-wrap">
       <table class="portal-table">
         <thead>
           <tr>
