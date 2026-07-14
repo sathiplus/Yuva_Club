@@ -1,4 +1,4 @@
-const CACHE_NAME = 'yuva-club-app-v8';
+const CACHE_NAME = 'yuva-club-app-v9';
 const STATIC_ASSETS = [
   '/index.html',
   '/app.html',

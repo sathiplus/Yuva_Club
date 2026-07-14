@@ -209,6 +209,78 @@ h3 { font-size: 22px; }
 
 .feature p, .month-card p, .resource-card p { color: var(--muted); margin: 0; }
 
+.app-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 380px);
+  align-items: center;
+  gap: clamp(24px, 5vw, 56px);
+}
+
+.app-page .section-head { margin-bottom: 22px; }
+
+.app-preview {
+  display: grid;
+  justify-content: center;
+}
+
+.app-phone {
+  width: min(100%, 330px);
+  min-height: 560px;
+  display: grid;
+  align-content: start;
+  gap: 14px;
+  padding: 22px;
+  border: 10px solid #11243f;
+  border-radius: 34px;
+  background: #fffdf8;
+  box-shadow: var(--shadow);
+}
+
+.app-phone-top {
+  width: 72px;
+  height: 6px;
+  margin: 0 auto 10px;
+  border-radius: 999px;
+  background: #11243f;
+  opacity: .3;
+}
+
+.app-phone img {
+  width: 84px;
+  height: 84px;
+  object-fit: contain;
+  margin: 12px auto 0;
+}
+
+.app-phone strong {
+  display: block;
+  text-align: center;
+  font-size: 28px;
+  line-height: 1.15;
+}
+
+.app-phone span {
+  display: block;
+  text-align: center;
+  color: var(--muted);
+}
+
+.app-phone-card {
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f7fbff;
+  font-weight: 800;
+}
+
+.app-steps {
+  margin: 14px 0 18px;
+  padding-left: 1.25rem;
+  color: var(--muted);
+}
+
+.app-steps li { margin: 8px 0; }
+
 .story-list {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -1168,10 +1240,12 @@ h3 { font-size: 22px; }
 }
 
 @media (max-width: 980px) {
-  .hero, .story-hero, .story-layout, .two-grid, .field-grid, .preference-row { grid-template-columns: 1fr; }
+  .hero, .story-hero, .story-layout, .two-grid, .field-grid, .preference-row, .app-hero { grid-template-columns: 1fr; }
   .grid, .story-list, .journey-list, .choice-grid, .portal-stat-grid, .portal-module-grid, .portal-profile-grid, .three-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .lesson-panel { position: static; }
   .hero-art { min-height: 340px; }
+  .app-preview { justify-content: start; }
+  .app-phone { min-height: auto; }
 }
 
 @media (max-width: 640px) {
@@ -1179,6 +1253,7 @@ h3 { font-size: 22px; }
   .nav { justify-content: flex-start; }
   .grid, .story-list, .journey-list, .choice-grid, .portal-stat-grid, .portal-module-grid, .portal-profile-grid, .three-grid { grid-template-columns: 1fr; }
   .hero { min-height: auto; }
+  .app-phone { width: 100%; }
   .site-footer { flex-direction: column; align-items: flex-start; }
   .footer-links { justify-items: start; }
 }
