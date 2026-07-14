@@ -721,7 +721,7 @@ portal_header('Platform Administrator Dashboard');
     </section>
 
     <div id="student-records" class="portal-table-wrap">
-      <table class="portal-table">
+      <table class="portal-table student-record-table">
         <thead>
           <tr>
             <th>Student</th>

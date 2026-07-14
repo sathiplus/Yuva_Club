@@ -975,6 +975,75 @@ h3 { font-size: 22px; }
   font-size: 15px;
 }
 
+.admin-dashboard .student-record-table {
+  min-width: 1680px;
+}
+
+.admin-dashboard .student-record-table th:nth-child(1),
+.admin-dashboard .student-record-table td:nth-child(1) {
+  width: 220px;
+}
+
+.admin-dashboard .student-record-table th:nth-child(2),
+.admin-dashboard .student-record-table td:nth-child(2),
+.admin-dashboard .student-record-table th:nth-child(3),
+.admin-dashboard .student-record-table td:nth-child(3) {
+  width: 260px;
+}
+
+.admin-dashboard .student-record-table th:nth-child(4),
+.admin-dashboard .student-record-table td:nth-child(4) {
+  width: 780px;
+}
+
+.admin-dashboard .student-record-table th:nth-child(5),
+.admin-dashboard .student-record-table td:nth-child(5) {
+  width: 150px;
+}
+
+.admin-dashboard .student-record-table td:nth-child(4) {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(210px, 1fr));
+  gap: 12px;
+  align-content: start;
+}
+
+.admin-dashboard .student-record-table td:nth-child(4) > .field,
+.admin-dashboard .student-record-table td:nth-child(4) > .field-grid {
+  margin: 0;
+}
+
+.admin-dashboard .student-record-table td:nth-child(4) > .field-grid {
+  display: contents;
+}
+
+.admin-dashboard .student-record-table td:nth-child(4) textarea {
+  min-height: 72px;
+}
+
+.admin-dashboard .student-record-table td:nth-child(4) .field:has(textarea) {
+  grid-column: span 3;
+}
+
+.admin-dashboard .student-record-table td:nth-child(4) .field:has(input[readonly]) {
+  grid-column: span 3;
+}
+
+.admin-dashboard .student-record-table td:nth-child(5) {
+  white-space: nowrap;
+}
+
+.admin-dashboard .student-record-table td:nth-child(5) .button {
+  width: 100%;
+  margin-bottom: 8px;
+}
+
+@supports not selector(:has(*)) {
+  .admin-dashboard .student-record-table td:nth-child(4) {
+    grid-template-columns: repeat(2, minmax(240px, 1fr));
+  }
+}
+
 .certificate-page {
   background: #f7f2e7;
 }
