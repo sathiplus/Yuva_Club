@@ -4,7 +4,7 @@ if (window.location.pathname.endsWith('/offline.html') && navigator.onLine) {
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/service-worker.js?v=11').catch(() => {});
+    navigator.serviceWorker.register('/service-worker.js?v=12').catch(() => {});
   });
 }
 
@@ -13,6 +13,15 @@ const yuvaIsStandalone =
   window.navigator.standalone === true;
 
 document.documentElement.classList.toggle('pwa-mode', yuvaIsStandalone);
+
+document.addEventListener('click', (event) => {
+  const link = event.target.closest('a[href^="#"]');
+  if (!link) return;
+  const target = document.querySelector(link.getAttribute('href'));
+  if (!target) return;
+  event.preventDefault();
+  target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+});
 
 let yuvaDeferredInstallPrompt = null;
 

@@ -60,15 +60,24 @@ if ($selection && !$research) {
     ];
 }
 
-portal_header('Student Dashboard');
+portal_header('Student Dashboard', 'student-app-page');
 ?>
-<main>
-  <section class="band">
+<main class="student-app-main">
+  <section class="band student-app-home" id="student-home">
+    <div class="student-app-topbar">
+      <div>
+        <span>YUVA Club</span>
+        <strong>Home</strong>
+      </div>
+      <div class="student-app-actions" aria-label="Student app actions">
+        <a href="#safety-report" aria-label="Report issue">!</a>
+        <a href="#student-profile" aria-label="Profile"><?php echo e(strtoupper(substr($name, 0, 1))); ?></a>
+      </div>
+    </div>
     <div class="section-head">
       <p class="eyebrow">Student Dashboard</p>
       <h1>Welcome, <?php echo e($name); ?></h1>
-      <p>The Yuva Club website is your official hub for sessions, presentations, research, leadership hours, certificates, recordings, and announcements.</p>
-      <p><a class="button ghost" href="portal-logout.php">Log Out</a></p>
+      <p>Your YUVA Club app is your hub for practice, presentations, research, progress, certificates, recordings, and announcements.</p>
     </div>
 
     <?php if ($status === 'topic-saved'): ?><div class="form-status success">Topic selection saved.</div><?php endif; ?>
@@ -104,7 +113,7 @@ portal_header('Student Dashboard');
     </div>
   </section>
 
-  <section class="band alt">
+  <section class="band alt" id="student-progress">
     <div class="section-head">
       <p class="eyebrow">Leadership Challenge</p>
       <h2>The Global Youth Speaking & Leadership Challenge</h2>
@@ -126,7 +135,7 @@ portal_header('Student Dashboard');
     <p><a class="button ghost" href="leaderboard.php">View Challenge Leaderboard</a></p>
   </section>
 
-  <section class="band">
+  <section class="band" id="student-practice">
     <div class="two-grid">
       <div class="form-card">
         <h2>Presentation Rubric</h2>
@@ -146,7 +155,7 @@ portal_header('Student Dashboard');
     </div>
   </section>
 
-  <section class="band">
+  <section class="band" id="student-present">
     <div class="two-grid">
       <div class="form-card hub-card">
         <h2>My Zoom Session</h2>
@@ -225,7 +234,7 @@ portal_header('Student Dashboard');
     </div>
   </section>
 
-  <section class="band">
+  <section class="band" id="student-scheduler">
     <div class="form-card">
       <h2>Zoom Scheduler</h2>
       <p>Select a meeting time for Yuva Club using the embedded scheduler below. This is the embeddable Zoom Scheduler page.</p>
@@ -240,7 +249,7 @@ portal_header('Student Dashboard');
     </div>
   </section>
 
-  <section class="band">
+  <section class="band" id="student-profile">
     <div class="section-head">
       <h2>Student Profile</h2>
       <p>Your profile grows as you attend, present, research, receive feedback, and serve.</p>
@@ -277,7 +286,7 @@ portal_header('Student Dashboard');
     </div>
   </section>
 
-  <section class="band">
+  <section class="band" id="student-modules">
     <div class="portal-module-grid">
       <?php foreach (rank_definitions() as $rankName => $rankInfo): ?>
         <div class="feature portal-module"><strong><?php echo e($rankName); ?></strong><p><?php echo e($rankInfo['meaning']); ?>. <?php echo e($rankInfo['requirements']); ?></p></div>
@@ -408,7 +417,7 @@ portal_header('Student Dashboard');
     </form>
   </section>
 
-  <section class="band">
+  <section class="band" id="student-safety">
     <div class="three-grid">
       <div class="form-card" id="announcements">
         <h2>Announcements</h2>
@@ -432,6 +441,13 @@ portal_header('Student Dashboard');
       </div>
     </div>
   </section>
+  <nav class="student-bottom-nav" aria-label="Student app navigation">
+    <a class="active" href="#student-home">Home</a>
+    <a href="#student-practice">Practice</a>
+    <a href="#student-present">Present</a>
+    <a href="#student-progress">Progress</a>
+    <a href="#student-profile">Profile</a>
+  </nav>
 </main>
 <script>
 const topicMap = <?php echo json_encode($topics); ?>;

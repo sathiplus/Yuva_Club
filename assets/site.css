@@ -1603,6 +1603,7 @@ h3 { font-size: 22px; }
 html.pwa-mode,
 html.pwa-mode body {
   min-height: 100dvh;
+  scroll-behavior: smooth;
   overflow-x: hidden;
   overscroll-behavior: none;
   -webkit-tap-highlight-color: transparent;
@@ -1755,6 +1756,28 @@ html.pwa-mode .mobile-app-shell {
   gap: 12px;
 }
 
+.mobile-app-sections {
+  padding-top: 4px;
+}
+
+.mobile-app-sections > section {
+  scroll-margin-top: 18px;
+}
+
+.mobile-mini-button {
+  display: inline-grid;
+  min-height: 40px;
+  width: fit-content;
+  align-items: center;
+  padding: 0 14px;
+  border-radius: 999px;
+  background: #14332f;
+  color: #fff;
+  font-size: .84rem;
+  font-weight: 900;
+  text-decoration: none;
+}
+
 .mobile-stats-row {
   justify-content: space-between;
   padding: 16px;
@@ -1814,6 +1837,174 @@ html.pwa-mode button,
 html.pwa-mode input,
 html.pwa-mode select {
   min-height: 44px;
+}
+
+.student-app-topbar,
+.student-bottom-nav {
+  display: none;
+}
+
+.student-app-page {
+  scroll-behavior: smooth;
+}
+
+.student-app-page .student-app-home,
+.student-app-page #student-practice,
+.student-app-page #student-present,
+.student-app-page #student-progress,
+.student-app-page #student-profile {
+  scroll-margin-top: 18px;
+}
+
+@media (max-width: 760px) {
+  .student-app-page {
+    background: #f7f8fc;
+  }
+
+  .student-app-page .site-header,
+  .student-app-page .site-footer {
+    display: none;
+  }
+
+  .student-app-main {
+    padding: calc(18px + env(safe-area-inset-top)) 16px calc(92px + env(safe-area-inset-bottom));
+  }
+
+  .student-app-page .band,
+  .student-app-page .band.alt {
+    width: 100%;
+    padding: 0;
+    margin: 0 0 16px;
+    background: transparent;
+  }
+
+  .student-app-page .section-head h1 {
+    font-size: clamp(2rem, 12vw, 3.25rem);
+    line-height: 1;
+  }
+
+  .student-app-page .section-head p {
+    font-size: 1rem;
+    line-height: 1.5;
+  }
+
+  .student-app-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 18px;
+  }
+
+  .student-app-topbar span {
+    color: #667085;
+    font-size: .84rem;
+    font-weight: 800;
+  }
+
+  .student-app-topbar strong {
+    display: block;
+    color: #101828;
+    font-size: 1.35rem;
+  }
+
+  .student-app-actions {
+    display: flex;
+    gap: 10px;
+  }
+
+  .student-app-actions a {
+    display: grid;
+    width: 44px;
+    height: 44px;
+    place-items: center;
+    border-radius: 999px;
+    background: #fff;
+    color: #101828;
+    text-decoration: none;
+    font-weight: 900;
+    box-shadow: 0 10px 26px rgba(16, 24, 40, .10);
+  }
+
+  .student-app-page .next-action-card {
+    border-radius: 24px;
+    background:
+      radial-gradient(circle at 85% 20%, rgba(255, 255, 255, .28), transparent 38%),
+      linear-gradient(135deg, #5b4fd6, #2934a2);
+    color: #fff;
+  }
+
+  .student-app-page .next-action-card .eyebrow,
+  .student-app-page .next-action-card p {
+    color: rgba(255, 255, 255, .82);
+  }
+
+  .student-app-page .next-action-card .button {
+    background: #fff;
+    color: #2934a2;
+  }
+
+  .student-app-page .form-card,
+  .student-app-page .feature {
+    border-radius: 22px;
+    box-shadow: 0 14px 32px rgba(16, 24, 40, .08);
+  }
+
+  .student-app-page .portal-stat-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .student-app-page .portal-stat-grid .feature {
+    min-height: 96px;
+    padding: 16px;
+  }
+
+  .student-app-page .portal-stat-grid .feature strong {
+    font-size: .88rem;
+  }
+
+  .student-app-page .portal-stat-grid .feature p {
+    font-size: 1rem;
+  }
+
+  .student-app-page .two-grid,
+  .student-app-page .three-grid,
+  .student-app-page .portal-profile-grid,
+  .student-app-page .portal-module-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .student-bottom-nav {
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 40;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    max-width: 520px;
+    margin: 0 auto;
+    padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+    border-top: 1px solid rgba(91, 79, 214, .14);
+    background: rgba(255, 255, 255, .94);
+    backdrop-filter: blur(16px);
+    box-shadow: 0 -12px 32px rgba(16, 24, 40, .12);
+  }
+
+  .student-bottom-nav a {
+    min-height: 48px;
+    display: grid;
+    place-items: center;
+    border-radius: 16px;
+    color: #667085;
+    text-decoration: none;
+    font-size: .78rem;
+    font-weight: 900;
+  }
+
+  .student-bottom-nav a.active {
+    background: #ecebff;
+    color: #3f36b4;
+  }
 }
 
 @media (max-width: 980px) {

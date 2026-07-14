@@ -13,7 +13,7 @@
   <link rel="canonical" href="https://www.yuvaclub.app/app.html">
   <link rel="icon" href="/icons/favicon-32x32.png" sizes="32x32" type="image/png">
   <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
-  <link rel="manifest" href="/manifest.webmanifest?v=20260714-app-icon-fix">
+  <link rel="manifest" href="/manifest.webmanifest?v=20260714-student-app-shell">
   <meta name="theme-color" content="#5B4FD6">
   <meta name="application-name" content="YUVA Club">
   <meta name="mobile-web-app-capable" content="yes">
@@ -21,8 +21,8 @@
   <meta name="apple-mobile-web-app-title" content="YUVA Club">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="format-detection" content="telephone=no">
-  <link rel="stylesheet" href="assets/site.css?v=20260714-app-icon-fix">
-  <script src="assets/app.js?v=20260714-app-icon-fix" defer></script>
+  <link rel="stylesheet" href="assets/site.css?v=20260714-student-app-shell">
+  <script src="assets/app.js?v=20260714-student-app-shell" defer></script>
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="YUVA Club App">
   <meta name="twitter:description" content="Install YUVA Club on iPhone and Android as a secure web app.">
@@ -54,15 +54,15 @@
   </header>
 
   <main class="app-page">
-    <section class="mobile-app-shell" aria-label="YUVA Club mobile app home">
+    <section class="mobile-app-shell" id="app-home" aria-label="YUVA Club mobile app home">
       <div class="mobile-app-topbar">
         <div>
           <span>YUVA Club</span>
           <strong>Home</strong>
         </div>
         <div class="mobile-app-actions" aria-label="App actions">
-          <a href="portal-login.php" aria-label="Notifications">!</a>
-          <a href="portal-login.php" aria-label="Profile">YC</a>
+          <a href="#app-alerts" aria-label="Notifications">!</a>
+          <a href="#app-profile" aria-label="Profile">YC</a>
         </div>
       </div>
 
@@ -81,23 +81,23 @@
       </div>
 
       <div class="mobile-action-grid">
-        <a href="portal-login.php" class="mobile-action-card primary">
+        <a href="#app-practice" class="mobile-action-card primary">
           <span>Continue</span>
           <strong>Practice</strong>
         </a>
-        <a href="challenges.html" class="mobile-action-card">
+        <a href="#app-present" class="mobile-action-card">
           <span>Next</span>
           <strong>Challenge</strong>
         </a>
       </div>
 
       <div class="mobile-card-stack">
-        <a href="portal-login.php" class="mobile-info-card">
+        <a href="#app-present" class="mobile-info-card">
           <span>Upcoming Presentation</span>
           <strong>No session assigned yet</strong>
           <small>Sign in to view your next presentation.</small>
         </a>
-        <a href="portal-login.php" class="mobile-info-card">
+        <a href="#app-practice" class="mobile-info-card">
           <span>AI Coach</span>
           <strong>Feedback starts after topic selection</strong>
           <small>Practice suggestions appear in your student portal.</small>
@@ -109,12 +109,44 @@
         </div>
       </div>
 
+      <div class="mobile-card-stack mobile-app-sections">
+        <section id="app-practice" class="mobile-info-card">
+          <span>Practice</span>
+          <strong>Build confidence before presenting</strong>
+          <small>Choose a topic, prepare research, and use coach feedback after signing in.</small>
+          <a class="mobile-mini-button" href="portal-login.php">Open Practice</a>
+        </section>
+        <section id="app-present" class="mobile-info-card">
+          <span>Present</span>
+          <strong>Your next session appears here</strong>
+          <small>Presentation dates, Zoom links, and assigned activities sync from your student portal.</small>
+          <a class="mobile-mini-button" href="portal-login.php">View Sessions</a>
+        </section>
+        <section id="app-progress" class="mobile-info-card">
+          <span>Progress</span>
+          <strong>Track points, tokens, and certificates</strong>
+          <small>Leadership rank, portfolio milestones, and challenge status update as work is approved.</small>
+          <a class="mobile-mini-button" href="leaderboard.php">View Leaderboard</a>
+        </section>
+        <section id="app-alerts" class="mobile-info-card">
+          <span>Alerts</span>
+          <strong>No new alerts</strong>
+          <small>Announcements and safety messages appear after you sign in.</small>
+        </section>
+        <section id="app-profile" class="mobile-info-card">
+          <span>Profile</span>
+          <strong>Sign in to personalize YUVA Club</strong>
+          <small>Your profile keeps your YUVA ID, learning goals, presentations, and certificates together.</small>
+          <a class="mobile-mini-button" href="portal-login.php">Sign In</a>
+        </section>
+      </div>
+
       <nav class="mobile-bottom-nav" aria-label="Mobile app navigation">
-        <a class="active" href="app.html"><span>Home</span></a>
-        <a href="portal-login.php"><span>Practice</span></a>
-        <a href="challenges.html"><span>Present</span></a>
-        <a href="leaderboard.php"><span>Progress</span></a>
-        <a href="portal-login.php"><span>Profile</span></a>
+        <a class="active" href="#app-home"><span>Home</span></a>
+        <a href="#app-practice"><span>Practice</span></a>
+        <a href="#app-present"><span>Present</span></a>
+        <a href="#app-progress"><span>Progress</span></a>
+        <a href="#app-profile"><span>Profile</span></a>
       </nav>
     </section>
 
