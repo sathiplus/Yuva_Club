@@ -15,6 +15,7 @@ $status = $_GET['status'] ?? '';
 $scheduledMeetings = [];
 $organizationAdmins = array_map('organization_admin_public_view', organization_admin_accounts());
 $organizationOptions = organization_options();
+$organizationMemberships = organization_student_memberships();
 $organizationAuditLines = [];
 if (file_exists(security_audit_file())) {
     $lines = file(security_audit_file(), FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) ?: [];
@@ -121,6 +122,8 @@ portal_header('Platform Administrator Dashboard');
       <div class="form-status success">Organization administrator invitation was created. Check the invitation status below to confirm email delivery.</div>
     <?php elseif ($status === 'org-admin-updated'): ?>
       <div class="form-status success">Organization administrator account was updated.</div>
+    <?php elseif ($status === 'org-membership-archived'): ?>
+      <div class="form-status success">Organization student membership was archived. The global student account was not deleted.</div>
     <?php elseif ($status === 'org-admin-error'): ?>
       <div class="form-status error">Organization administrator request could not be completed.</div>
     <?php endif; ?>
@@ -238,6 +241,69 @@ portal_header('Platform Administrator Dashboard');
                       <input name="organization_id" type="text" required value="<?php echo e((string) ($account['organization_id'] ?? '')); ?>" list="organization_ids">
                       <button class="button ghost" type="submit">Change Org</button>
                     </form>
+                    <form action="admin-organization-admin-actions.php" method="post" class="inline-form" onsubmit="return confirm('Delete this organization admin account? This removes the admin login and pending tokens, but does not delete the organization or students.');">
+                      <?php echo csrf_field(); ?>
+                      <input type="hidden" name="email" value="<?php echo e($accountEmail); ?>">
+                      <button class="button ghost" name="action" value="delete_account" type="submit">Delete Account</button>
+                    </form>
+                  </td>
+                </tr>
+              <?php endforeach; ?>
+            </tbody>
+          </table>
+        </div>
+      <?php endif; ?>
+    </section>
+
+    <section class="form-card">
+      <h2>Organization Student Membership Cleanup</h2>
+      <p class="form-note">Use this to remove test students from an organization. This archives only the organization membership and does not delete the student's global YUVA account, YUVA ID, certificates, portfolio, or history.</p>
+      <?php if ($organizationMemberships === []): ?>
+        <p>No organization student memberships have been created yet.</p>
+      <?php else: ?>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Organization</th>
+                <th>Student</th>
+                <th>Status</th>
+                <th>Source</th>
+                <th>Updated</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <?php foreach ($organizationMemberships as $membershipKey => $membership): ?>
+                <?php
+                  if (!is_array($membership)) {
+                      continue;
+                  }
+                  $studentId = normalize_yuva_id((string) ($membership['student_id'] ?? ''));
+                  $student = $studentId !== '' ? ($students[$studentId] ?? []) : [];
+                  $studentLabel = $student !== [] ? student_display_name($student) . ' / ' . $studentId : 'Invited Student';
+                  $studentEmail = normalize_email((string) ($membership['student_email'] ?? ($student['Student Email'] ?? '')));
+                ?>
+                <tr>
+                  <td><?php echo e((string) ($membership['organization_id'] ?? '')); ?></td>
+                  <td>
+                    <strong><?php echo e($studentLabel); ?></strong><br>
+                    <?php echo e($studentEmail); ?>
+                  </td>
+                  <td><?php echo e((string) ($membership['status'] ?? '')); ?></td>
+                  <td><?php echo e((string) ($membership['source'] ?? '')); ?></td>
+                  <td><?php echo e((string) ($membership['updated_at'] ?? '')); ?></td>
+                  <td>
+                    <?php if (($membership['status'] ?? '') === 'Archived'): ?>
+                      Archived
+                    <?php else: ?>
+                      <form action="admin-organization-student-actions.php" method="post" class="inline-form" onsubmit="return confirm('Archive this organization membership? The global student account will not be deleted.');">
+                        <?php echo csrf_field(); ?>
+                        <input type="hidden" name="action" value="archive_membership">
+                        <input type="hidden" name="membership_key" value="<?php echo e((string) $membershipKey); ?>">
+                        <button class="button ghost" type="submit">Remove From Organization</button>
+                      </form>
+                    <?php endif; ?>
                   </td>
                 </tr>
               <?php endforeach; ?>

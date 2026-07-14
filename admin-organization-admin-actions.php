@@ -32,6 +32,8 @@ if ($action === 'resend') {
     $ok = send_organization_admin_invitation($admin, $email, 'password_reset');
 } elseif ($action === 'assignment') {
     $ok = update_organization_admin_assignment($admin, $email, (string) ($_POST['organization_id'] ?? ''));
+} elseif ($action === 'delete_account') {
+    $ok = delete_organization_admin_account($admin, $email);
 }
 
 redirect_to('admin.php?status=' . ($ok ? 'org-admin-updated' : 'org-admin-error'));

@@ -871,6 +871,29 @@ function update_organization_admin_assignment(array $admin, string $email, strin
     return true;
 }
 
+function delete_organization_admin_account(array $admin, string $email): bool {
+    $email = normalize_email($email);
+    $accounts = organization_admin_accounts();
+    if ($email === '' || $email === YUVA_PLATFORM_ADMIN_EMAIL || !is_array($accounts[$email] ?? null)) {
+        audit_log_event($admin['id'], $admin['role'], $admin['organization_id'], 'organization_admin.account.delete', 'organization_admin', $email, false, ['reason' => 'invalid_or_reserved']);
+        return false;
+    }
+
+    unset($accounts[$email]);
+    write_organization_admin_accounts($accounts);
+
+    $tokens = organization_admin_invitation_tokens();
+    foreach ($tokens as $tokenId => $token) {
+        if (is_array($token) && normalize_email((string) ($token['admin_email'] ?? '')) === $email) {
+            unset($tokens[$tokenId]);
+        }
+    }
+    write_organization_admin_invitation_tokens($tokens);
+
+    audit_log_event($admin['id'], $admin['role'], $admin['organization_id'], 'organization_admin.account.delete', 'organization_admin', $email, true);
+    return true;
+}
+
 function organization_admin_password_matches(string $email, string $password): ?array {
     $email = normalize_email($email);
     $account = organization_admin_by_email($email);
@@ -1167,6 +1190,31 @@ function update_organization_student_membership(array $admin, string $membership
     }
     write_organization_student_memberships($memberships);
     audit_log_event($admin['id'], $admin['role'], $organizationId, 'organization_student.membership.update', 'student_membership', $membershipKey, true, ['status' => $status]);
+    return true;
+}
+
+function master_archive_organization_student_membership(array $admin, string $membershipKey): bool {
+    if (($admin['role'] ?? '') !== YUVA_ROLE_MASTER_ADMIN) {
+        return false;
+    }
+    $memberships = organization_student_memberships();
+    $existing = is_array($memberships[$membershipKey] ?? null) ? $memberships[$membershipKey] : null;
+    if ($existing === null) {
+        audit_log_event($admin['id'], $admin['role'], $admin['organization_id'], 'organization_student.membership.archive', 'student_membership', $membershipKey, false, ['reason' => 'missing']);
+        return false;
+    }
+
+    $memberships[$membershipKey] = array_merge($existing, [
+        'status' => 'Archived',
+        'archived_at' => (string) (($existing['archived_at'] ?? '') ?: gmdate('c')),
+        'updated_at' => gmdate('c'),
+    ]);
+    write_organization_student_memberships($memberships);
+    audit_log_event($admin['id'], $admin['role'], $admin['organization_id'], 'organization_student.membership.archive', 'student_membership', $membershipKey, true, [
+        'organization_id' => $existing['organization_id'] ?? '',
+        'student_id' => $existing['student_id'] ?? '',
+        'student_email_hash' => !empty($existing['student_email']) ? hash('sha256', normalize_email((string) $existing['student_email'])) : '',
+    ]);
     return true;
 }
 
