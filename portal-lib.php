@@ -2476,16 +2476,16 @@ function portal_header(string $title, string $bodyClass = ''): void {
     echo '<script type="application/ld+json">{"@context":"https://schema.org","@type":"EducationalOrganization","name":"YUVA Club","url":"https://www.yuvaclub.app","description":"Empowering Young Minds to Learn, Lead and Inspire."}</script>';
     echo '<link rel="icon" href="assets/logo.png" type="image/png">';
     echo '<link rel="apple-touch-icon" href="assets/app-icon-180.png">';
-    echo '<link rel="manifest" href="manifest.webmanifest?v=20260714-student-app-shell">';
+    echo '<link rel="manifest" href="manifest.webmanifest?v=20260714-public-mobile-nav">';
     echo '<meta name="theme-color" content="#062856">';
     echo '<meta name="apple-mobile-web-app-capable" content="yes">';
     echo '<meta name="apple-mobile-web-app-title" content="YUVA Club">';
     echo '<meta name="apple-mobile-web-app-status-bar-style" content="default">';
-    echo '<link rel="stylesheet" href="assets/site.css?v=20260714-student-app-shell">';
-    echo '<script src="assets/app.js?v=20260714-student-app-shell" defer></script>';
+    echo '<link rel="stylesheet" href="assets/site.css?v=20260714-public-mobile-nav">';
+    echo '<script src="assets/app.js?v=20260714-public-mobile-nav" defer></script>';
     echo '</head><body' . ($bodyClass !== '' ? ' class="' . e($bodyClass) . '"' : '') . '>';
     echo '<header class="site-header"><a class="brand" href="index.html" aria-label="Yuva Club home"><img src="assets/logo.png" alt="Yuva Club logo" width="78" height="78"><span>Yuva Club</span></a>';
-    echo '<nav class="nav" aria-label="Main navigation"><a href="index.html">Home</a><a href="programs.html">Programs</a><a href="challenges.html">Challenges</a><a href="curriculum.html">Topics</a><a href="stories.html">Stories</a><a href="leaderboard.php">Leaderboard</a><a href="app.html">App</a><a href="safety.html">Safety</a><a href="registration.php">Register</a><a href="portal-login.php">Student Portal</a><a href="parent-login.php">Parent</a><a href="admin-login.php">Admin</a></nav></header>';
+    echo '<nav class="nav" aria-label="Main navigation"><a href="index.html">Home</a><a href="programs.html">Programs</a><a href="curriculum.html">Topics</a><a href="challenges.html">Challenge</a><a href="app.html">App</a><a class="nav-register" href="registration.php">Register</a><details class="signin-menu"><summary>Sign In</summary><div><a href="portal-login.php">Student</a><a href="parent-login.php">Parent</a><a href="admin-login.php">Admin</a></div></details></nav></header>';
 }
 
 function portal_footer(): void {

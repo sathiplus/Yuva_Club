@@ -1,4 +1,4 @@
-﻿:root {
+:root {
   --ink: #1d2433;
   --muted: #657084;
   --paper: #fffaf0;
@@ -83,6 +83,11 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 }
 
 .nav a:hover { color: #0f766e; }
+
+.nav details a {
+  width: 100%;
+  justify-content: flex-start;
+}
 
 .hero {
   min-height: 76vh;
@@ -2011,23 +2016,90 @@ html.pwa-mode select {
   .hero, .story-hero, .story-layout, .two-grid, .field-grid, .preference-row, .app-hero, .app-product-hero { grid-template-columns: 1fr; }
   .grid, .story-list, .journey-list, .choice-grid, .portal-stat-grid, .portal-module-grid, .portal-profile-grid, .three-grid, .benefit-grid, .role-preview-grid, .topic-preview-grid, .trust-grid, .journey-steps, .install-panel { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .lesson-panel { position: static; }
-  .hero-art { min-height: 340px; }
+  .hero-art {
+    width: min(100%, 720px);
+    min-height: 0;
+    margin: 0 auto;
+  }
   .app-preview { justify-content: start; }
   .app-phone { min-height: auto; }
   .organization-band { align-items: flex-start; flex-direction: column; }
 }
 
 @media (max-width: 640px) {
-  .site-header { align-items: flex-start; flex-direction: column; }
-  .nav { justify-content: flex-start; }
+  .site-header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 12px;
+    padding: 14px 18px;
+  }
+  .brand img { width: 56px; height: 56px; }
+  .brand span { font-size: 20px; }
+  .nav {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+    justify-content: stretch;
+  }
+  .nav a,
+  .signin-menu summary {
+    min-height: 42px;
+    justify-content: center;
+    padding: 8px 6px;
+    border: 1px solid rgba(231, 221, 202, .9);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, .72);
+    text-align: center;
+    font-size: 13px;
+  }
+  .nav-register {
+    border-color: #14332f !important;
+  }
   .grid, .story-list, .journey-list, .choice-grid, .portal-stat-grid, .portal-module-grid, .portal-profile-grid, .three-grid, .benefit-grid, .role-preview-grid, .topic-preview-grid, .trust-grid, .journey-steps, .install-panel { grid-template-columns: 1fr; }
-  .hero { min-height: auto; }
+  .hero {
+    min-height: auto;
+    gap: 24px;
+    padding-top: 34px;
+  }
+  .hero h1 { font-size: clamp(42px, 14vw, 64px); }
+  .hero p { font-size: 20px; }
+  .hero-art {
+    width: 100%;
+    aspect-ratio: 1696 / 928;
+    min-height: 0;
+    background-size: contain;
+    background-position: center;
+  }
   .app-phone { width: 100%; }
   .app-header .brand img { width: 52px; height: 52px; }
+  .app-public-nav {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
   .signin-menu { display: block; width: 100%; }
-  .signin-menu div { position: static; width: 100%; margin-top: 8px; }
+  .signin-menu div {
+    position: static;
+    width: 100%;
+    margin-top: 8px;
+    box-shadow: none;
+  }
   .install-callout { align-items: flex-start; flex-direction: column; }
   .app-product-hero { min-height: auto; }
   .site-footer { flex-direction: column; align-items: flex-start; }
   .footer-links { justify-items: start; }
+}
+
+@media (display-mode: standalone), (display-mode: fullscreen) {
+  .app-header {
+    display: none;
+  }
+
+  .app-page {
+    padding-top: 0;
+  }
+
+  .mobile-app-shell {
+    min-height: 100vh;
+    border-radius: 0;
+  }
 }

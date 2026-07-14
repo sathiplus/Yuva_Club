@@ -1,12 +1,12 @@
 {
-  "id": "/",
+  "id": "/app.html",
   "name": "YUVA Club",
   "short_name": "YUVA Club",
   "description": "A secure youth leadership web app for student presentations, AI-assisted practice, parent-connected progress, certificates, and organization programs.",
-  "start_url": "/app.html",
+  "start_url": "/app.html?source=pwa",
   "scope": "/",
   "display": "standalone",
-  "display_override": ["window-controls-overlay", "standalone", "minimal-ui", "browser"],
+  "display_override": ["standalone", "minimal-ui"],
   "orientation": "portrait-primary",
   "background_color": "#F7F8FC",
   "theme_color": "#5B4FD6",
@@ -54,21 +54,9 @@
       "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
     },
     {
-      "name": "Programs",
-      "short_name": "Programs",
-      "url": "/programs.html",
-      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
-    },
-    {
       "name": "Register",
       "short_name": "Register",
       "url": "/registration.php",
-      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
-    },
-    {
-      "name": "Stories",
-      "short_name": "Stories",
-      "url": "/stories.html",
       "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
     }
   ]

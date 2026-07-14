@@ -26,7 +26,7 @@ $registrationId = $_GET['registration'] ?? '';
   <meta name="twitter:image" content="https://www.yuvaclub.app/assets/logo.png">
   <script type="application/ld+json">{"@context":"https://schema.org","@type":"EducationalOrganization","name":"YUVA Club","url":"https://www.yuvaclub.app","description":"Empowering Young Minds to Learn, Lead and Inspire."}</script>
   <link rel="icon" href="assets/logo.png" type="image/png">
-  <link rel="stylesheet" href="assets/site.css?v=20260614-large-photos">
+  <link rel="stylesheet" href="assets/site.css?v=20260714-public-mobile-nav">
 </head>
 <body>
   <header class="site-header">
@@ -38,14 +38,17 @@ $registrationId = $_GET['registration'] ?? '';
       <a href="index.html">Home</a>
       <a href="programs.html">Programs</a>
       <a href="curriculum.html">Topics</a>
-      <a href="resources.html">Resources</a>
-      <a href="stories.html">Stories</a>
+      <a href="challenges.html">Challenge</a>
       <a href="app.html">App</a>
-      <a href="safety.html">Safety</a>
-      <a href="registration.php">Register</a>
-      <a href="portal-login.php">Student Portal</a>
-      <a href="parent-login.php">Parent</a>
-      <a href="admin-login.php">Admin</a>
+      <a class="nav-register" href="registration.php">Register</a>
+      <details class="signin-menu">
+        <summary>Sign In</summary>
+        <div>
+          <a href="portal-login.php">Student</a>
+          <a href="parent-login.php">Parent</a>
+          <a href="admin-login.php">Admin</a>
+        </div>
+      </details>
     </nav>
   </header>
 

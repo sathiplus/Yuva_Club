@@ -26,7 +26,7 @@ $certificateName = rank_definitions()[$rank]['certificate'] ?? 'Certificate of P
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Certificate | Yuva Club</title>
   <link rel="icon" href="assets/logo.png" type="image/png">
-  <link rel="stylesheet" href="assets/site.css?v=20260614-large-photos">
+  <link rel="stylesheet" href="assets/site.css?v=20260714-public-mobile-nav">
 </head>
 <body class="certificate-page">
   <main class="certificate-shell">

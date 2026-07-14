@@ -18,7 +18,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="YUVA Club">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <link rel="stylesheet" href="assets/site.css?v=20260614-large-photos">
+  <link rel="stylesheet" href="assets/site.css?v=20260714-public-mobile-nav">
   <script src="assets/app.js" defer></script>
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="YUVA Club">
@@ -34,17 +34,18 @@
     <nav class="nav" aria-label="Main navigation">
       <a href="index.html">Home</a>
       <a href="programs.html">Programs</a>
-      <a href="challenges.html">Challenges</a>
       <a href="curriculum.html">Topics</a>
-      <a href="resources.html">Resources</a>
-      <a href="stories.html">Stories</a>
-      <a href="leaderboard.php">Leaderboard</a>
+      <a href="challenges.html">Challenge</a>
       <a href="app.html">App</a>
-      <a href="safety.html">Safety</a>
-      <a href="registration.php">Register</a>
-      <a href="portal-login.php">Student Portal</a>
-      <a href="parent-login.php">Parent</a>
-      <a href="admin-login.php">Admin</a>
+      <a class="nav-register" href="registration.php">Register</a>
+      <details class="signin-menu">
+        <summary>Sign In</summary>
+        <div>
+          <a href="portal-login.php">Student</a>
+          <a href="parent-login.php">Parent</a>
+          <a href="admin-login.php">Admin</a>
+        </div>
+      </details>
     </nav>
   </header>
   <main>
