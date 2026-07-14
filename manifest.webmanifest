@@ -2,7 +2,7 @@
   "id": "/",
   "name": "YUVA Club",
   "short_name": "YUVA Club",
-  "description": "A global youth leadership app where students explore topics, present ideas, discuss, and lead.",
+  "description": "A secure youth leadership web app for student presentations, AI-assisted practice, parent-connected progress, certificates, and organization programs.",
   "start_url": "/app.html",
   "scope": "/",
   "display": "standalone",
@@ -11,6 +11,9 @@
   "background_color": "#ffffff",
   "theme_color": "#062856",
   "categories": ["education", "kids", "productivity"],
+  "launch_handler": {
+    "client_mode": "navigate-existing"
+  },
   "icons": [
     {
       "src": "/assets/app-icon-192.png",

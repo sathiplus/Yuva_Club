@@ -4,6 +4,71 @@ if (window.location.pathname.endsWith('/offline.html') && navigator.onLine) {
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/service-worker.js?v=8').catch(() => {});
+    navigator.serviceWorker.register('/service-worker.js?v=10').catch(() => {});
   });
 }
+
+let yuvaDeferredInstallPrompt = null;
+
+const installPanel = document.getElementById('pwa-install-panel');
+const installButton = document.getElementById('pwa-install-button');
+
+window.addEventListener('beforeinstallprompt', (event) => {
+  event.preventDefault();
+  yuvaDeferredInstallPrompt = event;
+
+  if (installPanel && installButton) {
+    installPanel.hidden = false;
+  }
+});
+
+if (installButton) {
+  installButton.addEventListener('click', async () => {
+    if (!yuvaDeferredInstallPrompt) {
+      return;
+    }
+
+    yuvaDeferredInstallPrompt.prompt();
+    await yuvaDeferredInstallPrompt.userChoice.catch(() => null);
+    yuvaDeferredInstallPrompt = null;
+
+    if (installPanel) {
+      installPanel.hidden = true;
+    }
+  });
+}
+
+window.addEventListener('appinstalled', () => {
+  yuvaDeferredInstallPrompt = null;
+
+  if (installPanel) {
+    installPanel.hidden = true;
+  }
+});
+
+(() => {
+  const userAgent = navigator.userAgent || '';
+  const platform = navigator.platform || '';
+  const touchMac = platform === 'MacIntel' && navigator.maxTouchPoints > 1;
+  const isIOS = /iPad|iPhone|iPod/.test(userAgent) || touchMac;
+  const isAndroid = /Android/.test(userAgent);
+  const isWindows = /Windows/.test(userAgent);
+  const isMac = /Macintosh|Mac OS X/.test(userAgent) && !touchMac;
+
+  const target = isIOS
+    ? 'install-ios'
+    : isAndroid
+      ? 'install-android'
+      : isWindows
+        ? 'install-windows'
+        : isMac
+          ? 'install-mac'
+          : '';
+
+  if (target) {
+    const radio = document.getElementById(target);
+    if (radio) {
+      radio.checked = true;
+    }
+  }
+})();
