@@ -950,6 +950,44 @@ function organization_student_membership_defaults(string $organizationId, string
     ];
 }
 
+function activate_organization_student_membership_from_registration(string $organizationId, string $studentId, string $studentEmail): bool {
+    $organizationId = normalize_organization_id($organizationId);
+    $studentId = normalize_yuva_id($studentId);
+    $studentEmail = normalize_email($studentEmail);
+    if ($organizationId === YUVA_PLATFORM_ORGANIZATION_ID || $studentId === '' || $studentEmail === '') {
+        return false;
+    }
+
+    $memberships = organization_student_memberships();
+    $studentKey = organization_student_membership_key($organizationId, $studentId, $studentEmail);
+    $emailKey = organization_student_membership_key($organizationId, '', $studentEmail);
+    $emailInvite = is_array($memberships[$emailKey] ?? null) ? $memberships[$emailKey] : [];
+    $studentMembership = is_array($memberships[$studentKey] ?? null) ? $memberships[$studentKey] : [];
+    $base = $emailInvite !== [] ? $emailInvite : organization_student_membership_defaults($organizationId, $studentId, $studentEmail);
+
+    $memberships[$studentKey] = array_merge($base, $studentMembership, [
+        'organization_id' => $organizationId,
+        'student_id' => $studentId,
+        'student_email' => $studentEmail,
+        'status' => 'Active',
+        'source' => ($emailInvite !== [] ? 'organization_invitation' : 'registration'),
+        'activated_at' => (string) (($studentMembership['activated_at'] ?? '') ?: gmdate('c')),
+        'updated_at' => gmdate('c'),
+    ]);
+
+    if ($emailKey !== $studentKey && isset($memberships[$emailKey])) {
+        unset($memberships[$emailKey]);
+    }
+
+    write_organization_student_memberships($memberships);
+    audit_log_event(null, YUVA_ROLE_STUDENT, $organizationId, 'organization_student.invitation.accepted', 'student_membership', $studentKey, true, [
+        'student_id' => $studentId,
+        'student_email_hash' => hash('sha256', $studentEmail),
+        'matched_invitation' => $emailInvite !== [],
+    ]);
+    return true;
+}
+
 function organization_student_memberships_for_org(string $organizationId): array {
     $organizationId = normalize_organization_id($organizationId);
     if ($organizationId === YUVA_PLATFORM_ORGANIZATION_ID) {
@@ -960,6 +998,19 @@ function organization_student_memberships_for_org(string $organizationId): array
     foreach (organization_student_memberships() as $key => $membership) {
         if (!is_array($membership) || normalize_organization_id((string) ($membership['organization_id'] ?? '')) !== $organizationId) {
             continue;
+        }
+        $studentId = normalize_yuva_id((string) ($membership['student_id'] ?? ''));
+        $studentEmail = normalize_email((string) ($membership['student_email'] ?? ''));
+        if ($studentId === '' && $studentEmail !== '') {
+            foreach (portal_students() as $registeredStudentId => $student) {
+                if (
+                    student_organization_id($student) === $organizationId
+                    && normalize_email((string) ($student['Student Email'] ?? '')) === $studentEmail
+                    && normalize_yuva_id((string) $registeredStudentId) !== ''
+                ) {
+                    continue 2;
+                }
+            }
         }
         $memberships[$key] = array_merge(organization_student_membership_defaults($organizationId), $membership);
     }

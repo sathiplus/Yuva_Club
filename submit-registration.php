@@ -380,6 +380,10 @@ if (!$storedInDatabase) {
     create_parent_account($parentEmail, $accountPassword, $studentId);
 }
 
+if ($membershipType === 'organization' && $organizationCode !== '' && $studentEmail !== '') {
+    activate_organization_student_membership_from_registration($organizationCode, $studentId, $studentEmail);
+}
+
 if ($notificationEmail !== '') {
     $registrationReference = $storedInDatabase ? ($studentId . ' / Registration #' . (string) $registrationId) : $studentId;
     $subject = "New Yuva Club Registration: $registrationReference";
