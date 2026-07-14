@@ -221,7 +221,7 @@ portal_header('Platform Administrator Dashboard');
                   <td><?php echo e((string) ($account['organization_id'] ?? '')); ?></td>
                   <td><?php echo e((string) ($account['status'] ?? '')); ?></td>
                   <td><?php echo e((string) ($account['invitation_status'] ?? '')); ?></td>
-                  <td><?php echo e((string) ($account['last_login_at'] ?? 'Never')); ?></td>
+                  <td><?php echo e(display_eastern_time((string) ($account['last_login_at'] ?? '')) ?: 'Never'); ?></td>
                   <td>
                     <form action="admin-organization-admin-actions.php" method="post" class="inline-form">
                       <?php echo csrf_field(); ?>
@@ -292,7 +292,7 @@ portal_header('Platform Administrator Dashboard');
                   </td>
                   <td><?php echo e((string) ($membership['status'] ?? '')); ?></td>
                   <td><?php echo e((string) ($membership['source'] ?? '')); ?></td>
-                  <td><?php echo e((string) ($membership['updated_at'] ?? '')); ?></td>
+                  <td><?php echo e(display_eastern_time((string) ($membership['updated_at'] ?? ''))); ?></td>
                   <td>
                     <?php if (($membership['status'] ?? '') === 'Archived'): ?>
                       Archived
@@ -332,7 +332,7 @@ portal_header('Platform Administrator Dashboard');
             <tbody>
               <?php foreach ($organizationAuditLines as $entry): ?>
                 <tr>
-                  <td><?php echo e((string) ($entry['timestamp'] ?? '')); ?></td>
+                  <td><?php echo e(display_eastern_time((string) ($entry['timestamp'] ?? ''))); ?></td>
                   <td><?php echo e((string) ($entry['actor_user_id'] ?? '')); ?></td>
                   <td><?php echo e((string) ($entry['action'] ?? '')); ?></td>
                   <td><?php echo e((string) ($entry['target_id'] ?? '')); ?></td>

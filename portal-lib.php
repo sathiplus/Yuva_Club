@@ -59,6 +59,22 @@ function clean_text(string $value): string {
     return preg_replace('/\s+/', ' ', $value) ?? '';
 }
 
+function display_eastern_time(?string $timestamp): string {
+    $timestamp = clean_text((string) $timestamp);
+    if ($timestamp === '') {
+        return '';
+    }
+
+    try {
+        $date = new DateTimeImmutable($timestamp);
+        return $date
+            ->setTimezone(new DateTimeZone('America/New_York'))
+            ->format('M j, Y g:i A T');
+    } catch (Exception) {
+        return $timestamp;
+    }
+}
+
 function normalize_yuva_id(string $value): string {
     $value = strtoupper(clean_text($value));
     if (preg_match('/^YC-?(\d{4})-?(\d+)$/', $value, $matches) === 1) {

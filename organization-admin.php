@@ -265,7 +265,7 @@ portal_header('Organization Admin Dashboard');
                   <td>
                     <strong><?php echo e((string) ($membership['status'] ?? '')); ?></strong><br>
                     Source: <?php echo e((string) ($membership['source'] ?? '')); ?><br>
-                    Updated: <?php echo e((string) ($membership['updated_at'] ?? '')); ?>
+                    Updated: <?php echo e(display_eastern_time((string) ($membership['updated_at'] ?? ''))); ?>
                     <form method="post" action="organization-student-actions.php" style="margin-top: .75rem;">
                       <?php echo csrf_field(); ?>
                       <input type="hidden" name="action" value="archive_membership">
