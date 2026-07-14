@@ -4,9 +4,15 @@ if (window.location.pathname.endsWith('/offline.html') && navigator.onLine) {
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/service-worker.js?v=10').catch(() => {});
+    navigator.serviceWorker.register('/service-worker.js?v=11').catch(() => {});
   });
 }
+
+const yuvaIsStandalone =
+  window.matchMedia('(display-mode: standalone)').matches ||
+  window.navigator.standalone === true;
+
+document.documentElement.classList.toggle('pwa-mode', yuvaIsStandalone);
 
 let yuvaDeferredInstallPrompt = null;
 

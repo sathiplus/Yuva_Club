@@ -11,18 +11,18 @@
   <meta property="og:url" content="https://www.yuvaclub.app/app.html">
   <meta property="og:type" content="website">
   <link rel="canonical" href="https://www.yuvaclub.app/app.html">
-  <link rel="icon" href="assets/logo.png" type="image/png">
-  <link rel="apple-touch-icon" href="assets/app-icon-180.png">
-  <link rel="manifest" href="manifest.webmanifest">
-  <meta name="theme-color" content="#062856">
+  <link rel="icon" href="/icons/favicon-32x32.png" sizes="32x32" type="image/png">
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+  <link rel="manifest" href="/manifest.webmanifest?v=20260714-app-icon-fix">
+  <meta name="theme-color" content="#5B4FD6">
   <meta name="application-name" content="YUVA Club">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="YUVA Club">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="format-detection" content="telephone=no">
-  <link rel="stylesheet" href="assets/site.css?v=20260714-app-landing">
-  <script src="assets/app.js?v=20260714-app-landing" defer></script>
+  <link rel="stylesheet" href="assets/site.css?v=20260714-app-icon-fix">
+  <script src="assets/app.js?v=20260714-app-icon-fix" defer></script>
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="YUVA Club App">
   <meta name="twitter:description" content="Install YUVA Club on iPhone and Android as a secure web app.">
@@ -54,6 +54,70 @@
   </header>
 
   <main class="app-page">
+    <section class="mobile-app-shell" aria-label="YUVA Club mobile app home">
+      <div class="mobile-app-topbar">
+        <div>
+          <span>YUVA Club</span>
+          <strong>Home</strong>
+        </div>
+        <div class="mobile-app-actions" aria-label="App actions">
+          <a href="portal-login.php" aria-label="Notifications">!</a>
+          <a href="portal-login.php" aria-label="Profile">YC</a>
+        </div>
+      </div>
+
+      <div class="mobile-greeting-card">
+        <p>Good morning</p>
+        <h1>Ready to practice?</h1>
+        <span>Leadership Level: Explorer</span>
+      </div>
+
+      <div class="mobile-progress-card">
+        <div>
+          <strong>Weekly Progress</strong>
+          <span>0 of 3 practice steps complete</span>
+        </div>
+        <div class="mobile-progress-bar"><span style="width: 12%"></span></div>
+      </div>
+
+      <div class="mobile-action-grid">
+        <a href="portal-login.php" class="mobile-action-card primary">
+          <span>Continue</span>
+          <strong>Practice</strong>
+        </a>
+        <a href="challenges.html" class="mobile-action-card">
+          <span>Next</span>
+          <strong>Challenge</strong>
+        </a>
+      </div>
+
+      <div class="mobile-card-stack">
+        <a href="portal-login.php" class="mobile-info-card">
+          <span>Upcoming Presentation</span>
+          <strong>No session assigned yet</strong>
+          <small>Sign in to view your next presentation.</small>
+        </a>
+        <a href="portal-login.php" class="mobile-info-card">
+          <span>AI Coach</span>
+          <strong>Feedback starts after topic selection</strong>
+          <small>Practice suggestions appear in your student portal.</small>
+        </a>
+        <div class="mobile-stats-row">
+          <div><strong>0</strong><span>Points</span></div>
+          <div><strong>0</strong><span>Tokens</span></div>
+          <div><strong>0</strong><span>Certificates</span></div>
+        </div>
+      </div>
+
+      <nav class="mobile-bottom-nav" aria-label="Mobile app navigation">
+        <a class="active" href="app.html"><span>Home</span></a>
+        <a href="portal-login.php"><span>Practice</span></a>
+        <a href="challenges.html"><span>Present</span></a>
+        <a href="leaderboard.php"><span>Progress</span></a>
+        <a href="portal-login.php"><span>Profile</span></a>
+      </nav>
+    </section>
+
     <section class="band app-product-hero">
       <div class="app-hero-copy">
         <p class="eyebrow">YUVA Club App</p>

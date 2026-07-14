@@ -1,4 +1,4 @@
-const CACHE_NAME = 'yuva-club-app-v10';
+const CACHE_NAME = 'yuva-club-app-v11';
 const STATIC_ASSETS = [
   '/index.html',
   '/app.html',
@@ -10,13 +10,19 @@ const STATIC_ASSETS = [
   '/resources.html',
   '/offline.html',
   '/manifest.webmanifest',
-  '/assets/site.css?v=20260714-app-landing',
-  '/assets/app.js?v=20260714-app-landing',
+  '/assets/site.css?v=20260714-app-icon-fix',
+  '/assets/app.js?v=20260714-app-icon-fix',
   '/assets/logo.png',
   '/assets/app-icon-180.png',
   '/assets/app-icon-192.png',
   '/assets/app-icon-512.png',
   '/assets/app-icon-maskable-512.png',
+  '/icons/icon-192.png',
+  '/icons/icon-512.png',
+  '/icons/maskable-icon-192.png',
+  '/icons/maskable-icon-512.png',
+  '/icons/apple-touch-icon.png',
+  '/icons/favicon-32x32.png',
   '/assets/home-hero.png',
   '/assets/topics-source.png'
 ];
