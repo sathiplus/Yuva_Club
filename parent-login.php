@@ -45,6 +45,7 @@ portal_header('Parent Dashboard Login');
       <?php if ($status === 'expired'): ?><div class="form-status error">Your parent session expired. Please log in again.</div><?php endif; ?>
       <?php if ($status === 'security-error'): ?><div class="form-status error">This login form expired. Please try again.</div><?php endif; ?>
       <?php if ($status === 'activated'): ?><div class="form-status success">Parent account setup is complete. Please log in.</div><?php endif; ?>
+      <?php if ($status === 'password-reset'): ?><div class="form-status success">Your password was updated. Please log in.</div><?php endif; ?>
       <form class="form-card" method="post">
         <?php echo csrf_field(); ?>
         <div class="field">
@@ -56,7 +57,8 @@ portal_header('Parent Dashboard Login');
           <input id="password" name="password" type="password" required autocomplete="current-password">
         </div>
         <button class="button primary" type="submit">Log In</button>
-        <p><a href="parent-activate.php">Set up or reset parent access</a></p>
+        <p><a href="forgot-password.php?account=parent">Forgot password?</a></p>
+        <p><a href="parent-activate.php">Set up parent access</a></p>
       </form>
     </div>
   </section>

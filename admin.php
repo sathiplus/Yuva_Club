@@ -89,7 +89,7 @@ portal_header('Platform Administrator Dashboard');
       <p class="eyebrow">Platform Administrator Dashboard</p>
       <h1>YUVA Club Records</h1>
       <p>Manage platform-level student approvals, topics, attendance, research, service hours, certificates, safety, and configuration.</p>
-      <p><a class="button primary" href="admin-students.php">Registered Students</a> <a class="button ghost" href="portal-logout.php">Log Out</a></p>
+      <p><a class="button primary" href="admin-students.php">Registered Students</a> <a class="button ghost" href="leaderboard.php">Challenge Leaderboard</a> <a class="button ghost" href="portal-logout.php">Log Out</a></p>
     </div>
 
     <nav class="admin-section-nav" aria-label="Admin dashboard sections">
@@ -100,6 +100,7 @@ portal_header('Platform Administrator Dashboard');
       <a href="#zoom-slots">Zoom Slots</a>
       <a href="#safety-ai">Safety & AI</a>
       <a href="#student-records">Student Records</a>
+      <a href="leaderboard.php">Leaderboard</a>
     </nav>
 
     <?php if ($status === 'saved'): ?>

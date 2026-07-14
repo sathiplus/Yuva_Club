@@ -137,6 +137,10 @@ function admin_credentials_file(): string {
     return portal_path('portal-data') . DIRECTORY_SEPARATOR . 'admin-credentials.json';
 }
 
+function password_reset_tokens_file(): string {
+    return portal_path('portal-data') . DIRECTORY_SEPARATOR . 'password-reset-tokens.json';
+}
+
 function organization_admin_accounts_file(): string {
     return portal_path('portal-data') . DIRECTORY_SEPARATOR . 'organization-admin-accounts.json';
 }
@@ -184,6 +188,16 @@ function admin_credentials(): array {
         'role' => YUVA_ROLE_MASTER_ADMIN,
         'organization_id' => YUVA_PLATFORM_ORGANIZATION_ID,
     ], read_json_file(admin_credentials_file(), []));
+}
+
+function write_admin_credentials(array $credentials): void {
+    write_json_file(admin_credentials_file(), [
+        'email' => YUVA_PLATFORM_ADMIN_EMAIL,
+        'password_hash' => (string) ($credentials['password_hash'] ?? YUVA_ADMIN_PASSWORD_HASH),
+        'role' => YUVA_ROLE_MASTER_ADMIN,
+        'organization_id' => YUVA_PLATFORM_ORGANIZATION_ID,
+        'updated_at' => gmdate('c'),
+    ]);
 }
 
 function password_hash_for_admin(string $password): string {
@@ -606,6 +620,235 @@ function send_yuva_email(string $to, string $subject, string $plainText, string 
     $headers = "From: {$from}\r\n"
         . "Reply-To: {$replyToAddress}\r\n";
     return @mail($to, $subject, $plainText, $headers);
+}
+
+function password_reset_tokens(): array {
+    return read_json_file(password_reset_tokens_file(), []);
+}
+
+function write_password_reset_tokens(array $tokens): void {
+    write_json_file(password_reset_tokens_file(), $tokens);
+}
+
+function password_reset_url(string $token): string {
+    return public_base_url() . '/reset-password.php?token=' . rawurlencode($token);
+}
+
+function password_reset_login_url(string $accountType): string {
+    return match ($accountType) {
+        'parent' => 'parent-login.php',
+        'admin', 'master_admin', 'organization_admin' => 'admin-login.php',
+        default => 'portal-login.php',
+    };
+}
+
+function password_reset_account_for_email(string $email, string $accountType): ?array {
+    $email = normalize_email($email);
+    $accountType = clean_text($accountType);
+    if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        return null;
+    }
+
+    if ($accountType === 'student') {
+        foreach (student_accounts() as $studentId => $account) {
+            if (normalize_email((string) ($account['student_email'] ?? '')) === $email && ($account['status'] ?? '') === 'active') {
+                return [
+                    'type' => 'student',
+                    'key' => normalize_yuva_id((string) ($account['yuva_id'] ?? $studentId)),
+                    'email' => $email,
+                    'label' => 'student account',
+                    'role' => YUVA_ROLE_STUDENT,
+                ];
+            }
+        }
+        return null;
+    }
+
+    if ($accountType === 'parent') {
+        $account = parent_account_by_email($email);
+        if ($account !== null && ($account['status'] ?? '') === 'active') {
+            return [
+                'type' => 'parent',
+                'key' => $email,
+                'email' => $email,
+                'label' => 'parent account',
+                'role' => YUVA_ROLE_PARENT,
+            ];
+        }
+        return null;
+    }
+
+    if ($accountType === 'admin') {
+        if ($email === YUVA_PLATFORM_ADMIN_EMAIL) {
+            return [
+                'type' => 'master_admin',
+                'key' => YUVA_PLATFORM_ADMIN_EMAIL,
+                'email' => $email,
+                'label' => 'platform administrator account',
+                'role' => YUVA_ROLE_MASTER_ADMIN,
+            ];
+        }
+        $account = organization_admin_by_email($email);
+        if (
+            $account !== null
+            && ($account['role'] ?? '') === YUVA_ROLE_ORGANIZATION_ADMIN
+            && ($account['status'] ?? '') === 'active'
+            && !empty($account['email_verified'])
+        ) {
+            return [
+                'type' => 'organization_admin',
+                'key' => $email,
+                'email' => $email,
+                'label' => 'organization administrator account',
+                'role' => YUVA_ROLE_ORGANIZATION_ADMIN,
+                'organization_id' => normalize_organization_id((string) ($account['organization_id'] ?? '')),
+            ];
+        }
+    }
+
+    return null;
+}
+
+function send_password_reset_email(string $email, string $url, string $accountLabel): bool {
+    $subject = 'Reset your YUVA Club password';
+    $message = "Hello,\n\n"
+        . "Use this secure link to reset your YUVA Club {$accountLabel} password:\n\n"
+        . $url . "\n\n"
+        . "This link is single-use and expires in 60 minutes. If you did not request this reset, you can ignore this email.\n\n"
+        . "YUVA Club";
+
+    return send_yuva_email($email, $subject, $message);
+}
+
+function request_password_reset(string $email, string $accountType): bool {
+    $email = normalize_email($email);
+    $account = password_reset_account_for_email($email, $accountType);
+    if ($account === null) {
+        audit_log_event(null, YUVA_ROLE_STUDENT, null, 'password_reset.request', 'account', hash('sha256', $email), false, ['reason' => 'not_found_or_inactive', 'account_type' => clean_text($accountType)]);
+        return false;
+    }
+
+    $token = bin2hex(random_bytes(32));
+    $tokenId = bin2hex(random_bytes(16));
+    $tokens = password_reset_tokens();
+    $tokens[$tokenId] = [
+        'token_hash' => hash('sha256', $token),
+        'account_type' => $account['type'],
+        'account_key' => $account['key'],
+        'email' => $account['email'],
+        'role' => $account['role'],
+        'organization_id' => $account['organization_id'] ?? null,
+        'created_at' => gmdate('c'),
+        'expires_at' => gmdate('c', time() + 3600),
+        'used_at' => null,
+    ];
+    write_password_reset_tokens($tokens);
+
+    $sent = send_password_reset_email($account['email'], password_reset_url($tokenId . '.' . $token), $account['label']);
+    audit_log_event(
+        $account['type'] === 'parent' ? parent_actor_id($account['email']) : ($account['type'] === 'student' ? $account['key'] : admin_actor_id($account['email'])),
+        $account['role'],
+        $account['organization_id'] ?? null,
+        'password_reset.request',
+        'account',
+        $account['type'] === 'student' ? $account['key'] : $account['email'],
+        $sent,
+        ['account_type' => $account['type'], 'email_delivery' => $sent ? 'sent' : 'failed']
+    );
+    return $sent;
+}
+
+function password_reset_token_record(string $token): ?array {
+    $parts = explode('.', trim($token), 2);
+    if (count($parts) !== 2) {
+        return null;
+    }
+    [$tokenId, $secret] = $parts;
+    if (!preg_match('/\A[a-f0-9]{32}\z/', $tokenId) || !preg_match('/\A[a-f0-9]{64}\z/', $secret)) {
+        return null;
+    }
+    $tokens = password_reset_tokens();
+    $record = $tokens[$tokenId] ?? null;
+    if (!is_array($record) || !empty($record['used_at'])) {
+        return null;
+    }
+    if (strtotime((string) ($record['expires_at'] ?? '')) < time()) {
+        return null;
+    }
+    if (!hash_equals((string) ($record['token_hash'] ?? ''), hash('sha256', $secret))) {
+        return null;
+    }
+    $record['token_id'] = $tokenId;
+    return $record;
+}
+
+function complete_password_reset(string $token, string $password): bool {
+    $record = password_reset_token_record($token);
+    if ($record === null || password_policy_error($password) !== '') {
+        return false;
+    }
+
+    $accountType = (string) ($record['account_type'] ?? '');
+    $accountKey = (string) ($record['account_key'] ?? '');
+    $email = normalize_email((string) ($record['email'] ?? ''));
+    $ok = false;
+
+    if ($accountType === 'student') {
+        $studentId = normalize_yuva_id($accountKey);
+        $accounts = student_accounts();
+        if (is_array($accounts[$studentId] ?? null)) {
+            $accounts[$studentId]['password_hash'] = password_hash($password, PASSWORD_DEFAULT);
+            $accounts[$studentId]['updated_at'] = gmdate('c');
+            write_student_accounts($accounts);
+            $ok = true;
+        }
+    } elseif ($accountType === 'parent') {
+        $accounts = parent_accounts();
+        if ($email !== '' && is_array($accounts[$email] ?? null) && ($accounts[$email]['status'] ?? '') === 'active') {
+            $accounts[$email]['password_hash'] = password_hash($password, PASSWORD_DEFAULT);
+            $accounts[$email]['updated_at'] = gmdate('c');
+            write_parent_accounts($accounts);
+            $ok = true;
+        }
+    } elseif ($accountType === 'master_admin' && $email === YUVA_PLATFORM_ADMIN_EMAIL) {
+        write_admin_credentials([
+            'password_hash' => password_hash_for_admin($password),
+        ]);
+        $ok = true;
+    } elseif ($accountType === 'organization_admin') {
+        $accounts = organization_admin_accounts();
+        if ($email !== '' && is_array($accounts[$email] ?? null) && ($accounts[$email]['status'] ?? '') === 'active') {
+            $accounts[$email]['password_hash'] = password_hash($password, PASSWORD_DEFAULT);
+            $accounts[$email]['email_verified'] = true;
+            $accounts[$email]['updated_at'] = gmdate('c');
+            write_organization_admin_accounts($accounts);
+            $ok = true;
+        }
+    }
+
+    if (!$ok) {
+        audit_log_event(null, (string) ($record['role'] ?? YUVA_ROLE_STUDENT), $record['organization_id'] ?? null, 'password_reset.complete', 'account', $email !== '' ? $email : $accountKey, false, ['account_type' => $accountType]);
+        return false;
+    }
+
+    $tokens = password_reset_tokens();
+    $tokenId = (string) ($record['token_id'] ?? '');
+    if ($tokenId !== '' && isset($tokens[$tokenId])) {
+        $tokens[$tokenId]['used_at'] = gmdate('c');
+        write_password_reset_tokens($tokens);
+    }
+
+    audit_log_event(
+        $accountType === 'parent' ? parent_actor_id($email) : ($accountType === 'student' ? normalize_yuva_id($accountKey) : admin_actor_id($email)),
+        (string) ($record['role'] ?? YUVA_ROLE_STUDENT),
+        $record['organization_id'] ?? null,
+        'password_reset.complete',
+        'account',
+        $accountType === 'student' ? normalize_yuva_id($accountKey) : $email,
+        true,
+        ['account_type' => $accountType]
+    );
+    return true;
 }
 
 function send_parent_activation_email(string $parentEmail, string $activationUrl): bool {

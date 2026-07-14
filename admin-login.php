@@ -45,6 +45,8 @@ portal_header('Admin Login');
         <div class="form-status error">This login form expired. Please try again.</div>
       <?php elseif ($status === 'org-admin-activated'): ?>
         <div class="form-status success">Your organization administrator account is active. Please log in.</div>
+      <?php elseif ($status === 'password-reset'): ?>
+        <div class="form-status success">Your password was updated. Please log in.</div>
       <?php endif; ?>
       <form class="form-card" method="post">
         <?php echo csrf_field(); ?>
@@ -57,6 +59,7 @@ portal_header('Admin Login');
           <input id="password" name="password" type="password" required>
         </div>
         <button class="button primary" type="submit">Log In</button>
+        <p><a href="forgot-password.php?account=admin">Forgot password?</a></p>
       </form>
     </div>
   </section>

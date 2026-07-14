@@ -1,10 +1,8 @@
 <?php
 require __DIR__ . '/portal-lib.php';
 
-$isAdmin = ($_SESSION['admin_logged_in'] ?? false) === true;
-$isStudent = logged_in_student_id() !== null;
-$isParent = normalize_yuva_id($_SESSION['parent_student_id'] ?? '') !== '';
-$canViewStudentIds = $isAdmin || $isStudent || $isParent;
+$admin = require_admin([YUVA_ROLE_MASTER_ADMIN]);
+$canViewStudentIds = true;
 
 $programFilter = clean_text($_GET['program'] ?? '');
 $stageFilter = clean_text($_GET['stage'] ?? '');
@@ -56,14 +54,15 @@ portal_header('Challenge Leaderboard');
 <main>
   <section class="band">
     <div class="section-head">
-      <p class="eyebrow">Leadership Challenge</p>
+      <p class="eyebrow">Platform Administration</p>
       <h1>Challenge Leaderboard</h1>
-      <p>Track approved student progress by program, challenge stage, points, tokens, and presentation rubric score.</p>
+      <p>Review approved student challenge progress by program, stage, points, tokens, and presentation rubric score.</p>
+      <p><a class="button ghost" href="admin.php">Back to Admin Dashboard</a></p>
     </div>
     <div class="form-card">
       <h2>What this leaderboard shows</h2>
-      <p>The YUVA Club leaderboard highlights approved student progress in leadership challenges. It celebrates participation, presentations, learning milestones, rubric scores, points, tokens, finalist status, and awards.</p>
-      <p>Public visitors can view achievement standings, while private student identifiers remain visible only to authorized students, parents, and administrators.</p>
+      <p>This admin leaderboard summarizes approved YUVA Club challenge records. Use it to review participation, presentations, learning milestones, rubric scores, points, tokens, finalist status, and awards before sharing any public recognition.</p>
+      <p>Student identifiers are visible here because this page is restricted to the platform administrator.</p>
     </div>
     <form class="form-card" method="get">
       <div class="field-grid">

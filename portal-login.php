@@ -54,6 +54,8 @@ portal_header('Student Portal Login');
         <div class="form-status error">Too many login attempts. Please wait 15 minutes and try again.</div>
       <?php elseif ($status === 'security-error'): ?>
         <div class="form-status error">This login form expired. Please try again.</div>
+      <?php elseif ($status === 'password-reset'): ?>
+        <div class="form-status success">Your password was updated. Please log in.</div>
       <?php endif; ?>
 
       <form class="form-card" method="post">
@@ -67,6 +69,7 @@ portal_header('Student Portal Login');
           <input id="password" name="password" type="password" required autocomplete="current-password">
         </div>
         <button class="button primary" type="submit">Log In</button>
+        <p><a href="forgot-password.php?account=student">Forgot password?</a></p>
       </form>
     </div>
   </section>

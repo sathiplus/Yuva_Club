@@ -68,7 +68,7 @@ portal_header('Parent Dashboard');
         <span class="<?php echo $stage === $challengeStage ? 'active' : ''; ?>"><?php echo e($stage); ?></span>
       <?php endforeach; ?>
     </div>
-    <p><a class="button ghost" href="leaderboard.php">View Challenge Leaderboard</a></p>
+    <p class="muted">Challenge recognition is reviewed by YUVA Club before any public sharing.</p>
   </section>
   <section class="band">
     <div class="three-grid">
