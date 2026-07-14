@@ -1,16 +1,35 @@
 :root {
-  --ink: #1d2433;
-  --muted: #657084;
+  --color-navy-900: #071A4D;
+  --color-navy-700: #102A72;
+  --color-blue: #2563EB;
+  --color-teal: #14B8A6;
+  --color-purple: #7C3AED;
+  --color-orange: #F97316;
+  --color-gold: #FBBF24;
+  --color-success: #22C55E;
+  --color-background: #F7F9FC;
+  --color-surface: #FFFFFF;
+  --color-text: #111827;
+  --color-text-muted: #64748B;
+  --color-border: #E5E7EB;
+  --color-indigo: #4338CA;
+  --color-coral: #FB4E4E;
+  --app-radius-card: 22px;
+  --app-radius-button: 14px;
+  --app-shadow-soft: 0 18px 55px rgba(7, 26, 77, .12);
+  --app-shadow-card: 0 14px 30px rgba(15, 23, 42, .10);
+  --ink: var(--color-text);
+  --muted: var(--color-text-muted);
   --paper: #fffaf0;
-  --surface: #ffffff;
-  --line: #e7ddca;
-  --saffron: #f59e0b;
-  --marigold: #facc15;
-  --lotus: #d946ef;
-  --leaf: #16a34a;
-  --teal: #0f766e;
-  --blue: #2563eb;
-  --shadow: 0 18px 55px rgba(29, 36, 51, .12);
+  --surface: var(--color-surface);
+  --line: var(--color-border);
+  --saffron: var(--color-orange);
+  --marigold: var(--color-gold);
+  --lotus: var(--color-purple);
+  --leaf: var(--color-success);
+  --teal: var(--color-teal);
+  --blue: var(--color-blue);
+  --shadow: var(--app-shadow-soft);
 }
 
 * { box-sizing: border-box; }
@@ -1916,6 +1935,418 @@ html.pwa-mode .mobile-app-shell {
 
 .mobile-bottom-nav a.active::before {
   background: linear-gradient(135deg, #f5c542, #ffffff);
+}
+
+/* Student app visual refresh */
+html.pwa-mode body {
+  color: var(--color-text);
+  background: var(--color-background);
+}
+
+html.pwa-mode .mobile-app-shell {
+  gap: 18px;
+  padding: calc(18px + env(safe-area-inset-top)) 18px calc(124px + env(safe-area-inset-bottom));
+  background: linear-gradient(180deg, var(--color-navy-900) 0 430px, var(--color-background) 430px 100%);
+  color: var(--color-text);
+}
+
+html.pwa-mode .mobile-app-topbar {
+  color: #ffffff;
+  padding: 2px 2px 6px;
+}
+
+html.pwa-mode .mobile-app-topbar span {
+  color: var(--color-teal);
+  font-size: .82rem;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+html.pwa-mode .mobile-app-topbar strong {
+  color: #ffffff;
+  font-size: 1.55rem;
+  line-height: 1.05;
+}
+
+html.pwa-mode .mobile-app-actions a {
+  min-height: 48px;
+  min-width: 48px;
+  border: 1px solid rgba(255, 255, 255, .24);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, .12);
+  color: #ffffff;
+  box-shadow: none;
+}
+
+html.pwa-mode .mobile-app-actions a:first-child {
+  color: var(--color-gold);
+}
+
+html.pwa-mode .mobile-app-actions a:last-child {
+  border-color: rgba(20, 184, 166, .70);
+  background: #ffffff;
+  color: var(--color-navy-900);
+}
+
+html.pwa-mode .mobile-greeting-card {
+  position: relative;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  color: #ffffff;
+  min-height: 230px;
+  padding: 18px 34% 10px 4px;
+  overflow: hidden;
+}
+
+html.pwa-mode .mobile-greeting-card p {
+  margin: 0 0 6px;
+  color: var(--color-teal);
+  font-size: clamp(1.15rem, 5vw, 1.45rem);
+}
+
+html.pwa-mode .mobile-greeting-card h1 {
+  margin: 0;
+  color: #ffffff;
+  font-size: clamp(2.35rem, 13.5vw, 4.1rem);
+  line-height: .98;
+  letter-spacing: 0;
+}
+
+html.pwa-mode .mobile-greeting-card span {
+  display: block;
+  margin-top: 12px;
+  color: rgba(255, 255, 255, .88);
+  font-size: 1rem;
+}
+
+html.pwa-mode .mobile-greeting-card::after {
+  content: "";
+  display: block;
+  width: 78px;
+  height: 5px;
+  margin-top: 14px;
+  border-radius: 999px;
+  background: var(--color-gold);
+}
+
+html.pwa-mode .mobile-hero-art {
+  position: absolute;
+  right: 0;
+  bottom: 8px;
+  width: min(42%, 170px);
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  border-radius: 34px;
+  background:
+    radial-gradient(circle at 50% 72%, rgba(20, 184, 166, .45), transparent 46%),
+    linear-gradient(145deg, rgba(37, 99, 235, .32), rgba(124, 58, 237, .30));
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .18), 0 22px 44px rgba(0, 0, 0, .20);
+}
+
+html.pwa-mode .mobile-hero-art::before,
+html.pwa-mode .mobile-hero-art::after {
+  content: "";
+  position: absolute;
+  border-radius: 999px;
+  background: var(--color-gold);
+}
+
+html.pwa-mode .mobile-hero-art::before {
+  width: 12px;
+  height: 12px;
+  top: 16px;
+  right: 18px;
+}
+
+html.pwa-mode .mobile-hero-art::after {
+  width: 8px;
+  height: 8px;
+  left: 18px;
+  bottom: 22px;
+  background: var(--color-teal);
+}
+
+html.pwa-mode .mobile-hero-art img {
+  position: relative;
+  z-index: 1;
+  width: 74%;
+  height: 74%;
+  object-fit: contain;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 16px 28px rgba(7, 26, 77, .20);
+}
+
+html.pwa-mode .mobile-progress-card,
+html.pwa-mode .mobile-stats-row {
+  border: 1px solid rgba(255, 255, 255, .16);
+  border-radius: var(--app-radius-card);
+  background: rgba(255, 255, 255, .10);
+  color: #ffffff;
+  box-shadow: none;
+}
+
+html.pwa-mode .mobile-progress-card strong,
+html.pwa-mode .mobile-stats-row strong {
+  color: #ffffff;
+}
+
+html.pwa-mode .mobile-progress-card span,
+html.pwa-mode .mobile-stats-row span {
+  color: rgba(255, 255, 255, .78);
+}
+
+html.pwa-mode .mobile-progress-bar {
+  background: rgba(255, 255, 255, .18);
+}
+
+html.pwa-mode .mobile-progress-bar span {
+  background: linear-gradient(90deg, var(--color-teal), var(--color-gold));
+}
+
+html.pwa-mode .mobile-action-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+html.pwa-mode .mobile-action-card {
+  min-height: 118px;
+  padding: 18px;
+  border: 0;
+  border-radius: var(--app-radius-card);
+  background: linear-gradient(135deg, var(--color-blue), var(--color-purple));
+  color: #ffffff;
+  box-shadow: var(--app-shadow-card);
+}
+
+html.pwa-mode .mobile-action-card.primary {
+  grid-column: 1 / -1;
+  min-height: 146px;
+  background: linear-gradient(135deg, var(--color-teal), var(--color-success));
+}
+
+html.pwa-mode .mobile-action-card.action-research {
+  background: linear-gradient(135deg, var(--color-orange), var(--color-coral));
+}
+
+html.pwa-mode .mobile-action-card.action-practice {
+  background: linear-gradient(135deg, var(--color-teal), var(--color-success));
+}
+
+html.pwa-mode .mobile-action-card.action-present {
+  background: linear-gradient(135deg, var(--color-blue), var(--color-purple));
+}
+
+html.pwa-mode .mobile-action-card.action-challenge {
+  background: linear-gradient(135deg, var(--color-orange), var(--color-gold));
+  color: var(--color-navy-900);
+}
+
+html.pwa-mode .mobile-action-card.action-progress {
+  background: linear-gradient(135deg, var(--color-blue), var(--color-indigo));
+}
+
+html.pwa-mode .mobile-action-card.action-ai {
+  background: linear-gradient(135deg, var(--color-teal), var(--color-blue));
+}
+
+html.pwa-mode .mobile-action-card span {
+  color: rgba(255, 255, 255, .82);
+  font-size: .75rem;
+  font-weight: 800;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+html.pwa-mode .mobile-action-card strong {
+  color: #ffffff;
+  font-size: clamp(1.25rem, 6vw, 1.75rem);
+  line-height: 1.05;
+}
+
+html.pwa-mode .mobile-action-card.action-challenge span,
+html.pwa-mode .mobile-action-card.action-challenge strong {
+  color: var(--color-navy-900);
+}
+
+html.pwa-mode .mobile-action-card::after,
+html.pwa-mode .mobile-info-card::after {
+  right: 18px;
+  bottom: 18px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, .18);
+  color: #ffffff;
+}
+
+html.pwa-mode .mobile-action-card.action-challenge::after {
+  background: rgba(7, 26, 77, .12);
+  color: var(--color-navy-900);
+}
+
+html.pwa-mode .mobile-card-stack {
+  gap: 16px;
+}
+
+html.pwa-mode .mobile-info-card {
+  border: 1px solid var(--color-border);
+  border-radius: var(--app-radius-card);
+  background: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: var(--app-shadow-card);
+}
+
+html.pwa-mode .mobile-info-card span {
+  color: var(--color-text-muted);
+  font-size: .74rem;
+  font-weight: 800;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+html.pwa-mode .mobile-info-card strong {
+  color: var(--color-text);
+  font-size: 1.08rem;
+}
+
+html.pwa-mode .mobile-info-card small {
+  color: var(--color-text-muted);
+}
+
+html.pwa-mode .app-card-practice {
+  border-top: 4px solid var(--color-teal);
+}
+
+html.pwa-mode .app-card-present {
+  border-top: 4px solid var(--color-blue);
+}
+
+html.pwa-mode .app-card-progress {
+  border-top: 4px solid var(--color-purple);
+}
+
+html.pwa-mode .app-card-ai {
+  border-top: 4px solid var(--color-teal);
+}
+
+html.pwa-mode .app-card-challenge {
+  border-top: 4px solid var(--color-gold);
+}
+
+html.pwa-mode .app-card-profile {
+  border-top: 4px solid var(--color-indigo);
+}
+
+html.pwa-mode .mobile-mini-button,
+html.pwa-mode .button,
+html.pwa-mode button {
+  min-height: 48px;
+  border-radius: var(--app-radius-button);
+  font-weight: 800;
+}
+
+html.pwa-mode .mobile-mini-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 14px;
+  padding: 0 18px;
+  border: 0;
+  background: var(--color-navy-900);
+  color: #ffffff;
+  text-decoration: none;
+}
+
+html.pwa-mode .mobile-mini-button:hover,
+html.pwa-mode .mobile-mini-button:focus-visible {
+  background: var(--color-blue);
+}
+
+html.pwa-mode .mobile-mini-button:active,
+html.pwa-mode .button:active,
+html.pwa-mode button:active {
+  transform: scale(.98);
+}
+
+html.pwa-mode .mobile-mini-button[aria-disabled="true"],
+html.pwa-mode .mobile-mini-button:disabled,
+html.pwa-mode .button[aria-disabled="true"],
+html.pwa-mode .button:disabled,
+html.pwa-mode button:disabled {
+  cursor: not-allowed;
+  opacity: .56;
+}
+
+html.pwa-mode .mobile-bottom-nav {
+  bottom: max(12px, env(safe-area-inset-bottom));
+  width: min(440px, calc(100vw - 24px));
+  padding: 8px max(8px, env(safe-area-inset-left)) calc(8px + env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-right));
+  border: 1px solid rgba(255, 255, 255, .12);
+  border-radius: 24px;
+  background: var(--color-navy-900);
+  box-shadow: 0 18px 46px rgba(7, 26, 77, .30);
+}
+
+html.pwa-mode .mobile-bottom-nav a {
+  position: relative;
+  min-height: 60px;
+  color: rgba(255, 255, 255, .76);
+  border-radius: 18px;
+}
+
+html.pwa-mode .mobile-bottom-nav a::before {
+  background: rgba(255, 255, 255, .18);
+}
+
+html.pwa-mode .mobile-bottom-nav a.active {
+  background: rgba(20, 184, 166, .16);
+  color: #ffffff;
+  box-shadow: none;
+}
+
+html.pwa-mode .mobile-bottom-nav a.active::before {
+  background: var(--color-teal);
+}
+
+html.pwa-mode .mobile-bottom-nav a.active::after {
+  content: "";
+  position: absolute;
+  top: 6px;
+  left: 50%;
+  width: 24px;
+  height: 3px;
+  border-radius: 999px;
+  background: var(--color-gold);
+  transform: translateX(-50%);
+}
+
+@media (max-width: 360px) {
+  html.pwa-mode .mobile-app-shell {
+    padding-right: 14px;
+    padding-left: 14px;
+  }
+
+  html.pwa-mode .mobile-greeting-card {
+    min-height: 214px;
+    padding-right: 4px;
+  }
+
+  html.pwa-mode .mobile-hero-art {
+    right: 2px;
+    width: 132px;
+    opacity: .34;
+  }
+
+  html.pwa-mode .mobile-action-grid {
+    gap: 12px;
+  }
+
+  html.pwa-mode .mobile-bottom-nav a {
+    font-size: .68rem;
+  }
 }
 
 html.pwa-mode .app-product-hero {
