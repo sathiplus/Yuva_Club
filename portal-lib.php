@@ -2474,10 +2474,11 @@ function portal_header(string $title, string $bodyClass = ''): void {
     echo '<meta name="twitter:description" content="Empowering Young Minds to Learn, Lead and Inspire.">';
     echo '<meta name="twitter:image" content="https://www.yuvaclub.app/assets/logo.png">';
     echo '<script type="application/ld+json">{"@context":"https://schema.org","@type":"EducationalOrganization","name":"YUVA Club","url":"https://www.yuvaclub.app","description":"Empowering Young Minds to Learn, Lead and Inspire."}</script>';
-    echo '<link rel="icon" href="assets/logo.png" type="image/png">';
-    echo '<link rel="apple-touch-icon" href="assets/app-icon-180.png">';
-    echo '<link rel="manifest" href="manifest.webmanifest?v=20260714-public-mobile-nav">';
-    echo '<meta name="theme-color" content="#062856">';
+    echo '<link rel="icon" href="/icons/favicon-32x32.png" sizes="32x32" type="image/png">';
+    echo '<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">';
+    echo '<link rel="manifest" href="/manifest.webmanifest?v=20260714-pwa-install-icon">';
+    echo '<meta name="theme-color" content="#5B4FD6">';
+    echo '<meta name="mobile-web-app-capable" content="yes">';
     echo '<meta name="apple-mobile-web-app-capable" content="yes">';
     echo '<meta name="apple-mobile-web-app-title" content="YUVA Club">';
     echo '<meta name="apple-mobile-web-app-status-bar-style" content="default">';

@@ -4,7 +4,7 @@ if (window.location.pathname.endsWith('/offline.html') && navigator.onLine) {
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/service-worker.js?v=12').catch(() => {});
+    navigator.serviceWorker.register('/service-worker.js?v=14').catch(() => {});
   });
 }
 

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'yuva-club-app-v13';
+const CACHE_NAME = 'yuva-club-app-v14';
 const STATIC_ASSETS = [
   '/index.html',
   '/app.html',
@@ -10,8 +10,8 @@ const STATIC_ASSETS = [
   '/resources.html',
   '/offline.html',
   '/manifest.webmanifest',
-  '/assets/site.css?v=20260714-public-mobile-nav',
-  '/assets/app.js?v=20260714-public-mobile-nav',
+  '/assets/site.css?v=20260714-pwa-install-icon',
+  '/assets/app.js?v=20260714-pwa-install-icon',
   '/assets/logo.png',
   '/assets/app-icon-180.png',
   '/assets/app-icon-192.png',
