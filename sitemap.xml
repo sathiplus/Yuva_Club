@@ -1,13 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>https://www.yuvaclub.app/</loc></url>
-  <url><loc>https://www.yuvaclub.app/login</loc></url>
-  <url><loc>https://www.yuvaclub.app/student</loc></url>
-  <url><loc>https://www.yuvaclub.app/organization</loc></url>
-  <url><loc>https://www.yuvaclub.app/admin</loc></url>
+  <url><loc>https://www.yuvaclub.app/app.html</loc></url>
   <url><loc>https://www.yuvaclub.app/registration.php</loc></url>
+  <url><loc>https://www.yuvaclub.app/portal-login.php</loc></url>
+  <url><loc>https://www.yuvaclub.app/parent-login.php</loc></url>
+  <url><loc>https://www.yuvaclub.app/admin-login.php</loc></url>
   <url><loc>https://www.yuvaclub.app/programs.html</loc></url>
+  <url><loc>https://www.yuvaclub.app/challenges.html</loc></url>
   <url><loc>https://www.yuvaclub.app/curriculum.html</loc></url>
+  <url><loc>https://www.yuvaclub.app/leaderboard.php</loc></url>
   <url><loc>https://www.yuvaclub.app/stories.html</loc></url>
   <url><loc>https://www.yuvaclub.app/resources.html</loc></url>
   <url><loc>https://www.yuvaclub.app/safety.html</loc></url>
