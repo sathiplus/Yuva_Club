@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>YUVA Club Design System</title>
+  <meta name="description" content="Reusable frontend design system components for the YUVA Club student app and public platform.">
+  <link rel="icon" href="/icons/favicon-32x32.png" sizes="32x32" type="image/png">
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+  <link rel="stylesheet" href="assets/site.css?v=20260714-design-system">
+</head>
+<body class="yuva-design-page">
+  <header class="yuva-hero-system">
+    <div class="yuva-container yuva-hero-grid">
+      <div>
+        <span class="yuva-kicker">YUVA Club Design System</span>
+        <h1>Energetic, modern, teen-ready interface patterns.</h1>
+        <span class="yuva-hero-accent" aria-hidden="true"></span>
+        <p>Reusable tokens, buttons, cards, forms, alerts, avatars, and mobile navigation styles for a consistent student app experience.</p>
+        <div class="hero-actions">
+          <a class="yuva-button yuva-button--gold" href="#components">View Components</a>
+          <a class="yuva-button yuva-button--outline" href="app.html">Preview App</a>
+        </div>
+      </div>
+      <div class="yuva-hero-card" aria-label="Design system preview card">
+        <div class="yuva-avatar yuva-avatar--large">YC</div>
+        <h2 style="margin-top: 24px; color: #fff;">Good morning, Test2</h2>
+        <p>Keep learning, keep growing. Your future is yours to build.</p>
+        <div class="yuva-stat-strip">
+          <div class="yuva-stat-pill"><strong>1250</strong><span>Points</span></div>
+          <div class="yuva-stat-pill"><strong>320</strong><span>Tokens</span></div>
+          <div class="yuva-stat-pill"><strong>4</strong><span>Level</span></div>
+          <div class="yuva-stat-pill"><strong>12</strong><span>Streak</span></div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main id="components" class="yuva-container">
+    <section class="yuva-section">
+      <span class="yuva-kicker">Color Tokens</span>
+      <h2 class="yuva-section-title">Centralized Palette</h2>
+      <div class="yuva-grid">
+        <div class="yuva-card yuva-card--compact" style="border-top: 8px solid var(--color-navy-900);"><strong>Primary Navy</strong><br>#071A4D</div>
+        <div class="yuva-card yuva-card--compact" style="border-top: 8px solid var(--color-blue);"><strong>Electric Blue</strong><br>#2563EB</div>
+        <div class="yuva-card yuva-card--compact" style="border-top: 8px solid var(--color-teal);"><strong>Teal</strong><br>#14B8A6</div>
+        <div class="yuva-card yuva-card--compact" style="border-top: 8px solid var(--color-purple);"><strong>Purple</strong><br>#7C3AED</div>
+        <div class="yuva-card yuva-card--compact" style="border-top: 8px solid var(--color-orange);"><strong>Orange</strong><br>#F97316</div>
+        <div class="yuva-card yuva-card--compact" style="border-top: 8px solid var(--color-gold);"><strong>Gold</strong><br>#FBBF24</div>
+      </div>
+    </section>
+
+    <section class="yuva-section">
+      <span class="yuva-kicker">Buttons</span>
+      <h2 class="yuva-section-title">Action Styles</h2>
+      <div class="yuva-card">
+        <div class="button-row">
+          <a class="yuva-button yuva-button--primary" href="#">Primary</a>
+          <a class="yuva-button yuva-button--secondary" href="#">Secondary</a>
+          <a class="yuva-button yuva-button--outline" href="#">Outline</a>
+          <a class="yuva-button yuva-button--text" href="#">Text</a>
+          <button class="yuva-button yuva-button--destructive" type="button">Destructive</button>
+          <button class="yuva-button yuva-button--secondary is-loading" type="button">Loading</button>
+          <button class="yuva-button yuva-button--primary" type="button" disabled>Disabled</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="yuva-section">
+      <span class="yuva-kicker">Cards</span>
+      <h2 class="yuva-section-title">Feature Cards</h2>
+      <div class="yuva-grid">
+        <a class="yuva-card yuva-card--feature yuva-gradient-practice" href="#">
+          <span class="yuva-icon-badge">P</span>
+          <strong>Practice</strong>
+          <span>Sharpen your skills</span>
+        </a>
+        <a class="yuva-card yuva-card--feature yuva-gradient-present" href="#">
+          <span class="yuva-icon-badge">M</span>
+          <strong>Present</strong>
+          <span>Present with confidence</span>
+        </a>
+        <a class="yuva-card yuva-card--feature yuva-gradient-progress" href="#">
+          <span class="yuva-icon-badge">G</span>
+          <strong>Progress</strong>
+          <span>Track your journey</span>
+        </a>
+        <a class="yuva-card yuva-card--feature yuva-gradient-certificate" href="#">
+          <span class="yuva-icon-badge">C</span>
+          <strong>Certificates</strong>
+          <span>Earn and celebrate</span>
+        </a>
+        <a class="yuva-card yuva-card--feature yuva-gradient-ai" href="#">
+          <span class="yuva-icon-badge">AI</span>
+          <strong>AI Coach</strong>
+          <span>Get smart feedback</span>
+        </a>
+        <a class="yuva-card yuva-card--feature yuva-gradient-research" href="#">
+          <span class="yuva-icon-badge">R</span>
+          <strong>Research</strong>
+          <span>Prepare your ideas</span>
+        </a>
+      </div>
+    </section>
+
+    <section class="yuva-section">
+      <span class="yuva-kicker">Forms</span>
+      <h2 class="yuva-section-title">Inputs and States</h2>
+      <div class="yuva-grid-two">
+        <form class="yuva-card" action="#" method="get">
+          <div class="yuva-form-grid">
+            <label class="yuva-field">
+              <span class="yuva-label">Student Name</span>
+              <input class="yuva-input" type="text" placeholder="Example: Maya Patel">
+              <span class="yuva-help">Use clear labels and readable helper text.</span>
+            </label>
+            <label class="yuva-field">
+              <span class="yuva-label">Learning Area</span>
+              <select class="yuva-select">
+                <option>Presentation Practice</option>
+                <option>Research</option>
+                <option>Challenge</option>
+              </select>
+            </label>
+            <label class="yuva-field" style="grid-column: 1 / -1;">
+              <span class="yuva-label">Notes</span>
+              <textarea class="yuva-textarea" placeholder="Write feedback, goals, or next steps."></textarea>
+            </label>
+          </div>
+        </form>
+        <div class="yuva-card">
+          <div class="yuva-alert yuva-alert--success">Success state: Your changes were saved.</div>
+          <br>
+          <div class="yuva-alert yuva-alert--info">Info state: Review pending items before the next session.</div>
+          <br>
+          <div class="yuva-alert yuva-alert--warning">Warning state: Some fields need attention.</div>
+          <br>
+          <div class="yuva-alert yuva-alert--error">Error state: The request could not be completed.</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="yuva-section">
+      <span class="yuva-kicker">Mobile Shell</span>
+      <h2 class="yuva-section-title">Bottom Navigation and Avatar</h2>
+      <div class="yuva-preview-phone">
+        <div class="yuva-safe-area-demo">
+          <div style="display: flex; justify-content: space-between; align-items: center; gap: 16px;">
+            <div>
+              <span class="yuva-kicker">Student Home</span>
+              <h3>Ready to practice?</h3>
+            </div>
+            <span class="yuva-avatar">T2</span>
+          </div>
+          <div class="yuva-card yuva-card--feature yuva-gradient-research" style="margin-top: 20px;">
+            <span class="yuva-kicker" style="color: rgba(255,255,255,.82);">Next Action</span>
+            <strong>Submit your research notes</strong>
+            <span>Add sources and prepared questions before presenting.</span>
+            <div style="margin-top: 18px;">
+              <a class="yuva-button yuva-button--primary" href="#">Submit Research</a>
+            </div>
+          </div>
+        </div>
+        <nav class="yuva-bottom-nav" aria-label="Student app preview navigation">
+          <a class="is-active" href="#"><span>H</span>Home</a>
+          <a href="#"><span>P</span>Practice</a>
+          <a href="#"><span>M</span>Present</a>
+          <a href="#"><span>G</span>Progress</a>
+          <a href="#"><span>U</span>Profile</a>
+        </nav>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
