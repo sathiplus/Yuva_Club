@@ -3,6 +3,11 @@ require __DIR__ . '/portal-lib.php';
 
 $student = require_student();
 $studentId = normalize_yuva_id($student['Yuva Club ID'] ?? '');
+
+if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !verify_csrf_token($_POST['csrf_token'] ?? null)) {
+    redirect_to('portal.php?status=security-error#safety-report');
+}
+
 $reportType = clean_text($_POST['report_type'] ?? '');
 $message = trim((string) ($_POST['report_message'] ?? ''));
 

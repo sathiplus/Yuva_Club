@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 280" role="img" aria-label="Young leaders growing from an open book">
+  <defs>
+    <linearGradient id="book" x1="0" x2="1"><stop stop-color="#e8f4ff"/><stop offset="1" stop-color="#fff"/></linearGradient>
+    <linearGradient id="blue" x1="0" y1="1" x2="1"><stop stop-color="#1769ff"/><stop offset="1" stop-color="#26c6da"/></linearGradient>
+    <linearGradient id="purple" x1="0" y1="1" x2="1"><stop stop-color="#6d38e8"/><stop offset="1" stop-color="#b66cff"/></linearGradient>
+    <filter id="shadow"><feDropShadow dx="0" dy="12" stdDeviation="10" flood-color="#020a27" flood-opacity=".35"/></filter>
+  </defs>
+  <g filter="url(#shadow)">
+    <path d="M35 221c57-17 105-7 145 27 39-34 88-44 145-27-50 7-97 22-145 45-48-23-95-38-145-45Z" fill="#09235d"/>
+    <path d="M39 202c57-12 104 1 141 38v26c-44-27-89-42-141-45Z" fill="url(#book)"/>
+    <path d="M321 202c-57-12-104 1-141 38v26c44-27 89-42 141-45Z" fill="#dcecff"/>
+    <path d="M180 239v27" stroke="#8abfff" stroke-width="4"/>
+  </g>
+  <g>
+    <path d="M178 194c-13-69-55-89-83-117 4 51 20 95 83 117Z" fill="#ffad12"/>
+    <circle cx="93" cy="70" r="15" fill="#ffad12"/>
+    <path d="M184 194c12-73 52-105 81-132-4 58-17 105-81 132Z" fill="url(#purple)"/>
+    <circle cx="269" cy="55" r="15" fill="#8a4df2"/>
+    <path d="M181 194c-5-94 5-134 33-169 21 49 21 106-33 169Z" fill="url(#blue)"/>
+    <circle cx="216" cy="29" r="15" fill="#21bdd2"/>
+    <path d="M177 194c-20-78-58-107-92-128 13 57 34 101 92 128Z" fill="#15b998" opacity=".92"/>
+    <circle cx="79" cy="60" r="14" fill="#15b998"/>
+    <path d="m216 8 42 17-42 16-42-16 42-17Z" fill="#1787ef"/>
+    <path d="M250 27v27" stroke="#ffb219" stroke-width="5" stroke-linecap="round"/>
+    <circle cx="250" cy="58" r="6" fill="#ffb219"/>
+  </g>
+  <g fill="#fff">
+    <path d="m48 101 4 9 10 4-10 4-4 10-4-10-10-4 10-4 4-9Z"/>
+    <path d="m301 91 3 7 8 3-8 3-3 8-3-8-8-3 8-3 3-7Z"/>
+    <circle cx="320" cy="151" r="4"/><circle cx="52" cy="168" r="4"/>
+  </g>
+</svg>

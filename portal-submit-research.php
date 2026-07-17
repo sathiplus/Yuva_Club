@@ -3,6 +3,10 @@ require __DIR__ . '/portal-lib.php';
 $student = require_student();
 $studentId = $student['Yuva Club ID'];
 
+if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !verify_csrf_token($_POST['csrf_token'] ?? null)) {
+    redirect_to('portal.php?status=security-error');
+}
+
 $researchAll = read_json_file(research_file());
 $existing = $researchAll[$studentId] ?? [];
 $record = [

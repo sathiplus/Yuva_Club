@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 260" role="img" aria-label="">
+  <defs><linearGradient id="mic" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#9b82ff"/><stop offset="1" stop-color="#4d3cce"/></linearGradient><linearGradient id="bubble" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#28c9d8"/><stop offset="1" stop-color="#1670dc"/></linearGradient><filter id="shadow"><feDropShadow dx="0" dy="14" stdDeviation="14" flood-color="#020926" flood-opacity=".45"/></filter></defs>
+  <ellipse cx="222" cy="224" rx="94" ry="18" fill="#08102f" opacity=".5"/>
+  <path d="M30 70c0-19 15-34 34-34h88c19 0 34 15 34 34v55c0 19-15 34-34 34h-35l-29 25 5-25H64c-19 0-34-15-34-34V70Z" fill="url(#bubble)" opacity=".9" filter="url(#shadow)"/>
+  <path d="M70 83h76M70 107h52" stroke="#62e3de" stroke-width="10" stroke-linecap="round" opacity=".75"/>
+  <g filter="url(#shadow)"><rect x="190" y="34" width="92" height="144" rx="46" fill="url(#mic)"/><path d="M202 69h68M198 93h76M198 117h76" stroke="#cbc2ff" stroke-width="7" stroke-linecap="round" opacity=".5"/><path d="M168 121v14c0 37 30 67 67 67s67-30 67-67v-14M235 202v29M201 231h68" fill="none" stroke="#7589ff" stroke-width="12" stroke-linecap="round"/></g>
+  <g fill="#ffb11a"><path d="m312 45 5 11 11 5-11 5-5 11-5-11-11-5 11-5 5-11Z"/><circle cx="324" cy="132" r="6"/></g><g fill="#36dfcb"><path d="m83 15 4 9 9 4-9 4-4 9-4-9-9-4 9-4 4-9Z"/><circle cx="142" cy="207" r="5"/></g><path d="m319 178 22-20-5 31Z" fill="#ff5b38"/>
+</svg>

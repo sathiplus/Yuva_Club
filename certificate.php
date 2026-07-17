@@ -16,6 +16,11 @@ if ($student === null) {
 
 $selection = read_json_file(topic_selections_file())[$studentId] ?? [];
 $record = student_record($studentId);
+$certificateStatus = $record['certificate_status'] ?? 'Not Ready';
+$certificateReady = in_array($certificateStatus, ['Ready', 'Issued'], true);
+if (!$isAdmin && !$certificateReady) {
+    redirect_to('portal.php?status=certificate-not-ready#app-achievements');
+}
 $rank = approved_rank($record);
 $certificateName = rank_definitions()[$rank]['certificate'] ?? 'Certificate of Participation';
 ?>
