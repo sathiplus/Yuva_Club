@@ -1,0 +1,104 @@
+name: Student V1 RC1 Validation
+
+on:
+  push:
+    branches:
+      - codex/student-v1-release
+
+  pull_request:
+
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate Student V1 RC1
+    if: >-
+      github.event_name != 'pull_request' ||
+      github.event.pull_request.head.ref == 'codex/student-v1-release'
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out release candidate
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          coverage: none
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Lint Student V1 PHP files
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          php -l portal.php
+          php -l portal-lib.php
+          php -l certificate.php
+          php -l portal-submit-topic.php
+          php -l portal-submit-research.php
+          php -l portal-report-issue.php
+
+      - name: Validate Student V1 JavaScript syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check assets/student-app.js
+
+      - name: Check Git whitespace
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BEFORE_SHA: ${{ github.event.before }}
+          CURRENT_SHA: ${{ github.sha }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+
+          git diff --check
+
+          if [[ "$EVENT_NAME" == "pull_request" ]]; then
+            git diff --check "$PR_BASE_SHA" "$PR_HEAD_SHA"
+          elif [[ "$EVENT_NAME" == "push" && \
+                  -n "$BEFORE_SHA" && \
+                  "$BEFORE_SHA" != "0000000000000000000000000000000000000000" ]]; then
+            git diff --check "$BEFORE_SHA" "$CURRENT_SHA"
+          elif git rev-parse HEAD^ >/dev/null 2>&1; then
+            git diff --check HEAD^ HEAD
+          fi
+
+      - name: Confirm Student V1 visual assets
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          required_files=(
+            "assets/student-hero-illustration.svg"
+            "assets/student-action-clipboard.svg"
+            "assets/student-presentation-illustration.svg"
+            "assets/student-ai-coach-illustration.svg"
+            "assets/student-leadership-journey-illustration.svg"
+            "assets/student-achievements-illustration.svg"
+            "assets/student-app.css"
+          )
+
+          for file in "${required_files[@]}"; do
+            if [[ ! -s "$file" ]]; then
+              echo "::error file=$file::Required Student V1 asset is missing or empty."
+              exit 1
+            fi
+
+            echo "Verified: $file"
+          done
