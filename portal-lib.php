@@ -1,8 +1,12 @@
 <?php
 declare(strict_types=1);
 
+require_once __DIR__ . '/backend/config.php';
+
+$configuredAppUrl = app_url();
 $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
-    || (($_SERVER['SERVER_PORT'] ?? '') === '443');
+    || (($_SERVER['SERVER_PORT'] ?? '') === '443')
+    || parse_url($configuredAppUrl, PHP_URL_SCHEME) === 'https';
 session_set_cookie_params([
     'lifetime' => 0,
     'path' => '/',
@@ -135,26 +139,25 @@ function verify_csrf_token(?string $token): bool {
 }
 
 function default_hub_settings(): array {
-    $defaultSchedulerEmbed = '<iframe src="https://scheduler.zoom.us/rakesh-nair-ora63i/yuva-club-1?embed=true" frameborder="0" style="width: 750px; height: 560px;"></iframe>';
-    $defaultZoomUrl = 'https://us06web.zoom.us/s/82094865538#success';
+    $zoom = app_config()['zoom'];
     return [
         'junior_session_date' => '',
         'junior_session_start' => '',
         'junior_session_end' => '',
         'junior_session_status' => 'Closed',
-        'junior_zoom_url' => $defaultZoomUrl,
-        'junior_zoom_meeting_id' => '820 9486 5538',
-        'junior_zoom_password' => 'Yuva2026',
-        'junior_scheduler_embed' => $defaultSchedulerEmbed,
+        'junior_zoom_url' => $zoom['default_url'],
+        'junior_zoom_meeting_id' => $zoom['default_meeting_id'],
+        'junior_zoom_password' => $zoom['default_password'],
+        'junior_scheduler_embed' => $zoom['scheduler_url'],
         'junior_session_title' => 'School Yuva Session',
         'senior_session_date' => '',
         'senior_session_start' => '',
         'senior_session_end' => '',
         'senior_session_status' => 'Closed',
-        'senior_zoom_url' => $defaultZoomUrl,
-        'senior_zoom_meeting_id' => '820 9486 5538',
-        'senior_zoom_password' => 'Yuva2026',
-        'senior_scheduler_embed' => $defaultSchedulerEmbed,
+        'senior_zoom_url' => $zoom['default_url'],
+        'senior_zoom_meeting_id' => $zoom['default_meeting_id'],
+        'senior_zoom_password' => $zoom['default_password'],
+        'senior_scheduler_embed' => $zoom['scheduler_url'],
         'senior_session_title' => 'College Yuva Session',
         'announcements' => '',
         'recordings' => '',
@@ -862,10 +865,64 @@ function ai_reviews(): array {
     return read_json_file(ai_reviews_file(), []);
 }
 
+function ai_review_identifier(string $studentId, array $reviewRecord): string {
+    $reviewId = trim((string) ($reviewRecord['review_id'] ?? ''));
+    if ($reviewId !== '') {
+        return $reviewId;
+    }
+
+    return hash('sha256', json_encode([
+        'student_id' => normalize_yuva_id($studentId),
+        'reviewed_at' => $reviewRecord['reviewed_at'] ?? '',
+        'review' => $reviewRecord['review'] ?? [],
+    ], JSON_UNESCAPED_SLASHES) ?: '');
+}
+
+function mark_ai_review_stale(string $studentId, string $reason): void {
+    $reviews = ai_reviews();
+    if (!isset($reviews[$studentId]) || !is_array($reviews[$studentId])) {
+        return;
+    }
+
+    $currentStatus = (string) ($reviews[$studentId]['status'] ?? '');
+    if (str_starts_with($currentStatus, 'Stale - ')) {
+        return;
+    }
+
+    $reviews[$studentId]['previous_status'] = $currentStatus;
+    $reviews[$studentId]['status'] = 'Stale - ' . $reason;
+    $reviews[$studentId]['stale_at'] = date('Y-m-d H:i:s');
+    $reviews[$studentId]['stale_reason'] = $reason;
+    write_json_file(ai_reviews_file(), $reviews);
+}
+
+function with_ai_apply_lock(callable $callback): mixed {
+    ensure_portal_dirs();
+    $lockPath = portal_path('portal-data') . DIRECTORY_SEPARATOR . 'ai-apply.lock';
+    $handle = fopen($lockPath, 'c+');
+    if ($handle === false || !flock($handle, LOCK_EX)) {
+        if (is_resource($handle)) {
+            fclose($handle);
+        }
+        throw new RuntimeException('Could not secure the AI review operation.');
+    }
+
+    try {
+        return $callback();
+    } finally {
+        flock($handle, LOCK_UN);
+        fclose($handle);
+    }
+}
+
 function openai_api_key(): string {
     $key = trim((string) (getenv('OPENAI_API_KEY') ?: ($_SERVER['OPENAI_API_KEY'] ?? '')));
     if ($key !== '') {
         return $key;
+    }
+
+    if (app_is_azure()) {
+        return '';
     }
 
     $privateConfig = dirname(__DIR__) . DIRECTORY_SEPARATOR . 'yuva-env.php';
@@ -883,6 +940,10 @@ function openai_model_name(): string {
     $model = trim((string) (getenv('OPENAI_MODEL') ?: ($_SERVER['OPENAI_MODEL'] ?? '')));
     if ($model !== '') {
         return $model;
+    }
+
+    if (app_is_azure()) {
+        return 'gpt-4.1-mini';
     }
 
     $privateConfig = dirname(__DIR__) . DIRECTORY_SEPARATOR . 'yuva-env.php';

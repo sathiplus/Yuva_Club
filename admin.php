@@ -96,10 +96,16 @@ portal_header('Admin Dashboard');
       <div class="form-status success">AI Coach draft review created. Please review and apply it before it becomes official.</div>
     <?php elseif ($status === 'ai-applied'): ?>
       <div class="form-status success">AI Coach feedback and points were applied to the student profile.</div>
+    <?php elseif ($status === 'ai-already-applied'): ?>
+      <div class="form-status success">This AI Coach review was already applied. No additional tokens were awarded.</div>
+    <?php elseif ($status === 'ai-stale'): ?>
+      <div class="form-status error">This AI Coach review is out of date. Generate a new review before applying feedback.</div>
     <?php elseif ($status === 'ai-error'): ?>
       <div class="form-status error">AI Coach could not run. Check that OPENAI_API_KEY is configured on the server.</div>
     <?php elseif ($status === 'ai-missing'): ?>
       <div class="form-status error">AI Coach needs a student with a selected topic and submitted research.</div>
+    <?php elseif ($status === 'security-error'): ?>
+      <div class="form-status error">This form expired. Please try again.</div>
     <?php endif; ?>
 
     <form class="form-card" action="admin-password-actions.php" method="post">
@@ -163,7 +169,7 @@ portal_header('Admin Dashboard');
         </div>
         <div class="field">
           <label for="junior_zoom_meeting_id">Zoom Meeting ID</label>
-          <input id="junior_zoom_meeting_id" name="junior_zoom_meeting_id" type="text" value="<?php echo e($schoolSession['zoom_meeting_id']); ?>" placeholder="820 9486 5538">
+          <input id="junior_zoom_meeting_id" name="junior_zoom_meeting_id" type="text" value="<?php echo e($schoolSession['zoom_meeting_id']); ?>" placeholder="Zoom meeting ID">
         </div>
         <div class="field">
           <label for="junior_zoom_password">Zoom Password</label>
@@ -206,7 +212,7 @@ portal_header('Admin Dashboard');
         </div>
         <div class="field">
           <label for="senior_zoom_meeting_id">Zoom Meeting ID</label>
-          <input id="senior_zoom_meeting_id" name="senior_zoom_meeting_id" type="text" value="<?php echo e($collegeSession['zoom_meeting_id']); ?>" placeholder="820 9486 5538">
+          <input id="senior_zoom_meeting_id" name="senior_zoom_meeting_id" type="text" value="<?php echo e($collegeSession['zoom_meeting_id']); ?>" placeholder="Zoom meeting ID">
         </div>
         <div class="field">
           <label for="senior_zoom_password">Zoom Password</label>
@@ -266,7 +272,7 @@ portal_header('Admin Dashboard');
           </div>
           <div class="field">
             <label>Zoom Meeting ID</label>
-            <input name="student_zoom_meeting_id" type="text" value="<?php echo e($schoolSession['zoom_meeting_id']); ?>" placeholder="820 9486 5538">
+            <input name="student_zoom_meeting_id" type="text" value="<?php echo e($schoolSession['zoom_meeting_id']); ?>" placeholder="Zoom meeting ID">
           </div>
           <div class="field">
             <label>Zoom Password</label>
@@ -318,7 +324,7 @@ portal_header('Admin Dashboard');
           </div>
           <div class="field">
             <label>Zoom Meeting ID</label>
-            <input name="student_zoom_meeting_id" type="text" value="<?php echo e($collegeSession['zoom_meeting_id']); ?>" placeholder="820 9486 5538">
+            <input name="student_zoom_meeting_id" type="text" value="<?php echo e($collegeSession['zoom_meeting_id']); ?>" placeholder="Zoom meeting ID">
           </div>
           <div class="field">
             <label>Zoom Password</label>
@@ -465,11 +471,13 @@ portal_header('Admin Dashboard');
                 <td>
                   <?php if ($selection && $research): ?>
                     <form action="admin-ai-review.php" method="post">
+                      <?php echo csrf_field(); ?>
                       <input type="hidden" name="student_id" value="<?php echo e($studentId); ?>">
                       <button class="button ghost" type="submit">Run AI Coach Review</button>
                     </form>
                     <?php if ($aiDraft): ?>
                       <form action="admin-ai-apply.php" method="post">
+                        <?php echo csrf_field(); ?>
                         <input type="hidden" name="student_id" value="<?php echo e($studentId); ?>">
                         <button class="button primary" type="submit">Apply AI Draft</button>
                       </form>
@@ -553,6 +561,7 @@ portal_header('Admin Dashboard');
                       <p><a href="portal-download.php?id=<?php echo e($studentId); ?>"><?php echo e($research['file_original']); ?></a></p>
                     <?php endif; ?>
                     <form action="admin-ai-review.php" method="post">
+                      <?php echo csrf_field(); ?>
                       <input type="hidden" name="student_id" value="<?php echo e($studentId); ?>">
                       <button class="button ghost" type="submit">Run AI Coach Review</button>
                     </form>
@@ -574,6 +583,7 @@ portal_header('Admin Dashboard');
                             <p><strong>Improvements:</strong> <?php echo e(implode(', ', $aiDraft['improvements'])); ?></p>
                           <?php endif; ?>
                           <form action="admin-ai-apply.php" method="post">
+                            <?php echo csrf_field(); ?>
                             <input type="hidden" name="student_id" value="<?php echo e($studentId); ?>">
                             <button class="button primary" type="submit">Apply AI Draft</button>
                           </form>
@@ -761,7 +771,7 @@ portal_header('Admin Dashboard');
                   </div>
                   <div class="field">
                     <label>Student Zoom Meeting ID</label>
-                    <input name="student_zoom_meeting_id" type="text" value="<?php echo e($record['student_zoom_meeting_id'] ?? ''); ?>" placeholder="820 9486 5538">
+                    <input name="student_zoom_meeting_id" type="text" value="<?php echo e($record['student_zoom_meeting_id'] ?? ''); ?>" placeholder="Zoom meeting ID">
                   </div>
                   <div class="field">
                     <label>Student Zoom Password</label>

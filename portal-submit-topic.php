@@ -22,13 +22,22 @@ if (topic_is_taken($title, $studentId)) {
 }
 
 $selections = read_json_file(topic_selections_file());
+$existing = $selections[$studentId] ?? [];
+$topicChanged = $existing === []
+    || ($existing['topic_category'] ?? '') !== $category
+    || ($existing['topic_title'] ?? '') !== $title
+    || ($existing['presentation_date'] ?? '') !== $date
+    || ($existing['presentation_time'] ?? '') !== $time;
 $selections[$studentId] = [
     'topic_category' => $category,
     'topic_title' => $title,
     'presentation_date' => $date,
     'presentation_time' => $time,
-    'status' => $selections[$studentId]['status'] ?? 'Pending Admin Review',
+    'status' => $topicChanged ? 'Pending Admin Review' : ($existing['status'] ?? 'Pending Admin Review'),
     'updated_at' => date('Y-m-d H:i:s'),
 ];
 write_json_file(topic_selections_file(), $selections);
+if ($topicChanged) {
+    mark_ai_review_stale($studentId, 'Topic Changed');
+}
 redirect_to('portal.php?status=topic-saved');

@@ -8,6 +8,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $student = find_student($studentId);
 
     if ($student !== null && ($student['Date of Birth'] ?? '') === $dateOfBirth) {
+        session_regenerate_id(true);
         $_SESSION['student_id'] = $studentId;
         redirect_to('portal.php');
     }

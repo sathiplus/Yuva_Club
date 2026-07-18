@@ -39,7 +39,6 @@ if (isset($_GET['health'])) {
     exit;
 }
 
-$notificationEmail = 'yuvaclub@karmabro.com';
 $studentIdYear = '2026';
 
 function clean_text(string $value): string {
@@ -352,7 +351,14 @@ if (!$storedInDatabase) {
     append_registration_row($fullCsvPath, $headers, $row, $studentIdYear, $idScanPaths);
 }
 
-if ($notificationEmail !== '') {
+$mailSettings = app_config()['mail'];
+$mailEnabled = (bool) ($mailSettings['enabled'] ?? false);
+$mailProvider = strtolower((string) ($mailSettings['provider'] ?? ''));
+$mailToEmail = filter_var((string) ($mailSettings['to_email'] ?? ''), FILTER_VALIDATE_EMAIL) ?: '';
+$mailFromEmail = filter_var((string) ($mailSettings['from_email'] ?? ''), FILTER_VALIDATE_EMAIL) ?: '';
+$mailFromName = clean_text((string) ($mailSettings['from_name'] ?? 'Yuva Club'));
+
+if ($mailEnabled && in_array($mailProvider, ['php', 'native'], true) && $mailToEmail !== '' && $mailFromEmail !== '') {
     $registrationReference = $storedInDatabase ? ('Registration #' . (string) $registrationId) : $studentId;
     $subject = "New Yuva Club Registration: $registrationReference";
     $message = "New Yuva Club registration:\n\n"
@@ -382,9 +388,8 @@ if ($notificationEmail !== '') {
         . "Code of Conduct Agreement: $agreeCode\n"
         . "Recording Agreement: $agreeRecording\n"
         . "Parent Permission: $agreeParentPermission\n";
-    $headersText = "From: no-reply@yuvaclub.net\r\n"
-        . "Reply-To: $parentEmail\r\n";
-    @mail($notificationEmail, $subject, $message, $headersText);
+    $headersText = 'From: ' . ($mailFromName !== '' ? $mailFromName . ' ' : '') . '<' . $mailFromEmail . ">\r\n";
+    @mail($mailToEmail, $subject, $message, $headersText);
 }
 
 $query = $storedInDatabase
