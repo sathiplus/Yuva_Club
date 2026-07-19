@@ -105,14 +105,14 @@ function migration_assert_safe_environment(bool $allowProduction): void {
 
 function migration_acquire_lock(PDO $pdo, int $timeoutMs = YUVA_MIGRATION_LOCK_TIMEOUT_MS): void {
     $statement = $pdo->prepare(
-        'DECLARE @lock_result INT;
+        "DECLARE @lock_result INT;
          EXEC @lock_result = sys.sp_getapplock
              @Resource = :resource,
-             @LockMode = ''Exclusive'',
-             @LockOwner = ''Session'',
+             @LockMode = 'Exclusive',
+             @LockOwner = 'Session',
              @LockTimeout = :timeout_ms,
-             @DbPrincipal = ''public'';
-         SELECT @lock_result AS lock_result;'
+             @DbPrincipal = 'public';
+         SELECT @lock_result AS lock_result;"
     );
     $statement->bindValue(':resource', YUVA_MIGRATION_LOCK_RESOURCE, PDO::PARAM_STR);
     $statement->bindValue(':timeout_ms', $timeoutMs, PDO::PARAM_INT);
@@ -127,12 +127,12 @@ function migration_acquire_lock(PDO $pdo, int $timeoutMs = YUVA_MIGRATION_LOCK_T
 
 function migration_release_lock(PDO $pdo): void {
     $statement = $pdo->prepare(
-        'DECLARE @lock_result INT;
+        "DECLARE @lock_result INT;
          EXEC @lock_result = sys.sp_releaseapplock
              @Resource = :resource,
-             @LockOwner = ''Session'',
-             @DbPrincipal = ''public'';
-         SELECT @lock_result AS lock_result;'
+             @LockOwner = 'Session',
+             @DbPrincipal = 'public';
+         SELECT @lock_result AS lock_result;"
     );
     $statement->execute(['resource' => YUVA_MIGRATION_LOCK_RESOURCE]);
     $statement->closeCursor();
