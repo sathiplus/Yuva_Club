@@ -51,6 +51,12 @@ function app_config(): array {
             'default_password' => env_value('ZOOM_DEFAULT_PASSWORD'),
             'scheduler_url' => env_value('ZOOM_SCHEDULER_URL'),
         ],
+        'features' => [
+            'sql_approval_enabled' => env_bool(
+                'SQL_APPROVAL_ENABLED',
+                false
+            ),
+        ],
     ];
 }
 
@@ -68,4 +74,8 @@ function app_url(): string {
 
 function app_is_azure(): bool {
     return env_value('WEBSITE_INSTANCE_ID') !== '' || env_value('WEBSITE_SITE_NAME') !== '';
+}
+
+function sql_approval_enabled(): bool {
+    return (app_config()['features']['sql_approval_enabled'] ?? false) === true;
 }

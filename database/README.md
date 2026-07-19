@@ -34,9 +34,17 @@ rules.
 ## Phase A approval service
 
 `backend/repositories.php` contains an Azure SQL-compatible registration
-approval service, but Commit 3 does not connect that service to an admin action,
-portal read, login flow, dual write, or storage-mode change. Filesystem behavior
-therefore remains authoritative.
+approval service. The minimal admin action remains disabled unless
+`SQL_APPROVAL_ENABLED=true` is explicitly configured. A missing, false, or
+invalid value disables both the admin controls and endpoint. This gate is
+independent of `PORTAL_STORAGE_MODE`; filesystem portal reads, student login,
+and registration writes remain authoritative and unchanged.
+
+The guarded admin approval list treats `new`, `reviewing`, and `waitlisted`
+registrations as directly actionable. A waitlisted registration therefore does
+not require a separate status transition before an authenticated administrator
+approves it. The repository approval service enforces the same three-state
+allowlist.
 
 Before the SQL approval service is enabled in a later approved phase, the
 current UTC year must have a reconciled row in `dbo.yuva_id_counters`. Normal
@@ -52,9 +60,10 @@ The database-free approval contract test is:
 
 ```text
 php tests/backend/backend-approval-test.php
+php tests/backend/admin-registration-approval-test.php
 ```
 
 The guarded integration test is excluded from normal CI. It requires
-`APP_ENV=test`, `DB_DRIVER=sqlsrv`, `YUVA_RUN_SQL_INTEGRATION=YES`, a disposable
-database name containing `test`, `ci`, `scratch`, or `temp`, and an already
-migrated Phase A schema.
+`APP_ENV=test`, `DB_DRIVER=sqlsrv`, `SQL_APPROVAL_ENABLED=true`,
+`YUVA_RUN_SQL_INTEGRATION=YES`, a disposable database name containing `test`,
+`ci`, `scratch`, or `temp`, and an already migrated Phase A schema.

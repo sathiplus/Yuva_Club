@@ -128,8 +128,59 @@ function create_registration(array $input): int {
     });
 }
 
+function pending_sql_registrations(int $limit = 50): array {
+    if (!sql_approval_enabled() || !db_is_sqlsrv()) {
+        throw new RuntimeException('Registration approval is unavailable.');
+    }
+    $safeLimit = max(1, min(100, $limit));
+    $stmt = db()->query(
+        "SELECT TOP (" . $safeLimit . ")
+             registration.id,
+             registration.submitted_at,
+             registration.status,
+             registration.student_first_name,
+             registration.student_last_name,
+             registration.preferred_name,
+             registration.age,
+             registration.grade,
+             registration.school,
+             program.code AS program_code,
+             program.name AS program_name
+         FROM dbo.registrations AS registration
+         LEFT JOIN dbo.programs AS program
+             ON program.id = registration.program_id
+         WHERE registration.status IN (N'new', N'reviewing', N'waitlisted')
+         ORDER BY registration.submitted_at, registration.id"
+    );
+    $rows = $stmt->fetchAll();
+    return is_array($rows) ? $rows : [];
+}
+
+function find_sql_admin_user_id(string $email): ?int {
+    if (!sql_approval_enabled() || !db_is_sqlsrv()) {
+        return null;
+    }
+    $normalized = backend_usable_email($email);
+    if ($normalized === null) {
+        return null;
+    }
+    $stmt = db()->prepare(
+        "SELECT TOP (1) id
+         FROM dbo.users
+         WHERE email = :email
+           AND role = N'admin'
+           AND status = N'active'"
+    );
+    $stmt->execute(['email' => $normalized]);
+    $id = $stmt->fetchColumn();
+    return $id === false ? null : (int) $id;
+}
+
 function approve_registration(int $registrationId, int $adminUserId): string {
     if (db_driver() === 'sqlsrv') {
+        if (!sql_approval_enabled()) {
+            throw new RuntimeException('Registration approval is unavailable.');
+        }
         return approve_registration_sqlsrv($registrationId, $adminUserId);
     }
     if (db_driver() === 'mysql') {

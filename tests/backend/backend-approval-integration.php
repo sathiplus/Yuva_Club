@@ -21,6 +21,11 @@ function approval_integration_guard(): void {
     if (db_driver() !== 'sqlsrv') {
         throw new RuntimeException('Integration test requires DB_DRIVER=sqlsrv.');
     }
+    if (!sql_approval_enabled()) {
+        throw new RuntimeException(
+            'Integration test requires SQL_APPROVAL_ENABLED=true.'
+        );
+    }
     $databaseName = strtolower(env_value('DB_DATABASE'));
     if (
         $databaseName === ''

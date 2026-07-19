@@ -1,6 +1,23 @@
 <?php
 require __DIR__ . '/portal-lib.php';
+require_once __DIR__ . '/backend/repositories.php';
 require_admin();
+
+$sqlApprovalEnabled = sql_approval_enabled();
+$sqlPendingRegistrations = [];
+$sqlRegistrationListAvailable = $sqlApprovalEnabled;
+if ($sqlApprovalEnabled) {
+    try {
+        $sqlPendingRegistrations = pending_sql_registrations();
+    } catch (Throwable $error) {
+        $sqlRegistrationListAvailable = false;
+        error_log(
+            'YUVA SQL registration list failed'
+            . ' correlation=' . bin2hex(random_bytes(12))
+            . ' exception_type=' . get_class($error)
+        );
+    }
+}
 
 $students = portal_students();
 $selections = read_json_file(topic_selections_file());
@@ -106,7 +123,72 @@ portal_header('Admin Dashboard');
       <div class="form-status error">AI Coach needs a student with a selected topic and submitted research.</div>
     <?php elseif ($status === 'security-error'): ?>
       <div class="form-status error">This form expired. Please try again.</div>
+    <?php elseif ($status === 'sql-registration-approved'): ?>
+      <div class="form-status success">Registration approved successfully.</div>
+    <?php elseif ($status === 'sql-registration-unavailable'): ?>
+      <div class="form-status error">Registration approval is unavailable.</div>
+    <?php elseif ($status === 'sql-registration-invalid'): ?>
+      <div class="form-status error">Invalid request.</div>
+    <?php elseif ($status === 'sql-registration-error'): ?>
+      <div class="form-status error">Registration could not be approved.</div>
     <?php endif; ?>
+
+    <section class="form-card" id="sql-registrations">
+      <h2>Pending Azure SQL Registrations</h2>
+      <?php if (!$sqlApprovalEnabled || !$sqlRegistrationListAvailable): ?>
+        <p class="form-note">Registration approval is unavailable.</p>
+      <?php elseif ($sqlPendingRegistrations === []): ?>
+        <p class="form-note">No pending Azure SQL registrations.</p>
+      <?php else: ?>
+        <div class="portal-table-wrap">
+          <table class="portal-table">
+            <thead>
+              <tr>
+                <th>Student</th>
+                <th>Submitted</th>
+                <th>Program</th>
+                <th>School</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <?php foreach ($sqlPendingRegistrations as $registration): ?>
+                <?php
+                  $registrationName = trim(
+                      (string) ($registration['student_first_name'] ?? '')
+                      . ' '
+                      . (string) ($registration['student_last_name'] ?? '')
+                  );
+                ?>
+                <tr>
+                  <td>
+                    <strong><?php echo e($registrationName); ?></strong>
+                    <?php if (($registration['preferred_name'] ?? '') !== ''): ?>
+                      <br><span>Preferred: <?php echo e((string) $registration['preferred_name']); ?></span>
+                    <?php endif; ?>
+                    <?php if (($registration['grade'] ?? '') !== ''): ?>
+                      <br><span>Grade: <?php echo e((string) $registration['grade']); ?></span>
+                    <?php endif; ?>
+                  </td>
+                  <td><?php echo e((string) ($registration['submitted_at'] ?? '')); ?></td>
+                  <td><?php echo e((string) ($registration['program_name'] ?? 'Unassigned')); ?></td>
+                  <td><?php echo e((string) ($registration['school'] ?? '')); ?></td>
+                  <td><?php echo e((string) ($registration['status'] ?? '')); ?></td>
+                  <td>
+                    <form action="admin-registration-approve.php" method="post">
+                      <?php echo csrf_field(); ?>
+                      <input type="hidden" name="registration_id" value="<?php echo e((string) ($registration['id'] ?? '')); ?>">
+                      <button class="button primary" type="submit">Approve Registration</button>
+                    </form>
+                  </td>
+                </tr>
+              <?php endforeach; ?>
+            </tbody>
+          </table>
+        </div>
+      <?php endif; ?>
+    </section>
 
     <form class="form-card" action="admin-password-actions.php" method="post">
       <h2>Admin Login Settings</h2>
