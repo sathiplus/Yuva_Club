@@ -6,6 +6,8 @@ This directory contains the Azure SQL baseline and ordered migrations.
 
 1. `01-schema.azure-sql.sql` — original Azure SQL application baseline.
 2. `02-schema-migrations.azure-sql.sql` — idempotent migration ledger.
+3. `03-phase-a-identity-approval.azure-sql.sql` — Phase A identity, approval, and portal lookup additions.
+4. `04-phase-a-portal-student-view.azure-sql.sql` — read-only portal compatibility view.
 
 The previously documented `02-import-hostinger-data.azure-sql.sql` is not
 present in this repository and is not part of the automated migration set.

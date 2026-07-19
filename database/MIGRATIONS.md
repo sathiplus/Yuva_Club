@@ -35,6 +35,26 @@ Current versions:
 | --- | --- | --- |
 | `01` | `01-schema.azure-sql.sql` | Existing application baseline |
 | `02` | `02-schema-migrations.azure-sql.sql` | Migration ledger |
+| `03` | `03-phase-a-identity-approval.azure-sql.sql` | Phase A registration identity state, YUVA ID counters, and approval lookup indexes |
+| `04` | `04-phase-a-portal-student-view.azure-sql.sql` | Read-only one-row-per-student compatibility view for later portal SQL reads |
+
+## Phase A identity compatibility
+
+Migration `03` adds nullable approval-attempt state to `dbo.registrations`, an
+empty `dbo.yuva_id_counters` table, and approval-path indexes. It does not seed
+or reconcile counter values. Existing unique constraints on `dbo.users.email`
+and `dbo.parents.user_id` remain the authoritative indexes for their respective
+identity lookups. Its six idempotently guarded indexes also support reserved-ID
+uniqueness, registration review ordering, direct student registration lookup,
+student YUVA ID lookup, and deterministic primary-parent selection.
+
+Migration `04` creates or alters `dbo.vw_portal_students`. The view starts from
+`dbo.students`, selects at most one linked registration, and selects at most one
+linked parent. A primary parent sorts first; ties are resolved by relationship
+creation time and parent ID. The view exposes stored YUVA IDs unchanged and does
+not expose password hashes, account tokens, audit metadata, or approval error
+details. No typed placeholder columns are required because every projected
+compatibility field exists in the baseline schema.
 
 ## Migration ledger
 

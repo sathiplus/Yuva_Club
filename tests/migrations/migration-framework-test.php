@@ -29,6 +29,117 @@ if (!mkdir($temporaryDirectory, 0700, true) && !is_dir($temporaryDirectory)) {
 }
 
 try {
+    $repositoryMigrations = migration_discover(__DIR__ . '/../../database');
+    test_assert(
+        array_column($repositoryMigrations, 'filename') === [
+            '01-schema.azure-sql.sql',
+            '02-schema-migrations.azure-sql.sql',
+            '03-phase-a-identity-approval.azure-sql.sql',
+            '04-phase-a-portal-student-view.azure-sql.sql',
+        ],
+        'Repository migrations are not discovered in deterministic order.'
+    );
+
+    $identitySql = file_get_contents(
+        __DIR__ . '/../../database/03-phase-a-identity-approval.azure-sql.sql'
+    );
+    $portalViewSql = file_get_contents(
+        __DIR__ . '/../../database/04-phase-a-portal-student-view.azure-sql.sql'
+    );
+    test_assert($identitySql !== false, 'Phase A identity migration is missing.');
+    test_assert($portalViewSql !== false, 'Phase A portal view migration is missing.');
+
+    foreach (
+        [
+            "COL_LENGTH(N'dbo.registrations', N'reserved_yuva_id') IS NULL",
+            "COL_LENGTH(N'dbo.registrations', N'approval_error_code') IS NULL",
+            "COL_LENGTH(N'dbo.registrations', N'approval_attempted_at') IS NULL",
+            "OBJECT_ID(N'dbo.yuva_id_counters', N'U') IS NULL",
+            'WHERE reserved_yuva_id IS NOT NULL',
+        ] as $requiredIdentitySql
+    ) {
+        test_assert(
+            str_contains($identitySql, $requiredIdentitySql),
+            'Phase A identity migration is missing: ' . $requiredIdentitySql
+        );
+    }
+
+    $expectedIdentityIndexes = [
+        'uq_registrations_reserved_yuva_id',
+        'idx_registrations_status_submitted',
+        'idx_registrations_parent_approval_lookup',
+        'idx_registrations_student_portal_lookup',
+        'idx_students_yuva_id_lookup',
+        'idx_student_parents_primary_lookup',
+    ];
+    foreach ($expectedIdentityIndexes as $indexName) {
+        test_assert(
+            substr_count($identitySql, "name = N'{$indexName}'") === 1,
+            'Phase A index does not have exactly one idempotent guard: ' . $indexName
+        );
+        test_assert(
+            substr_count(
+                $identitySql,
+                'CREATE '
+                    . ($indexName === 'uq_registrations_reserved_yuva_id' ? 'UNIQUE ' : '')
+                    . "INDEX {$indexName}"
+            ) === 1,
+            'Phase A index does not have exactly one definition: ' . $indexName
+        );
+    }
+    test_assert(
+        substr_count($identitySql, 'FROM sys.indexes') === count($expectedIdentityIndexes),
+        'Every Phase A index must have its own sys.indexes guard.'
+    );
+    foreach (
+        [
+            'student_id,',
+            'reviewed_at DESC,',
+            'submitted_at DESC,',
+            'id DESC',
+            'INCLUDE (status)',
+        ] as $studentPortalIndexSql
+    ) {
+        test_assert(
+            str_contains($identitySql, $studentPortalIndexSql),
+            'Student portal registration index is missing: ' . $studentPortalIndexSql
+        );
+    }
+
+    foreach (
+        [
+            'CREATE OR ALTER VIEW dbo.vw_portal_students',
+            'student.yuva_id AS yuva_id',
+            'FROM dbo.students AS student',
+            'SELECT TOP (1)',
+            'student_parent.is_primary DESC',
+            'student_parent.created_at',
+            'student_parent.parent_id',
+        ] as $requiredViewSql
+    ) {
+        test_assert(
+            str_contains($portalViewSql, $requiredViewSql),
+            'Phase A portal view migration is missing: ' . $requiredViewSql
+        );
+    }
+
+    $phaseASql = $identitySql . "\n" . $portalViewSql;
+    foreach (
+        [
+            '/\bLIMIT\b/i',
+            '/\bUTC_TIMESTAMP\s*\(/i',
+            '/\bAUTO_INCREMENT\b/i',
+            '/`[A-Za-z_][A-Za-z0-9_]*`/',
+            '/\bSELECT\b[\s\S]*\bFOR\s+UPDATE\b/i',
+            '/\b(?:DROP|TRUNCATE)\s+(?:TABLE|VIEW)\b/i',
+        ] as $forbiddenSqlPattern
+    ) {
+        test_assert(
+            preg_match($forbiddenSqlPattern, $phaseASql) !== 1,
+            'Phase A migrations contain forbidden SQL: ' . $forbiddenSqlPattern
+        );
+    }
+
     file_put_contents(
         $temporaryDirectory . DIRECTORY_SEPARATOR . '10-third.azure-sql.sql',
         "SELECT 3;\r\n"
@@ -163,6 +274,10 @@ try {
     }
 
     fwrite(STDOUT, "PASS migration discovery\n");
+    fwrite(STDOUT, "PASS Phase A repository migration order\n");
+    fwrite(STDOUT, "PASS Phase A idempotency guards\n");
+    fwrite(STDOUT, "PASS Phase A Azure SQL compatibility\n");
+    fwrite(STDOUT, "PASS Phase A non-destructive SQL policy\n");
     fwrite(STDOUT, "PASS deterministic ordering\n");
     fwrite(STDOUT, "PASS canonical SHA-256 checksum\n");
     fwrite(STDOUT, "PASS SQL Server GO batch parsing\n");
