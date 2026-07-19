@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - codex/student-v1-release
+      - backend-modernization-v2
 
   pull_request:
 
@@ -17,7 +18,8 @@ jobs:
     name: Validate Student V1 RC1
     if: >-
       github.event_name != 'pull_request' ||
-      github.event.pull_request.head.ref == 'codex/student-v1-release'
+      github.event.pull_request.head.ref == 'codex/student-v1-release' ||
+      github.event.pull_request.head.ref == 'backend-modernization-v2'
 
     runs-on: ubuntu-latest
 
@@ -49,6 +51,93 @@ jobs:
           php -l portal-submit-topic.php
           php -l portal-submit-research.php
           php -l portal-report-issue.php
+
+      - name: Lint Azure SQL migration framework PHP files
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          php -l tools/run-azure-sql-migrations.php
+          php -l tests/migrations/migration-framework-test.php
+          php -l tests/migrations/migration-framework-integration.php
+
+      - name: Test Azure SQL migration framework without a database
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          php tests/migrations/migration-framework-test.php
+
+      - name: Scan migration framework for committed secrets
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          python3 - <<'PY'
+          import pathlib
+          import re
+          import sys
+
+          files = [
+              pathlib.Path("database/02-schema-migrations.azure-sql.sql"),
+              pathlib.Path("tools/run-azure-sql-migrations.php"),
+              pathlib.Path("tests/migrations/migration-framework-test.php"),
+              pathlib.Path("tests/migrations/migration-framework-integration.php"),
+          ]
+          patterns = [
+              (
+                  "storage credential",
+                  re.compile(r"(?i)\b(?:AccountKey|SharedAccessSignature)\s*="),
+              ),
+              (
+                  "OpenAI API key",
+                  re.compile(r"\bsk-[A-Za-z0-9_-]{20,}\b"),
+              ),
+              (
+                  "hardcoded password assignment",
+                  re.compile(
+                      r"""(?ix)
+                      \b(?:password|pwd)\s*[:=]\s*
+                      ["'][^"'$<{][^"']{7,}["']
+                      """
+                  ),
+              ),
+              (
+                  "credential-bearing SQL connection string",
+                  re.compile(
+                      r"""(?ix)
+                      \b(?:Server|Data\ Source)\s*=\s*[^;\s]+;
+                      [^\n]*(?:Password|PWD)\s*=\s*[^;\s"']+
+                      """
+                  ),
+              ),
+          ]
+
+          findings = []
+          for path in files:
+              text = path.read_text(encoding="utf-8")
+              for line_number, line in enumerate(text.splitlines(), start=1):
+                  for label, pattern in patterns:
+                      if not pattern.search(line):
+                          continue
+
+                      # These deterministic values exist only in assertions
+                      # that prove database exception output is redacted.
+                      if (
+                          path.name == "migration-framework-test.php"
+                          and "private-database-" in line
+                      ):
+                          continue
+
+                      findings.append(f"{path}:{line_number}: {label}")
+
+          if findings:
+              print("Potential committed secret patterns found:", file=sys.stderr)
+              print("\n".join(findings), file=sys.stderr)
+              raise SystemExit(1)
+
+          print("No committed migration-framework secret patterns found.")
+          PY
 
       - name: Validate Student V1 JavaScript syntax
         shell: bash
