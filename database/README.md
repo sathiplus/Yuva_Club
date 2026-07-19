@@ -1,15 +1,30 @@
-# Yuva Club Azure SQL Migration Package
+# YUVA Club Azure SQL Database
 
-Run these in Azure SQL Database Query Editor, in order:
+This directory contains the Azure SQL baseline and ordered migrations.
 
-1. `01-schema.azure-sql.sql`
-2. `02-import-hostinger-data.azure-sql.sql`
+## Current files
 
-Data counts from Hostinger backup:
+1. `01-schema.azure-sql.sql` — original Azure SQL application baseline.
+2. `02-schema-migrations.azure-sql.sql` — idempotent migration ledger.
 
-- Registrations: 2
-- Student records: 2
-- Topic selections: 1
-- Uploaded files: 0
+The previously documented `02-import-hostinger-data.azure-sql.sql` is not
+present in this repository and is not part of the automated migration set.
+Legacy data import will use a separately reviewed, idempotent data-migration
+process.
 
-Database target: Azure SQL Database `yuva_club`.
+## Running migrations
+
+Use the CLI-only runner from the repository root:
+
+```text
+php tools/run-azure-sql-migrations.php
+```
+
+The runner uses `backend/config.php` and `backend/database.php`. It requires the
+PDO SQL Server driver and the existing `DB_*` environment variables. It acquires
+a SQL Server application lock, validates SHA-256 checksums, and applies pending
+files in deterministic filename order.
+
+Do not run migrations against production during Phase A development or staging
+validation. See `database/MIGRATIONS.md` for naming, safety, and validation
+rules.
