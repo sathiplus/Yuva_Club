@@ -30,3 +30,31 @@ files in deterministic filename order.
 Do not run migrations against production during Phase A development or staging
 validation. See `database/MIGRATIONS.md` for naming, safety, and validation
 rules.
+
+## Phase A approval service
+
+`backend/repositories.php` contains an Azure SQL-compatible registration
+approval service, but Commit 3 does not connect that service to an admin action,
+portal read, login flow, dual write, or storage-mode change. Filesystem behavior
+therefore remains authoritative.
+
+Before the SQL approval service is enabled in a later approved phase, the
+current UTC year must have a reconciled row in `dbo.yuva_id_counters`. Normal
+request handling deliberately refuses a missing counter instead of deriving or
+guessing a value from production student records.
+
+SQL approval locking follows one order: registration application lock,
+lexically sorted SHA-256 identity-email application locks, registration row,
+program and level, optional counter row, then identity and relationship rows.
+Raw email addresses are never used as application-lock resource names.
+
+The database-free approval contract test is:
+
+```text
+php tests/backend/backend-approval-test.php
+```
+
+The guarded integration test is excluded from normal CI. It requires
+`APP_ENV=test`, `DB_DRIVER=sqlsrv`, `YUVA_RUN_SQL_INTEGRATION=YES`, a disposable
+database name containing `test`, `ci`, `scratch`, or `temp`, and an already
+migrated Phase A schema.
