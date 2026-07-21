@@ -80,8 +80,17 @@ jobs:
           php -l tests/backend/backend-approval-integration.php
           php -l backend/config.php
           php -l admin.php
+          php -l admin-login.php
           php -l admin-registration-approve.php
           php -l tests/backend/admin-registration-approval-test.php
+          php -l tests/backend/staging-readiness-test.php
+
+      - name: Test staging smoke-test fixtures without a database
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          php tests/backend/staging-readiness-test.php
 
       - name: Test guarded admin registration approval without a database
         shell: bash
@@ -186,8 +195,11 @@ jobs:
               pathlib.Path("tests/backend/backend-approval-integration.php"),
               pathlib.Path("backend/config.php"),
               pathlib.Path("admin.php"),
+              pathlib.Path("admin-login.php"),
               pathlib.Path("admin-registration-approve.php"),
+              pathlib.Path("portal-lib.php"),
               pathlib.Path("tests/backend/admin-registration-approval-test.php"),
+              pathlib.Path("tests/backend/staging-readiness-test.php"),
           ]
           patterns = [
               (
@@ -239,6 +251,12 @@ jobs:
               for line_number, line in enumerate(text.splitlines(), start=1):
                   for label, pattern in patterns:
                       if pattern.search(line):
+                          if (
+                              label == "hardcoded password assignment"
+                              and "rawurlencode((string) $params['pwd'])" in line
+                          ):
+                              continue
+
                           findings.append(f"{path}:{line_number}: {label}")
 
           if findings:
