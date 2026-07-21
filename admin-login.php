@@ -6,6 +6,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email = clean_text($_POST['email'] ?? '');
     $password = (string) ($_POST['password'] ?? '');
     if (admin_password_matches($email, $password)) {
+        session_regenerate_id(true);
         $_SESSION['admin_logged_in'] = true;
         $_SESSION['admin_email'] = $email;
         redirect_to('admin.php');

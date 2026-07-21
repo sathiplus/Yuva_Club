@@ -56,6 +56,10 @@ function app_config(): array {
                 'SQL_APPROVAL_ENABLED',
                 false
             ),
+            'staging_test_fixtures_enabled' => env_bool(
+                'STAGING_TEST_FIXTURES_ENABLED',
+                false
+            ),
         ],
     ];
 }
@@ -78,4 +82,69 @@ function app_is_azure(): bool {
 
 function sql_approval_enabled(): bool {
     return (app_config()['features']['sql_approval_enabled'] ?? false) === true;
+}
+
+function staging_test_fixture_config(): ?array {
+    if (
+        !app_is_staging()
+        || !((app_config()['features']['staging_test_fixtures_enabled'] ?? false) === true)
+        || sql_approval_enabled()
+    ) {
+        return null;
+    }
+
+    $expectedSiteName = env_value('STAGING_TEST_APP_NAME');
+    $actualSiteName = env_value('WEBSITE_SITE_NAME');
+    $studentId = strtoupper(env_value('STAGING_TEST_STUDENT_ID'));
+    $studentDob = env_value('STAGING_TEST_STUDENT_DOB');
+    $adminEmail = strtolower(env_value('STAGING_TEST_ADMIN_EMAIL'));
+    $adminPasswordHash = strtolower(env_value('STAGING_TEST_ADMIN_PASSWORD_HASH'));
+
+    if (
+        $expectedSiteName === ''
+        || $actualSiteName === ''
+        || !hash_equals($expectedSiteName, $actualSiteName)
+        || preg_match('/^YC[A-Z0-9]{5,38}$/', $studentId) !== 1
+        || filter_var($adminEmail, FILTER_VALIDATE_EMAIL) === false
+        || preg_match('/^[a-f0-9]{64}$/', $adminPasswordHash) !== 1
+    ) {
+        return null;
+    }
+
+    $dobParts = explode('-', $studentDob);
+    if (
+        count($dobParts) !== 3
+        || !ctype_digit($dobParts[0])
+        || !ctype_digit($dobParts[1])
+        || !ctype_digit($dobParts[2])
+        || !checkdate((int) $dobParts[1], (int) $dobParts[2], (int) $dobParts[0])
+    ) {
+        return null;
+    }
+
+    $dob = DateTimeImmutable::createFromFormat('!Y-m-d', $studentDob);
+    if (!$dob instanceof DateTimeImmutable || $dob->format('Y-m-d') !== $studentDob) {
+        return null;
+    }
+
+    $today = new DateTimeImmutable('today');
+    if ($dob > $today) {
+        return null;
+    }
+
+    $age = $dob->diff($today)->y;
+    if ($age < 13 || $age > 21) {
+        return null;
+    }
+
+    return [
+        'student_id' => $studentId,
+        'student_dob' => $studentDob,
+        'student_age' => $age,
+        'student_program_group' => $age >= 18
+            ? 'College Yuva (Ages 18-21)'
+            : 'School Yuva (Ages 13-17)',
+        'admin_email' => $adminEmail,
+        'admin_password_hash' => $adminPasswordHash,
+    ];
 }

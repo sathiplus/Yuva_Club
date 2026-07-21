@@ -110,6 +110,11 @@ function admin_credentials_file(): string {
 }
 
 function admin_credentials(): array {
+    $stagingCredentials = staging_test_admin_credentials();
+    if ($stagingCredentials !== null) {
+        return $stagingCredentials;
+    }
+
     return array_merge([
         'email' => YUVA_ADMIN_EMAIL,
         'password_hash' => YUVA_ADMIN_PASSWORD_HASH,
@@ -125,6 +130,18 @@ function csrf_token(): string {
         $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
     }
     return $_SESSION['csrf_token'];
+}
+
+function staging_test_admin_credentials(): ?array {
+    $fixture = staging_test_fixture_config();
+    if ($fixture === null) {
+        return null;
+    }
+
+    return [
+        'email' => $fixture['admin_email'],
+        'password_hash' => $fixture['admin_password_hash'],
+    ];
 }
 
 function csrf_field(): string {
@@ -695,6 +712,38 @@ function portal_students(): array {
             $students[$student['Yuva Club ID']] = $student;
         }
     }
+    return merge_staging_test_student($students);
+}
+
+function staging_test_student_fixture(): ?array {
+    $fixture = staging_test_fixture_config();
+    if ($fixture === null) {
+        return null;
+    }
+
+    $student = array_fill_keys(registration_headers(), '');
+    $student['Yuva Club ID'] = $fixture['student_id'];
+    $student['Student First Name'] = 'Staging';
+    $student['Student Last Name'] = 'Test Student';
+    $student['Preferred Name'] = 'Staging';
+    $student['Date of Birth'] = $fixture['student_dob'];
+    $student['Age'] = (string) $fixture['student_age'];
+    $student['Program Group'] = $fixture['student_program_group'];
+
+    return $student;
+}
+
+function merge_staging_test_student(array $students): array {
+    $fixture = staging_test_student_fixture();
+    if ($fixture === null) {
+        return $students;
+    }
+
+    $studentId = (string) $fixture['Yuva Club ID'];
+    if (!array_key_exists($studentId, $students)) {
+        $students[$studentId] = $fixture;
+    }
+
     return $students;
 }
 
