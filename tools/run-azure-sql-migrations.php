@@ -68,6 +68,10 @@ function migration_discover(string $directory): array {
  * @return list<string>
  */
 function migration_sql_batches(string $sql): array {
+    if (str_starts_with($sql, "\xEF\xBB\xBF")) {
+        $sql = substr($sql, 3);
+    }
+
     $parts = preg_split('/^\s*GO\s*;?\s*$/mi', $sql);
     if ($parts === false) {
         throw new RuntimeException('Migration SQL could not be parsed.');

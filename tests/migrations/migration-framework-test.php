@@ -178,6 +178,10 @@ try {
         $batches === ['SELECT 1;', 'SELECT 2;', 'SELECT 3;'],
         'GO batch parsing failed.'
     );
+    test_assert(
+        migration_sql_batches("\xEF\xBB\xBFSELECT 1;") === ['SELECT 1;'],
+        'A leading UTF-8 BOM must be removed before SQL execution.'
+    );
 
     migration_assert_checksum(
         $migrations[0],
