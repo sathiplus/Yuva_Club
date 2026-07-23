@@ -232,6 +232,33 @@ try {
     );
     unlink($temporaryDirectory . DIRECTORY_SEPARATOR . 'invalid_name.azure-sql.sql');
 
+    migration_assert_blank_baseline_state([], [], 0);
+    migration_assert_blank_baseline_state(['dbo.schema_migrations'], [], 0);
+    test_expect_exception(
+        static fn() => migration_assert_blank_baseline_state(
+            ['dbo.schema_migrations', 'dbo.unexpected_table'],
+            [],
+            0
+        ),
+        'not a blank baseline'
+    );
+    test_expect_exception(
+        static fn() => migration_assert_blank_baseline_state(
+            ['dbo.schema_migrations'],
+            ['dbo.unexpected_view'],
+            0
+        ),
+        'not a blank baseline'
+    );
+    test_expect_exception(
+        static fn() => migration_assert_blank_baseline_state(
+            ['dbo.schema_migrations'],
+            [],
+            1
+        ),
+        'not a blank baseline'
+    );
+
     $ledgerSql = file_get_contents(
         __DIR__ . '/../../database/02-schema-migrations.azure-sql.sql'
     );
@@ -288,6 +315,8 @@ try {
     fwrite(STDOUT, "PASS checksum mismatch refusal\n");
     fwrite(STDOUT, "PASS duplicate version refusal\n");
     fwrite(STDOUT, "PASS invalid filename refusal\n");
+    fwrite(STDOUT, "PASS blank baseline acceptance\n");
+    fwrite(STDOUT, "PASS non-blank baseline refusal\n");
     fwrite(STDOUT, "PASS idempotent ledger definition\n");
     fwrite(STDOUT, "PASS database exception redaction\n");
 } finally {

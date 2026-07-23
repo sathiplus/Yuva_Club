@@ -49,11 +49,7 @@ if ($directory === false) {
 
 $pdo = db();
 migration_assert_sqlsrv($pdo);
-$requiredTables = ['programs', 'users', 'students', 'registrations', 'schema_migrations'];
-$presence = migration_table_presence($pdo, $requiredTables);
-if (count(array_filter($presence)) !== 0) {
-    throw new RuntimeException('Blank-database validation requires a new empty test database.');
-}
+migration_assert_blank_baseline($pdo);
 
 $migrations = migration_discover($directory);
 $firstRun = migration_run($pdo, $migrations);

@@ -150,6 +150,51 @@ function migration_ledger_exists(PDO $pdo): bool {
 }
 
 /**
+ * @param list<string> $tableNames
+ * @param list<string> $viewNames
+ */
+function migration_assert_blank_baseline_state(
+    array $tableNames,
+    array $viewNames,
+    int $ledgerRowCount
+): void {
+    $additionalTables = array_values(
+        array_filter(
+            $tableNames,
+            static fn(string $name): bool => $name !== 'dbo.schema_migrations'
+        )
+    );
+    if ($additionalTables !== [] || $viewNames !== [] || $ledgerRowCount !== 0) {
+        throw new RuntimeException(
+            'The database is not a blank baseline; migration execution was refused.'
+        );
+    }
+}
+
+function migration_assert_blank_baseline(PDO $pdo): void {
+    $tableNames = $pdo->query(
+        "SELECT schemas.name + N'.' + tables.name
+         FROM sys.tables AS tables
+         INNER JOIN sys.schemas AS schemas ON schemas.schema_id = tables.schema_id
+         WHERE tables.is_ms_shipped = 0"
+    )->fetchAll(PDO::FETCH_COLUMN);
+    $viewNames = $pdo->query(
+        "SELECT schemas.name + N'.' + views.name
+         FROM sys.views AS views
+         INNER JOIN sys.schemas AS schemas ON schemas.schema_id = views.schema_id
+         WHERE views.is_ms_shipped = 0"
+    )->fetchAll(PDO::FETCH_COLUMN);
+    $ledgerRowCount = 0;
+    if (migration_ledger_exists($pdo)) {
+        $ledgerRowCount = (int) $pdo->query(
+            'SELECT COUNT_BIG(*) FROM dbo.schema_migrations'
+        )->fetchColumn();
+    }
+
+    migration_assert_blank_baseline_state($tableNames, $viewNames, $ledgerRowCount);
+}
+
+/**
  * @param list<array{version:string,filename:string,name:string,path:string,checksum:string}> $migrations
  */
 function migration_bootstrap_ledger(PDO $pdo, array $migrations): void {
@@ -361,6 +406,10 @@ function migration_run(PDO $pdo, array $migrations): array {
 
     $result = ['applied' => [], 'adopted' => [], 'skipped' => []];
     try {
+        $applied = migration_applied($pdo);
+        if (!isset($applied['01'])) {
+            migration_assert_blank_baseline($pdo);
+        }
         migration_bootstrap_ledger($pdo, $migrations);
         $applied = migration_applied($pdo);
         foreach ($migrations as $migration) {
