@@ -10,6 +10,7 @@ require_once __DIR__ . '/backend/authentication/ParentAuthentication.php';
 require_once __DIR__ . '/backend/authentication/AuthenticationService.php';
 require_once __DIR__ . '/backend/authentication/LoginThrottle.php';
 require_once __DIR__ . '/backend/authentication/StudentLoginWorkflow.php';
+require_once __DIR__ . '/backend/authentication/ParentLoginWorkflow.php';
 
 $configuredAppUrl = app_url();
 $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
@@ -213,13 +214,16 @@ function portal_authentication_service(): \YuvaClub\Authentication\Authenticatio
             )
     );
 
-    // AuthenticationService currently requires both role services. Parent
-    // callbacks remain inert until the separately scoped parent integration.
     $parents = new \YuvaClub\Authentication\ParentAuthentication(
         $repository,
-        static fn(string $yuvaId): ?array => null,
-        static fn(string $email): array => [],
-        static fn(array $record, string $credential): bool => false
+        static fn(string $yuvaId): ?array => find_student($yuvaId),
+        static fn(string $email): array =>
+            filesystem_parent_identities($email),
+        static fn(array $record, string $credential): bool =>
+            hash_equals(
+                strtolower(trim((string) ($record['Parent Email'] ?? ''))),
+                strtolower(trim($credential))
+            )
     );
 
     $service = new \YuvaClub\Authentication\AuthenticationService(
@@ -242,6 +246,30 @@ function portal_student_login_workflow(): \YuvaClub\Authentication\StudentLoginW
             portal_path('portal-data')
             . DIRECTORY_SEPARATOR
             . 'student-login-throttle.json'
+        ),
+        static fn(?string $token): bool => verify_csrf_token($token),
+        static function (): void {
+            session_regenerate_id(true);
+        },
+        static function (string $category): void {
+            error_log('[portal-auth] ' . $category);
+        }
+    );
+    return $workflow;
+}
+
+function portal_parent_login_workflow(): \YuvaClub\Authentication\ParentLoginWorkflow {
+    static $workflow = null;
+    if ($workflow instanceof \YuvaClub\Authentication\ParentLoginWorkflow) {
+        return $workflow;
+    }
+
+    $workflow = new \YuvaClub\Authentication\ParentLoginWorkflow(
+        portal_authentication_service(),
+        new \YuvaClub\Authentication\LoginThrottle(
+            portal_path('portal-data')
+            . DIRECTORY_SEPARATOR
+            . 'parent-login-throttle.json'
         ),
         static fn(?string $token): bool => verify_csrf_token($token),
         static function (): void {
@@ -852,6 +880,28 @@ function find_student(string $studentId): ?array {
     return $students[$studentId] ?? null;
 }
 
+/** @return array<int, array<string, mixed>> */
+function filesystem_parent_identities(string $email): array {
+    $normalizedEmail = strtolower(trim($email));
+    if ($normalizedEmail === '') {
+        return [];
+    }
+
+    $matches = [];
+    foreach (portal_students() as $student) {
+        $parentEmail = strtolower(trim(
+            (string) ($student['Parent Email'] ?? '')
+        ));
+        if (
+            $parentEmail !== ''
+            && hash_equals($normalizedEmail, $parentEmail)
+        ) {
+            $matches[] = $student;
+        }
+    }
+    return $matches;
+}
+
 function student_display_name(array $student): string {
     $preferred = $student['Preferred Name'] ?? '';
     if ($preferred !== '') {
@@ -875,6 +925,48 @@ function clear_student_authentication_session(): void {
         $_SESSION['student_user_id'],
         $_SESSION['portal_role']
     );
+}
+
+function clear_parent_authentication_session(): void {
+    unset(
+        $_SESSION['parent_student_id'],
+        $_SESSION['parent_auth_source'],
+        $_SESSION['parent_user_id'],
+        $_SESSION['parent_id'],
+        $_SESSION['portal_role']
+    );
+}
+
+function require_parent_student(): array {
+    $studentId = normalize_yuva_id(
+        (string) ($_SESSION['parent_student_id'] ?? '')
+    );
+    if ($studentId === '') {
+        redirect_to('parent-login.php');
+    }
+
+    $source = $_SESSION['parent_auth_source'] ?? null;
+    $authMode = portal_auth_mode();
+    if (
+        $source === null
+        && in_array($authMode, ['filesystem', 'hybrid'], true)
+    ) {
+        $student = find_student($studentId);
+    } elseif (
+        $source === 'sql'
+        && in_array($authMode, ['sql', 'hybrid'], true)
+    ) {
+        $student = portal_parent_login_workflow()
+            ->revalidateSqlChildAccess($_SESSION);
+    } else {
+        $student = null;
+    }
+
+    if ($student === null) {
+        clear_parent_authentication_session();
+        redirect_to('parent-login.php?status=error');
+    }
+    return $student;
 }
 
 function require_student(): array {

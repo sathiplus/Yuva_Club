@@ -1,11 +1,10 @@
 <?php
 require __DIR__ . '/portal-lib.php';
 
-$studentId = normalize_yuva_id($_SESSION['parent_student_id'] ?? '');
-$student = $studentId !== '' ? find_student($studentId) : null;
-if ($student === null) {
-    redirect_to('parent-login.php');
-}
+$student = require_parent_student();
+$studentId = normalize_yuva_id(
+    (string) ($_SESSION['parent_student_id'] ?? '')
+);
 
 $selection = read_json_file(topic_selections_file())[$studentId] ?? [];
 $research = read_json_file(research_file())[$studentId] ?? [];

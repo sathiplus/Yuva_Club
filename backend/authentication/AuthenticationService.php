@@ -95,4 +95,35 @@ final class AuthenticationService
     {
         return $this->parents->canAccessChild($parentUserId, $yuvaId);
     }
+
+    public function revalidateSqlParentSession(
+        int $parentUserId,
+        int $parentId
+    ): bool {
+        if (!in_array($this->mode, [self::MODE_SQL, self::MODE_HYBRID], true)) {
+            return false;
+        }
+
+        return $this->parents->revalidateSqlSession($parentUserId, $parentId);
+    }
+
+    /** @return array<string, mixed>|null */
+    public function authorizedSqlParentChildRecord(
+        int $parentUserId,
+        string $yuvaId
+    ): ?array {
+        if (!in_array($this->mode, [self::MODE_SQL, self::MODE_HYBRID], true)) {
+            return null;
+        }
+
+        $link = $this->parents->authorizedChild($parentUserId, $yuvaId);
+        if ($link === null) {
+            return null;
+        }
+
+        return $this->students->revalidateSqlSession(
+            $yuvaId,
+            (int) ($link['student_user_id'] ?? 0)
+        );
+    }
 }

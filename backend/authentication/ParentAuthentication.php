@@ -121,11 +121,32 @@ final class ParentAuthentication
 
     public function canAccessChild(int $parentUserId, string $yuvaId): bool
     {
+        return $this->authorizedChild($parentUserId, $yuvaId) !== null;
+    }
+
+    /** @return array<string, mixed>|null */
+    public function authorizedChild(int $parentUserId, string $yuvaId): ?array
+    {
         $row = $this->repository->findParentChildLink(
             $parentUserId,
             $this->normalizeYuvaId($yuvaId)
         );
-        return $row !== null && $this->isAuthorizedChildRow($row);
+        return $row !== null && $this->isAuthorizedChildRow($row)
+            ? $this->withoutParentAuthorizationFields($row)
+            : null;
+    }
+
+    public function revalidateSqlSession(int $parentUserId, int $parentId): bool
+    {
+        if ($parentUserId <= 0 || $parentId <= 0) {
+            return false;
+        }
+
+        $parent = $this->repository->findParentByUserId($parentUserId);
+        return $parent !== null
+            && $this->isActivatedParent($parent)
+            && (int) ($parent['parent_user_id'] ?? 0) === $parentUserId
+            && (int) ($parent['parent_id'] ?? 0) === $parentId;
     }
 
     /** @param array<string, mixed>|null $parent */

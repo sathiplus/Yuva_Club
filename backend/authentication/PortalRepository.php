@@ -172,6 +172,32 @@ SQL,
         );
     }
 
+    /** @return array<string, mixed>|null */
+    public function findParentByUserId(int $parentUserId): ?array
+    {
+        return ($this->fetchOne)(
+            <<<'SQL'
+SELECT TOP (1)
+    parent.id AS parent_id,
+    parent.user_id AS parent_user_id,
+    parent.first_name,
+    parent.last_name,
+    parent.relationship,
+    parent.phone,
+    parent_user.email,
+    parent_user.password_hash,
+    parent_user.role AS user_role,
+    parent_user.status AS user_status,
+    parent_user.email_verified_at
+FROM dbo.parents AS parent
+INNER JOIN dbo.users AS parent_user
+    ON parent_user.id = parent.user_id
+WHERE parent_user.id = :parent_user_id
+SQL,
+            ['parent_user_id' => $parentUserId]
+        );
+    }
+
     /** @return array<int, array<string, mixed>> */
     public function findAuthorizedChildren(int $parentUserId): array
     {
@@ -231,6 +257,7 @@ SELECT TOP (1)
     student_parent.student_id,
     student_parent.consent_status,
     student.yuva_id,
+    student.user_id AS student_user_id,
     student.approval_status AS student_approval_status,
     student.approved_at,
     student_user.role AS student_user_role,
