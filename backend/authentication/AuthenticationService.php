@@ -59,6 +59,18 @@ final class AuthenticationService
         return $this->students->authenticate($this->mode, $yuvaId, $credential);
     }
 
+    /** @return array<string, mixed>|null */
+    public function revalidateSqlStudentSession(
+        string $yuvaId,
+        int $userId
+    ): ?array {
+        if (!in_array($this->mode, [self::MODE_SQL, self::MODE_HYBRID], true)) {
+            return null;
+        }
+
+        return $this->students->revalidateSqlSession($yuvaId, $userId);
+    }
+
     /** @return array<string, mixed> */
     public function authenticateParent(
         string $email,

@@ -2,6 +2,14 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/backend/config.php';
+require_once __DIR__ . '/backend/database.php';
+require_once __DIR__ . '/backend/authentication/PortalRepository.php';
+require_once __DIR__ . '/backend/authentication/PortalCompatibilityAdapter.php';
+require_once __DIR__ . '/backend/authentication/StudentAuthentication.php';
+require_once __DIR__ . '/backend/authentication/ParentAuthentication.php';
+require_once __DIR__ . '/backend/authentication/AuthenticationService.php';
+require_once __DIR__ . '/backend/authentication/LoginThrottle.php';
+require_once __DIR__ . '/backend/authentication/StudentLoginWorkflow.php';
 
 $configuredAppUrl = app_url();
 $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
@@ -153,6 +161,97 @@ function verify_csrf_token(?string $token): bool {
         && isset($_SESSION['csrf_token'])
         && is_string($_SESSION['csrf_token'])
         && hash_equals($_SESSION['csrf_token'], $token);
+}
+
+function portal_network_category(?string $remoteAddress): string {
+    $address = trim((string) $remoteAddress);
+    if (filter_var($address, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4) !== false) {
+        $parts = explode('.', $address);
+        return implode('.', array_slice($parts, 0, 3)) . '.0/24';
+    }
+
+    if (filter_var($address, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6) !== false) {
+        $packed = inet_pton($address);
+        if (is_string($packed)) {
+            return bin2hex(substr($packed, 0, 8)) . '/64';
+        }
+    }
+
+    return 'unknown';
+}
+
+function portal_authentication_service(): \YuvaClub\Authentication\AuthenticationService {
+    static $service = null;
+    if ($service instanceof \YuvaClub\Authentication\AuthenticationService) {
+        return $service;
+    }
+
+    $mode = portal_auth_mode();
+    if ($mode === \YuvaClub\Authentication\AuthenticationService::MODE_FILESYSTEM) {
+        $repository = new \YuvaClub\Authentication\PortalRepository(
+            static fn(string $sql, array $parameters): ?array => null,
+            static fn(string $sql, array $parameters): array => []
+        );
+    } else {
+        if (db_driver() !== 'sqlsrv') {
+            throw new RuntimeException('SQL portal authentication requires DB_DRIVER=sqlsrv.');
+        }
+        $repository = \YuvaClub\Authentication\PortalRepository::fromPdo(
+            Database::connection()
+        );
+    }
+
+    $adapter = new \YuvaClub\Authentication\PortalCompatibilityAdapter();
+    $students = new \YuvaClub\Authentication\StudentAuthentication(
+        $repository,
+        $adapter,
+        static fn(string $yuvaId): ?array => find_student($yuvaId),
+        static fn(array $record, string $credential): bool =>
+            hash_equals(
+                (string) ($record['Date of Birth'] ?? ''),
+                $credential
+            )
+    );
+
+    // AuthenticationService currently requires both role services. Parent
+    // callbacks remain inert until the separately scoped parent integration.
+    $parents = new \YuvaClub\Authentication\ParentAuthentication(
+        $repository,
+        static fn(string $yuvaId): ?array => null,
+        static fn(string $email): array => [],
+        static fn(array $record, string $credential): bool => false
+    );
+
+    $service = new \YuvaClub\Authentication\AuthenticationService(
+        $mode,
+        $students,
+        $parents
+    );
+    return $service;
+}
+
+function portal_student_login_workflow(): \YuvaClub\Authentication\StudentLoginWorkflow {
+    static $workflow = null;
+    if ($workflow instanceof \YuvaClub\Authentication\StudentLoginWorkflow) {
+        return $workflow;
+    }
+
+    $workflow = new \YuvaClub\Authentication\StudentLoginWorkflow(
+        portal_authentication_service(),
+        new \YuvaClub\Authentication\LoginThrottle(
+            portal_path('portal-data')
+            . DIRECTORY_SEPARATOR
+            . 'student-login-throttle.json'
+        ),
+        static fn(?string $token): bool => verify_csrf_token($token),
+        static function (): void {
+            session_regenerate_id(true);
+        },
+        static function (string $category): void {
+            error_log('[portal-auth] ' . $category);
+        }
+    );
+    return $workflow;
 }
 
 function default_hub_settings(): array {
@@ -769,16 +868,43 @@ function logged_in_student_id(): ?string {
     return $_SESSION['student_id'] ?? null;
 }
 
+function clear_student_authentication_session(): void {
+    unset(
+        $_SESSION['student_id'],
+        $_SESSION['student_auth_source'],
+        $_SESSION['student_user_id'],
+        $_SESSION['portal_role']
+    );
+}
+
 function require_student(): array {
     $studentId = logged_in_student_id();
     if ($studentId === null) {
         redirect_to('portal-login.php');
     }
 
-    $student = find_student($studentId);
+    $source = $_SESSION['student_auth_source'] ?? null;
+    $authMode = portal_auth_mode();
+    if (
+        $source === null
+        && in_array($authMode, ['filesystem', 'hybrid'], true)
+    ) {
+        $student = find_student($studentId);
+    } elseif (
+        $source === 'sql'
+        && in_array($authMode, ['sql', 'hybrid'], true)
+        && ($_SESSION['portal_role'] ?? null) === 'student'
+        && is_int($_SESSION['student_user_id'] ?? null)
+    ) {
+        $student = portal_student_login_workflow()
+            ->revalidateSqlSession($_SESSION);
+    } else {
+        $student = null;
+    }
+
     if ($student === null) {
-        unset($_SESSION['student_id']);
-        redirect_to('portal-login.php?status=missing');
+        clear_student_authentication_session();
+        redirect_to('portal-login.php?status=error');
     }
 
     return $student;

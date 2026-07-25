@@ -2,14 +2,21 @@
 require __DIR__ . '/portal-lib.php';
 
 $status = $_GET['status'] ?? '';
+$authMode = portal_auth_mode();
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $studentId = normalize_yuva_id($_POST['student_id'] ?? '');
-    $dateOfBirth = clean_text($_POST['date_of_birth'] ?? '');
-    $student = find_student($studentId);
+    $credential = $authMode === 'filesystem'
+        ? clean_text($_POST['date_of_birth'] ?? '')
+        : (string) ($_POST['credential'] ?? '');
+    $result = portal_student_login_workflow()->attempt(
+        $_SESSION,
+        $studentId,
+        $credential,
+        isset($_POST['csrf_token']) ? (string) $_POST['csrf_token'] : null,
+        portal_network_category($_SERVER['REMOTE_ADDR'] ?? null)
+    );
 
-    if ($student !== null && ($student['Date of Birth'] ?? '') === $dateOfBirth) {
-        session_regenerate_id(true);
-        $_SESSION['student_id'] = $studentId;
+    if ($result['authenticated'] === true) {
         redirect_to('portal.php');
     }
 
@@ -24,24 +31,41 @@ portal_header('Student Portal Login');
       <div class="section-head">
         <p class="eyebrow">Student Portal</p>
         <h1>Student Login</h1>
-        <p>Students can log in with their Yuva Club ID and date of birth after registration.</p>
+        <?php if ($authMode === 'filesystem'): ?>
+          <p>Students can log in with their Yuva Club ID and date of birth after registration.</p>
+        <?php elseif ($authMode === 'sql'): ?>
+          <p>Students can log in with their Yuva Club ID and password.</p>
+        <?php else: ?>
+          <p>Students can log in with their Yuva Club ID and current credential.</p>
+        <?php endif; ?>
       </div>
 
       <?php if ($status === 'error'): ?>
-        <div class="form-status error">Login failed. Check the Yuva Club ID and date of birth.</div>
-      <?php elseif ($status === 'missing'): ?>
-        <div class="form-status error">Your registration record was not found. Please contact the Yuva Club admin.</div>
+        <div class="form-status error">Login failed. Check your credentials and try again.</div>
       <?php endif; ?>
 
       <form class="form-card" method="post">
+        <?php echo csrf_field(); ?>
         <div class="field">
           <label for="student_id">Yuva Club ID *</label>
           <input id="student_id" name="student_id" type="text" required placeholder="YC2026001">
         </div>
-        <div class="field">
-          <label for="date_of_birth">Date of Birth *</label>
-          <input id="date_of_birth" name="date_of_birth" type="date" required>
-        </div>
+        <?php if ($authMode === 'filesystem'): ?>
+          <div class="field">
+            <label for="date_of_birth">Date of Birth *</label>
+            <input id="date_of_birth" name="date_of_birth" type="date" required>
+          </div>
+        <?php elseif ($authMode === 'sql'): ?>
+          <div class="field">
+            <label for="credential">Password *</label>
+            <input id="credential" name="credential" type="password" required autocomplete="current-password">
+          </div>
+        <?php else: ?>
+          <div class="field">
+            <label for="credential">Credential *</label>
+            <input id="credential" name="credential" type="password" required autocomplete="current-password" placeholder="Password or YYYY-MM-DD">
+          </div>
+        <?php endif; ?>
         <button class="button primary" type="submit">Log In</button>
       </form>
     </div>

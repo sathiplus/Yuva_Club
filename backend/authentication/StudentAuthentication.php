@@ -78,6 +78,27 @@ final class StudentAuthentication
         return $this->authenticateHybrid($yuvaId, $credential, $sqlStudent);
     }
 
+    /** @return array<string, mixed>|null */
+    public function revalidateSqlSession(string $yuvaId, int $userId): ?array
+    {
+        if ($userId <= 0) {
+            return null;
+        }
+
+        $student = $this->repository->findStudentByYuvaId(
+            $this->normalizeYuvaId($yuvaId)
+        );
+        if (
+            $student === null
+            || !$this->isActivatedSqlStudent($student)
+            || (int) ($student['student_user_id'] ?? 0) !== $userId
+        ) {
+            return null;
+        }
+
+        return $this->adapter->studentToLegacyRecord($student);
+    }
+
     /** @param array<string, mixed>|null $sqlStudent */
     private function authenticateHybrid(
         string $yuvaId,
