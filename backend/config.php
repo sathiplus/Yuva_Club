@@ -52,6 +52,10 @@ function app_config(): array {
             'scheduler_url' => env_value('ZOOM_SCHEDULER_URL'),
         ],
         'features' => [
+            'portal_auth_mode' => strtolower(env_value(
+                'PORTAL_AUTH_MODE',
+                'filesystem'
+            )),
             'sql_approval_enabled' => env_bool(
                 'SQL_APPROVAL_ENABLED',
                 false
@@ -82,6 +86,14 @@ function app_is_azure(): bool {
 
 function sql_approval_enabled(): bool {
     return (app_config()['features']['sql_approval_enabled'] ?? false) === true;
+}
+
+function portal_auth_mode(): string {
+    $mode = (string) (app_config()['features']['portal_auth_mode'] ?? 'filesystem');
+    if (!in_array($mode, ['filesystem', 'sql', 'hybrid'], true)) {
+        throw new RuntimeException('Unsupported PORTAL_AUTH_MODE value.');
+    }
+    return $mode;
 }
 
 function staging_test_fixture_config(): ?array {
