@@ -223,11 +223,12 @@ portal_header('Student Dashboard', true);
       $certificateTitle = $currentRankInfo['certificate'] ?? 'Certificate of Participation';
     ?>
     <div class="journey-hero">
-      <div class="journey-hero-copy"><p class="eyebrow">Leadership Journey</p><h1>You're becoming a leader.</h1><p>Every presentation, act of service, and brave new step helps your leadership grow.</p><div class="journey-hero-status"><span>Leadership Level<strong><?php echo e($level); ?></strong></span><span>Challenge Stage<strong><?php echo e($challengeStage); ?></strong></span></div></div>
+      <div class="journey-hero-copy"><p class="eyebrow">Leadership Journey</p><h1>Your leadership story is unfolding.</h1><p>Every presentation, act of service, and brave new step becomes part of the leader you are growing into.</p><div class="journey-hero-status"><span>Leadership Level<strong><?php echo e($level); ?></strong></span><span>Current Chapter<strong><?php echo e($challengeStage); ?></strong></span></div></div>
       <img src="assets/student-leadership-journey-illustration.svg" alt="" aria-hidden="true">
     </div>
 
-    <div class="journey-section-heading"><p class="eyebrow">Growth Snapshot</p><h2>Your progress at a glance</h2></div>
+    <div class="journey-story">
+    <div class="journey-section-heading journey-story-heading"><span class="journey-chapter-index" aria-hidden="true">01</span><div><p class="eyebrow">Your Journey So Far</p><h2>Real steps. Meaningful growth.</h2><p>These milestones come directly from your approved YUVA Club activity.</p></div></div>
     <div class="journey-metrics" aria-label="Student growth metrics">
       <article class="journey-metric journey-metric-points"><span class="journey-metric-icon" aria-hidden="true"></span><p>Points</p><strong><?php echo e((string) $points); ?></strong></article>
       <article class="journey-metric journey-metric-tokens"><span class="journey-metric-icon" aria-hidden="true"></span><p>Tokens</p><strong><?php echo e((string) $tokens); ?></strong></article>
@@ -236,7 +237,7 @@ portal_header('Student Dashboard', true);
       <article class="journey-metric journey-metric-presentations"><span class="journey-metric-icon" aria-hidden="true"></span><p>Presentations</p><strong><?php echo e($record['presentations'] ?? '0'); ?></strong></article>
     </div>
 
-    <div class="journey-primary-grid">
+    <div class="journey-primary-grid" aria-label="Current leadership chapter">
       <article class="journey-card journey-rank-card">
         <div class="journey-card-heading"><span class="journey-card-icon journey-rank-icon" aria-hidden="true"></span><div><p class="eyebrow">Leadership Path</p><h2><?php echo e($level); ?></h2><p><?php echo e($currentRankInfo['meaning']); ?></p></div></div>
         <div class="journey-rank-details"><p><span>Approved Rank</span><strong><?php echo e($level); ?></strong></p><p><span>Rank Status</span><strong><?php echo e($record['rank_status'] ?? 'Approved'); ?></strong></p><p><span>Eligible Rank</span><strong><?php echo e($eligibleRank); ?></strong></p><p><span>Next Rank</span><strong><?php echo e($nextRank === $level ? 'Continued mentorship' : $nextRank); ?></strong></p></div>
@@ -250,16 +251,17 @@ portal_header('Student Dashboard', true);
       </article>
     </div>
 
+    <div class="journey-section-heading journey-story-heading journey-challenge-heading"><span class="journey-chapter-index" aria-hidden="true">02</span><div><p class="eyebrow">Your Current Chapter</p><h2>Follow the challenge path</h2><p>Your approved challenge stage anchors this part of your journey.</p></div></div>
     <article class="journey-card journey-challenge-card">
       <div class="journey-card-heading"><span class="journey-card-icon journey-challenge-icon" aria-hidden="true"></span><div><p class="eyebrow">Challenge Journey</p><h2><?php echo e($challengeStage); ?></h2><p>The Global Youth Speaking &amp; Leadership Challenge</p></div></div>
       <div class="journey-challenge-meta"><p><span>Month</span><strong><?php echo e($record['challenge_month'] ?? date('Y-m')); ?></strong></p><p><span>Region</span><strong><?php echo e(($record['challenge_region'] ?? '') !== '' ? $record['challenge_region'] : 'Not assigned'); ?></strong></p><p><span>Finalist Status</span><strong><?php echo e($record['finalist_status'] ?? 'Not Qualified'); ?></strong></p><p><span>Award Status</span><strong><?php echo e($record['award_status'] ?? 'None'); ?></strong></p></div>
       <div class="journey-stage-path" aria-label="Challenge stages"><?php foreach (challenge_stages() as $stage): ?><div class="<?php echo $stage === $challengeStage ? 'is-current' : ''; ?>"><span aria-hidden="true"></span><strong><?php echo e($stage); ?></strong></div><?php endforeach; ?></div>
     </article>
 
-    <div class="journey-section-heading"><p class="eyebrow">Badges</p><h2>Milestones you've earned</h2></div>
+    <div class="journey-section-heading journey-story-heading"><span class="journey-chapter-index" aria-hidden="true">03</span><div><p class="eyebrow">Milestones</p><h2>Recognition earned along the way</h2><p>Only badges earned through your real participation appear here.</p></div></div>
     <?php if ($badges): ?><div class="journey-badge-grid"><?php foreach ($badges as $index => $badge): ?><article class="journey-badge journey-badge-<?php echo e((string) (($index % 5) + 1)); ?>"><span aria-hidden="true"></span><strong><?php echo e($badge); ?></strong><small>Earned</small></article><?php endforeach; ?></div><?php else: ?><div class="journey-empty-state"><span class="journey-empty-icon" aria-hidden="true"></span><div><h2>Your first badge is waiting</h2><p>Your first badge will appear as you participate and complete real milestones.</p></div></div><?php endif; ?>
 
-    <div class="journey-section-heading journey-rubric-heading"><p class="eyebrow">Official Presentation Rubric</p><h2>Your evaluated presentation skills</h2><p>This is the official YUVA Club presentation evaluation.</p></div>
+    <div class="journey-section-heading journey-story-heading journey-rubric-heading"><span class="journey-chapter-index" aria-hidden="true">04</span><div><p class="eyebrow">Reflection</p><h2>Learn from every presentation</h2><p>Your official evaluation and approved guidance shape the next step.</p></div></div>
     <div class="journey-rubric-layout">
       <article class="journey-card journey-rubric-card"><div class="journey-rubric-total"><span>Total Score</span><strong><?php echo e((string) $rubricScore); ?><small>/100</small></strong><p><?php echo e((string) $rubricCompleted); ?> of <?php echo e((string) count(rubric_categories())); ?> categories scored</p></div><div class="journey-rubric-list"><?php foreach (rubric_categories() as $rubricKey => $rubricLabel): ?><p><span><?php echo e($rubricLabel); ?></span><strong><?php echo ($record['rubric_' . $rubricKey] ?? '') !== '' ? e((string) $record['rubric_' . $rubricKey]) . ' / 10' : 'Not scored'; ?></strong></p><?php endforeach; ?></div></article>
       <article class="journey-card journey-feedback-card"><div class="journey-card-heading"><span class="journey-card-icon journey-feedback-icon" aria-hidden="true"></span><div><p class="eyebrow">Judge Feedback</p><h2>Guidance for your next step</h2></div></div><p><?php echo e(($record['judge_feedback'] ?? '') !== '' ? $record['judge_feedback'] : 'Challenge feedback will appear after a mentor or judge reviews your presentation.'); ?></p><div class="journey-award-status"><span>Award Status</span><strong><?php echo e($record['award_status'] ?? 'None'); ?></strong></div></article>
@@ -269,6 +271,7 @@ portal_header('Student Dashboard', true);
 
     <div class="journey-section-heading journey-future-heading"><p class="eyebrow">Future Growth</p><h2>More ways to build momentum</h2><p>These capabilities are planned for future YUVA Club updates.</p></div>
     <div class="journey-roadmap-grid"><article class="journey-roadmap journey-roadmap-goals"><span class="journey-roadmap-icon" aria-hidden="true"></span><div><h3>Weekly Goals</h3><p>Set and track weekly leadership activities.</p></div><strong>Coming Soon</strong></article><article class="journey-roadmap journey-roadmap-streak"><span class="journey-roadmap-icon" aria-hidden="true"></span><div><h3>Streak Tracking</h3><p>Celebrate consistent participation over time.</p></div><strong>Coming Soon</strong></article><article class="journey-roadmap journey-roadmap-rewards"><span class="journey-roadmap-icon" aria-hidden="true"></span><div><h3>Token Rewards</h3><p>Use tokens with future approved rewards.</p></div><strong>Future Update</strong></article></div>
+    </div>
   </section>
 
   <section class="band app-section" id="app-achievements" data-app-section="progress">

@@ -1734,3 +1734,507 @@ body.student-app {
     grid-template-columns: 1fr;
   }
 }
+
+/* Leadership Journey: signature story experience */
+.student-app #app-progress {
+  color: var(--text-primary);
+  background:
+    radial-gradient(circle at 88% 3%, rgba(109, 61, 214, .08), transparent 25rem),
+    linear-gradient(180deg, #f8faff, var(--surface-secondary));
+}
+
+.student-app #app-progress .eyebrow {
+  color: var(--yuva-purple);
+}
+
+.student-app #app-progress .journey-hero {
+  min-height: 330px;
+  margin-bottom: var(--space-8);
+  padding: clamp(34px, 5vw, 62px) 44% clamp(34px, 5vw, 62px) clamp(30px, 5vw, 58px);
+  border-color: rgba(255, 255, 255, .12);
+  border-radius: var(--radius-feature);
+  background:
+    radial-gradient(circle at 77% 18%, rgba(0, 196, 154, .22), transparent 25%),
+    radial-gradient(circle at 91% 80%, rgba(139, 92, 246, .26), transparent 26%),
+    linear-gradient(135deg, var(--yuva-navy), #09265e 57%, #191254);
+  box-shadow: var(--shadow-elevated);
+}
+
+.student-app #app-progress .journey-hero h1 {
+  max-width: 680px;
+  color: #fff;
+  font-size: clamp(39px, 5.2vw, 64px);
+}
+
+.student-app #app-progress .journey-hero-copy > p:last-of-type {
+  max-width: 590px;
+  color: #d7e2f4;
+  font-size: var(--type-body);
+}
+
+.student-app #app-progress .journey-hero-status span {
+  border-color: rgba(255, 255, 255, .16);
+  color: #b6c6e1;
+  background: rgba(4, 17, 47, .52);
+}
+
+.student-app #app-progress .journey-story {
+  position: relative;
+  padding-left: 42px;
+}
+
+.student-app #app-progress .journey-story::before {
+  content: "";
+  position: absolute;
+  top: 26px;
+  bottom: 120px;
+  left: 14px;
+  width: 2px;
+  background: linear-gradient(
+    180deg,
+    var(--yuva-blue),
+    var(--yuva-green) 32%,
+    var(--yuva-purple) 65%,
+    rgba(109, 61, 214, .08)
+  );
+}
+
+.student-app #app-progress .journey-story-heading {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  margin: var(--space-10) 0 var(--space-5);
+}
+
+.student-app #app-progress .journey-story-heading:first-child {
+  margin-top: 0;
+}
+
+.student-app #app-progress .journey-story-heading::before {
+  content: "";
+  position: absolute;
+  left: -35px;
+  width: 16px;
+  height: 16px;
+  border: 4px solid var(--surface-secondary);
+  border-radius: 50%;
+  background: var(--yuva-blue);
+  box-shadow: 0 0 0 3px rgba(30, 77, 190, .14);
+}
+
+.student-app #app-progress .journey-challenge-heading::before {
+  background: var(--yuva-green);
+}
+
+.student-app #app-progress .journey-rubric-heading::before {
+  background: var(--yuva-purple);
+}
+
+.student-app #app-progress .journey-chapter-index {
+  display: grid;
+  width: 48px;
+  height: 48px;
+  flex: 0 0 48px;
+  place-items: center;
+  border-radius: 15px;
+  color: #fff;
+  background: linear-gradient(145deg, var(--yuva-blue-bright), var(--yuva-blue));
+  box-shadow: 0 10px 22px rgba(30, 77, 190, .20);
+  font-weight: 900;
+}
+
+.student-app #app-progress .journey-story-heading:nth-of-type(2) .journey-chapter-index,
+.student-app #app-progress .journey-challenge-heading .journey-chapter-index {
+  background: linear-gradient(145deg, #19c8a2, #078f72);
+}
+
+.student-app #app-progress .journey-rubric-heading .journey-chapter-index {
+  background: linear-gradient(145deg, #9360ed, var(--yuva-purple));
+}
+
+.student-app #app-progress .journey-story-heading h2,
+.student-app #app-progress .journey-story-heading p {
+  margin: 0;
+}
+
+.student-app #app-progress .journey-story-heading h2 {
+  color: var(--text-primary);
+  font-size: var(--type-section-title);
+}
+
+.student-app #app-progress .journey-story-heading p:last-child {
+  margin-top: 3px;
+  color: var(--text-secondary);
+}
+
+.student-app #app-progress .journey-metrics {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.student-app #app-progress .journey-metric {
+  position: relative;
+  min-height: 168px;
+  padding: var(--space-5);
+  border-color: var(--border-soft);
+  border-radius: var(--radius-card);
+  color: var(--text-primary);
+  background: var(--surface-primary);
+  box-shadow: var(--shadow-soft);
+}
+
+.student-app #app-progress .journey-metric::after {
+  content: "";
+  position: absolute;
+  right: 18px;
+  bottom: 16px;
+  left: 18px;
+  height: 4px;
+  border-radius: 999px;
+  opacity: .72;
+  background: var(--yuva-blue);
+}
+
+.student-app #app-progress .journey-metric-tokens::after {
+  background: var(--yuva-orange);
+}
+
+.student-app #app-progress .journey-metric-attendance::after {
+  background: var(--yuva-green);
+}
+
+.student-app #app-progress .journey-metric-hours::after {
+  background: var(--yuva-purple);
+}
+
+.student-app #app-progress .journey-metric-presentations::after {
+  background: var(--yuva-red);
+}
+
+.student-app #app-progress .journey-metric p {
+  color: var(--text-secondary);
+}
+
+.student-app #app-progress .journey-metric strong {
+  color: var(--text-primary);
+}
+
+.student-app #app-progress .journey-metric small {
+  color: var(--text-secondary);
+}
+
+.student-app #app-progress .journey-primary-grid {
+  grid-template-columns: minmax(0, 1.2fr) minmax(320px, .8fr);
+  gap: var(--space-5);
+  margin-top: var(--space-5);
+}
+
+.student-app #app-progress .journey-card {
+  border-color: var(--border-soft);
+  color: var(--text-primary);
+  background: var(--surface-primary);
+  box-shadow: var(--shadow-soft);
+}
+
+.student-app #app-progress .journey-card-heading h2 {
+  color: var(--text-primary);
+}
+
+.student-app #app-progress .journey-card-heading p:last-child {
+  color: var(--text-secondary);
+}
+
+.student-app #app-progress .journey-rank-card {
+  position: relative;
+  overflow: hidden;
+  border-top: 5px solid var(--yuva-purple);
+}
+
+.student-app #app-progress .journey-rank-card::after {
+  content: "";
+  position: absolute;
+  top: -75px;
+  right: -75px;
+  width: 210px;
+  height: 210px;
+  border-radius: 50%;
+  pointer-events: none;
+  background: radial-gradient(circle, rgba(109, 61, 214, .12), transparent 68%);
+}
+
+.student-app #app-progress .journey-achievement-card {
+  border-top: 5px solid var(--yuva-gold);
+}
+
+.student-app #app-progress .journey-rank-details p,
+.student-app #app-progress .journey-challenge-meta p {
+  border-color: var(--border-soft);
+  background: var(--surface-secondary);
+}
+
+.student-app #app-progress .journey-rank-details span,
+.student-app #app-progress .journey-challenge-meta span,
+.student-app #app-progress .journey-certificate-status span,
+.student-app #app-progress .journey-award-status span {
+  color: var(--text-secondary);
+}
+
+.student-app #app-progress .journey-rank-details strong,
+.student-app #app-progress .journey-challenge-meta strong {
+  color: var(--text-primary);
+}
+
+.student-app #app-progress .journey-requirement {
+  border-color: var(--yuva-purple);
+  background: rgba(109, 61, 214, .07);
+}
+
+.student-app #app-progress .journey-requirement span {
+  color: var(--yuva-purple);
+}
+
+.student-app #app-progress .journey-requirement p {
+  color: var(--text-secondary);
+}
+
+.student-app #app-progress .journey-certificate-status {
+  border-color: rgba(245, 181, 27, .30);
+  background: rgba(245, 181, 27, .09);
+}
+
+.student-app #app-progress .journey-certificate-status strong {
+  color: #9b6600;
+}
+
+.student-app #app-progress .journey-challenge-card {
+  position: relative;
+  margin-top: 0;
+  overflow: hidden;
+  border-top: 5px solid var(--yuva-green);
+}
+
+.student-app #app-progress .journey-stage-path {
+  padding: 22px 16px 12px;
+  border-radius: var(--radius-card);
+  background: linear-gradient(180deg, #f7fbff, var(--surface-secondary));
+}
+
+.student-app #app-progress .journey-stage-path > div {
+  color: var(--text-secondary);
+}
+
+.student-app #app-progress .journey-stage-path > div::before {
+  background: #ccd8e9;
+}
+
+.student-app #app-progress .journey-stage-path span {
+  border-color: #e3eaf4;
+  background: #91a1ba;
+}
+
+.student-app #app-progress .journey-stage-path .is-current {
+  color: var(--text-primary);
+}
+
+.student-app #app-progress .journey-stage-path .is-current span {
+  border-color: rgba(0, 196, 154, .20);
+  background: var(--yuva-green);
+}
+
+.student-app #app-progress .journey-badge {
+  border-color: var(--border-soft);
+  background: var(--surface-primary);
+  box-shadow: var(--shadow-soft);
+}
+
+.student-app #app-progress .journey-badge strong {
+  color: var(--text-primary);
+}
+
+.student-app #app-progress .journey-empty-state {
+  border-color: var(--border-soft);
+  background: var(--surface-primary);
+  box-shadow: var(--shadow-soft);
+}
+
+.student-app #app-progress .journey-empty-state h2 {
+  color: var(--text-primary);
+}
+
+.student-app #app-progress .journey-empty-state p {
+  color: var(--text-secondary);
+}
+
+.student-app #app-progress .journey-rubric-heading {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.student-app #app-progress .journey-rubric-card {
+  grid-template-columns: 220px minmax(0, 1fr);
+  overflow: hidden;
+}
+
+.student-app #app-progress .journey-rubric-total {
+  background: linear-gradient(145deg, rgba(109, 61, 214, .13), rgba(30, 77, 190, .07));
+}
+
+.student-app #app-progress .journey-rubric-total span,
+.student-app #app-progress .journey-rubric-total p,
+.student-app #app-progress .journey-rubric-list span,
+.student-app #app-progress .journey-feedback-card > p {
+  color: var(--text-secondary);
+}
+
+.student-app #app-progress .journey-rubric-total strong,
+.student-app #app-progress .journey-rubric-list strong {
+  color: var(--text-primary);
+}
+
+.student-app #app-progress .journey-rubric-list p {
+  border-color: var(--border-soft);
+}
+
+.student-app #app-progress .journey-award-status {
+  background: rgba(245, 181, 27, .09);
+}
+
+.student-app #app-progress .journey-award-status strong {
+  color: #9b6600;
+}
+
+.student-app #app-progress .journey-leaderboard-card {
+  border-color: rgba(109, 61, 214, .25);
+  background:
+    radial-gradient(circle at 10% 50%, rgba(0, 196, 154, .12), transparent 30%),
+    linear-gradient(135deg, var(--yuva-navy), #321978);
+  box-shadow: var(--shadow-elevated);
+}
+
+.student-app #app-progress .journey-future-heading h2 {
+  color: var(--text-primary);
+}
+
+.student-app #app-progress .journey-future-heading > p:last-child {
+  color: var(--text-secondary);
+}
+
+.student-app #app-progress .journey-roadmap {
+  border-color: var(--border-soft);
+  background: var(--surface-primary);
+  box-shadow: var(--shadow-soft);
+}
+
+.student-app #app-progress .journey-roadmap h3 {
+  color: var(--text-primary);
+}
+
+.student-app #app-progress .journey-roadmap p {
+  color: var(--text-secondary);
+}
+
+@media (max-width: 900px) {
+  .student-app #app-progress .journey-story {
+    padding-left: 34px;
+  }
+
+  .student-app #app-progress .journey-metrics {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .student-app #app-progress .journey-primary-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .student-app #app-progress {
+    padding-top: 0;
+  }
+
+  .student-app #app-progress .journey-hero {
+    min-height: 285px;
+    margin: 0 -14px var(--space-5);
+    padding: 48px 42% 28px 18px;
+    border-radius: 0 0 var(--radius-card) var(--radius-card);
+  }
+
+  .student-app #app-progress .journey-hero h1 {
+    font-size: 32px;
+  }
+
+  .student-app #app-progress .journey-story {
+    padding-left: 25px;
+  }
+
+  .student-app #app-progress .journey-story::before {
+    left: 7px;
+    bottom: 90px;
+  }
+
+  .student-app #app-progress .journey-story-heading {
+    align-items: flex-start;
+    margin-top: var(--space-8);
+  }
+
+  .student-app #app-progress .journey-story-heading::before {
+    left: -24px;
+    width: 14px;
+    height: 14px;
+  }
+
+  .student-app #app-progress .journey-chapter-index {
+    width: 42px;
+    height: 42px;
+    flex-basis: 42px;
+    border-radius: 13px;
+  }
+
+  .student-app #app-progress .journey-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .student-app #app-progress .journey-metric {
+    min-height: 148px;
+    padding: var(--space-4);
+  }
+
+  .student-app #app-progress .journey-metric:last-child {
+    grid-column: 1 / -1;
+  }
+
+  .student-app #app-progress .journey-rank-card,
+  .student-app #app-progress .journey-achievement-card,
+  .student-app #app-progress .journey-challenge-card,
+  .student-app #app-progress .journey-feedback-card {
+    padding: 18px;
+  }
+
+  .student-app #app-progress .journey-rubric-card {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 410px) {
+  .student-app #app-progress .journey-hero {
+    min-height: 310px;
+    padding-right: 38%;
+  }
+
+  .student-app #app-progress .journey-hero-status {
+    max-width: 180px;
+  }
+
+  .student-app #app-progress .journey-story {
+    padding-left: 20px;
+  }
+
+  .student-app #app-progress .journey-story-heading {
+    gap: 10px;
+  }
+
+  .student-app #app-progress .journey-story-heading::before {
+    left: -19px;
+  }
+}
