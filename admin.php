@@ -82,16 +82,95 @@ foreach ($records as $recordStudentId => $record) {
     ];
 }
 
-portal_header('Admin Dashboard');
+$pendingApprovalCount = $sqlRegistrationListAvailable
+    ? count($sqlPendingRegistrations)
+    : 0;
+$openSafetyReportCount = count(array_filter(
+    $reports,
+    static fn (array $report): bool =>
+        strtolower((string) ($report['status'] ?? 'Open')) !== 'closed'
+));
+$issuedCertificateCount = count(array_filter(
+    $records,
+    static fn (array $record): bool =>
+        ($record['certificate_status'] ?? 'Not Ready') === 'Issued'
+));
+
+portal_header('Master Admin', false, ['assets/master-admin.css?v=1']);
 ?>
-<main>
-  <section class="band">
-    <div class="section-head">
-      <p class="eyebrow">Admin Dashboard</p>
-      <h1>Yuva Club Records</h1>
-      <p>Approve students, review topics and research, track attendance, add service hours, and prepare certificates.</p>
-      <p><a class="button primary" href="admin-students.php">Signup Students</a> <a class="button ghost" href="portal-logout.php">Log Out</a></p>
-    </div>
+<a class="master-skip-link" href="#master-main">Skip to control center</a>
+<div class="master-shell">
+  <aside class="master-rail" aria-label="Master Admin navigation">
+    <a class="master-brand" href="#overview">
+      <img src="assets/logo.png" alt="">
+      <span><strong>YUVA Club</strong><small>Master Admin</small></span>
+    </a>
+    <nav class="master-nav" aria-label="Master Admin sections">
+      <a href="#overview"><span aria-hidden="true">O</span> Overview</a>
+      <a href="#organizations"><span aria-hidden="true">OR</span> Organizations</a>
+      <a href="#organization-admins"><span aria-hidden="true">OA</span> Organization Admins</a>
+      <a href="#students"><span aria-hidden="true">ST</span> Students</a>
+      <a href="#parents"><span aria-hidden="true">PA</span> Parents</a>
+      <a href="#sql-registrations"><span aria-hidden="true">AP</span> Approvals</a>
+      <a href="#certificates"><span aria-hidden="true">CE</span> Certificates</a>
+      <a href="#reports"><span aria-hidden="true">!</span> Reports</a>
+      <a href="#settings"><span aria-hidden="true">SE</span> Settings</a>
+      <a href="#system-health"><span aria-hidden="true">SH</span> System Health</a>
+    </nav>
+    <a class="master-logout" href="portal-logout.php">Log out</a>
+  </aside>
+  <main class="master-main" id="master-main">
+    <header class="master-mobile-header">
+      <a class="master-mobile-brand" href="#overview"><img src="assets/yuva-symbol.png" alt=""><span>Master Admin</span></a>
+      <a class="master-mobile-action" href="portal-logout.php">Log out</a>
+    </header>
+    <section class="master-hero" id="overview">
+      <div>
+        <p class="master-kicker">System-wide control center</p>
+        <h1>Lead the whole YUVA Club platform with clarity.</h1>
+        <p>Review access, student operations, program delivery, safety, and platform readiness from one accountable workspace.</p>
+      </div>
+      <div class="master-hero-actions">
+        <a class="button primary" href="admin-students.php">Manage signup students</a>
+        <a class="button ghost" href="#sql-registrations">Review approvals</a>
+      </div>
+    </section>
+
+    <section class="master-stat-grid" aria-label="Platform overview">
+      <article><span>Students</span><strong><?php echo count($students); ?></strong><small>Current portal records</small></article>
+      <article><span>Pending approvals</span><strong><?php echo $pendingApprovalCount; ?></strong><small><?php echo $sqlApprovalEnabled ? 'SQL approval queue' : 'SQL approval is disabled'; ?></small></article>
+      <article><span>Scheduled sessions</span><strong><?php echo count($scheduledMeetings); ?></strong><small>Across both programs</small></article>
+      <article><span>Open safety reports</span><strong><?php echo $openSafetyReportCount; ?></strong><small>Require responsible review</small></article>
+    </section>
+
+    <section class="master-module-grid" aria-label="Master Admin areas">
+      <article id="organizations">
+        <span class="master-module-mark organizations" aria-hidden="true">OR</span>
+        <div><p class="master-kicker">Organizations</p><h2>Organization foundation</h2><p>The approved foundation is present. Organization management remains intentionally unavailable until its future implementation phase.</p></div>
+        <span class="master-state neutral">Foundation only</span>
+      </article>
+      <article id="organization-admins">
+        <span class="master-module-mark admins" aria-hidden="true">OA</span>
+        <div><p class="master-kicker">Organization Admins</p><h2>Role foundation</h2><p>No organization administrators are managed from this Version 2.0 control center.</p></div>
+        <span class="master-state neutral">Not configured</span>
+      </article>
+      <article id="parents">
+        <span class="master-module-mark parents" aria-hidden="true">PA</span>
+        <div><p class="master-kicker">Parents</p><h2>Parent identities</h2><p>Parent access continues through the existing linked-student workflow and preserved authentication contract.</p></div>
+        <span class="master-state ready">Operational</span>
+      </article>
+      <article id="system-health">
+        <span class="master-module-mark health" aria-hidden="true">SH</span>
+        <div><p class="master-kicker">System Health</p><h2>Current operating state</h2><p>Filesystem portal records are available. SQL registration approval is <?php echo $sqlApprovalEnabled ? 'enabled' : 'disabled'; ?>.</p></div>
+        <span class="master-state <?php echo $sqlRegistrationListAvailable ? 'ready' : 'attention'; ?>"><?php echo $sqlRegistrationListAvailable ? 'Available' : 'Attention'; ?></span>
+      </article>
+    </section>
+
+    <section class="master-workspace">
+      <div class="master-section-heading">
+        <div><p class="master-kicker">Operations</p><h2>Platform management</h2></div>
+        <p>Existing administrative workflows, reorganized without changing their behavior.</p>
+      </div>
 
     <?php if ($status === 'saved'): ?>
       <div class="form-status success">Student record saved.</div>
@@ -133,8 +212,8 @@ portal_header('Admin Dashboard');
       <div class="form-status error">Registration could not be approved.</div>
     <?php endif; ?>
 
-    <section class="form-card" id="sql-registrations">
-      <h2>Pending Azure SQL Registrations</h2>
+    <section class="form-card master-panel" id="sql-registrations">
+      <div class="master-panel-heading"><div><p class="master-kicker">Approvals</p><h2>Pending Azure SQL registrations</h2></div><span class="master-count"><?php echo $pendingApprovalCount; ?></span></div>
       <?php if (!$sqlApprovalEnabled || !$sqlRegistrationListAvailable): ?>
         <p class="form-note">Registration approval is unavailable.</p>
       <?php elseif ($sqlPendingRegistrations === []): ?>
@@ -190,8 +269,9 @@ portal_header('Admin Dashboard');
       <?php endif; ?>
     </section>
 
-    <form class="form-card" action="admin-password-actions.php" method="post">
-      <h2>Admin Login Settings</h2>
+    <form class="form-card master-panel" id="settings" action="admin-password-actions.php" method="post">
+      <p class="master-kicker">Settings</p>
+      <h2>Master Admin login</h2>
       <div class="field-grid">
         <div class="field">
           <label for="current_email">Current Admin Email *</label>
@@ -217,8 +297,9 @@ portal_header('Admin Dashboard');
       <button class="button primary" type="submit">Update Admin Login</button>
     </form>
 
-    <form class="form-card" action="admin-hub-actions.php" method="post">
-      <h2>Portal Hub Settings</h2>
+    <form class="form-card master-panel" action="admin-hub-actions.php" method="post">
+      <p class="master-kicker">Program delivery</p>
+      <h2>Portal hub settings</h2>
       <h2>School Yuva Session (Ages 13-17)</h2>
       <div class="field-grid">
         <div class="field">
@@ -320,8 +401,8 @@ portal_header('Admin Dashboard');
       <button class="button primary" type="submit">Save Hub Settings</button>
     </form>
 
-    <div class="two-grid">
-      <form class="form-card" action="admin-bulk-session-actions.php" method="post">
+    <div class="two-grid master-schedule-grid">
+      <form class="form-card master-panel" action="admin-bulk-session-actions.php" method="post">
         <h2>Bulk Assign School Yuva Zoom Slot</h2>
         <div class="field-grid">
           <div class="field">
@@ -373,7 +454,7 @@ portal_header('Admin Dashboard');
         <button class="button primary" type="submit">Assign School Yuva Slot</button>
       </form>
 
-      <form class="form-card" action="admin-bulk-session-actions.php" method="post">
+      <form class="form-card master-panel" action="admin-bulk-session-actions.php" method="post">
         <h2>Bulk Assign College Yuva Zoom Slot</h2>
         <div class="field-grid">
           <div class="field">
@@ -426,7 +507,7 @@ portal_header('Admin Dashboard');
       </form>
     </div>
 
-    <section class="form-card">
+    <section class="form-card master-panel">
       <h2>Scheduled Meetings</h2>
       <p class="form-note">Students appear here after you assign them with the School Yuva or College Yuva bulk assignment forms. Remove selected students from a meeting without deleting their registration.</p>
       <?php if ($scheduledMeetings === []): ?>
@@ -461,8 +542,9 @@ portal_header('Admin Dashboard');
       <?php endif; ?>
     </section>
 
-    <section class="form-card">
-      <h2>Safety Reports</h2>
+    <section class="form-card master-panel" id="reports">
+      <p class="master-kicker">Reports</p>
+      <h2>Safety reports</h2>
       <p class="form-note">Reports submitted from the student app dashboard. Follow up with the parent or student outside the app as needed.</p>
       <?php if ($reports === []): ?>
         <p>No student safety reports yet.</p>
@@ -499,8 +581,9 @@ portal_header('Admin Dashboard');
       <?php endif; ?>
     </section>
 
-    <section class="form-card">
-      <h2>AI Coach Reviews</h2>
+    <section class="form-card master-panel">
+      <p class="master-kicker">Review workflow</p>
+      <h2>AI Mentor reviews</h2>
       <p class="form-note">Run AI Coach after a student has selected a topic and submitted research. AI creates a draft score and feedback; admin must apply it before it becomes official.</p>
       <div class="portal-table-wrap">
         <table class="portal-table compact-table">
@@ -578,6 +661,9 @@ portal_header('Admin Dashboard');
       </div>
     </section>
 
+    <section class="master-panel master-student-panel" id="students">
+      <div class="master-panel-heading" id="certificates"><div><p class="master-kicker">Students / Certificates</p><h2>Student records and recognition</h2></div><span class="master-count"><?php echo $issuedCertificateCount; ?> issued</span></div>
+      <p class="form-note">Manage existing student records, progress evidence, approvals, sessions, and certificate status.</p>
     <div class="portal-table-wrap">
       <table class="portal-table">
         <thead>
@@ -885,6 +971,15 @@ portal_header('Admin Dashboard');
         </tbody>
       </table>
     </div>
-  </section>
-</main>
+    </section>
+    </section>
+  </main>
+  <nav class="master-bottom-nav" aria-label="Master Admin mobile navigation">
+    <a href="#overview"><span aria-hidden="true">O</span>Overview</a>
+    <a href="#students"><span aria-hidden="true">ST</span>Students</a>
+    <a href="#sql-registrations"><span aria-hidden="true">AP</span>Approvals</a>
+    <a href="#reports"><span aria-hidden="true">!</span>Reports</a>
+    <a href="#settings"><span aria-hidden="true">SE</span>Settings</a>
+  </nav>
+</div>
 <?php portal_footer(); ?>

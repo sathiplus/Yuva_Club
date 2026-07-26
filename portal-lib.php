@@ -1447,7 +1447,7 @@ function student_app_navigation(string $className, string $label): string {
     return $html . '</nav>';
 }
 
-function portal_header(string $title, bool $studentApp = false): void {
+function portal_header(string $title, bool $studentApp = false, array $localStylesheets = []): void {
     echo '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">';
     echo '<title>' . e($title) . ' | Yuva Club</title>';
     echo '<meta name="description" content="Yuva Club student leadership portal.">';
@@ -1461,6 +1461,12 @@ function portal_header(string $title, bool $studentApp = false): void {
     echo '<link rel="stylesheet" href="assets/site.css?v=20260614-large-photos">';
     if ($studentApp) {
         echo '<link rel="stylesheet" href="assets/student-app.css?v=1">';
+    }
+    foreach ($localStylesheets as $localStylesheet) {
+        $localStylesheet = trim((string) $localStylesheet);
+        if ($localStylesheet !== '') {
+            echo '<link rel="stylesheet" href="' . e($localStylesheet) . '">';
+        }
     }
     echo '<script src="assets/app.js" defer></script>';
     if ($studentApp) {
@@ -1476,7 +1482,7 @@ function portal_header(string $title, bool $studentApp = false): void {
         return;
     }
     echo '<header class="site-header"><a class="brand" href="index.html" aria-label="Yuva Club home"><img src="assets/logo.png" alt="Yuva Club logo" width="78" height="78"><span>Yuva Club</span></a>';
-    echo '<nav class="nav" aria-label="Main navigation"><a href="index.html">Home</a><a href="programs.html">Programs</a><a href="challenges.html">Challenges</a><a href="curriculum.html">Topics</a><a href="stories.html">Stories</a><a href="leaderboard.php">Leaderboard</a><a href="app.html">App</a><a href="safety.html">Safety</a><a href="registration.php">Register</a><a href="portal-login.php">Student Portal</a><a href="parent-login.php">Parent</a><a href="admin-login.php">Admin</a></nav></header>';
+    echo '<nav class="nav" aria-label="Main navigation"><a href="index.html">Home</a><a href="programs.html">Programs</a><a href="challenges.html">Challenges</a><a href="curriculum.html">Topics</a><a href="resources.html">Resources</a><a href="stories.html">Stories</a><a href="leaderboard.php">Leaderboard</a><a href="app.html">App</a><a href="safety.html">Safety</a><a href="registration.php">Register</a><a href="portal-login.php">Student Portal</a><a href="parent-login.php">Parent</a><a href="admin-login.php">Admin</a></nav></header>';
 }
 
 function portal_footer(bool $studentApp = false): void {

@@ -1818,9 +1818,11 @@ function Page-Head([string]$title, [string]$description, [string]$pathPrefix) {
   <meta name="apple-mobile-web-app-title" content="YUVA Club">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <link rel="stylesheet" href="${pathPrefix}assets/site.css?v=20260614-large-photos">
+  <link rel="stylesheet" href="${pathPrefix}assets/public-site.css?v=1">
   <script src="${pathPrefix}assets/app.js" defer></script>
 </head>
 <body>
+  <a class="public-skip-link" href="#main-content">Skip to main content</a>
 "@
 }
 
@@ -3146,7 +3148,7 @@ $homePage = @()
 $homePage += Page-Head "The Global Youth Speaking & Leadership Challenge" "Yuva Club empowers students through presentations, challenges, competitions, mentorship, and leadership growth." ""
 $homePage += Site-Header ""
 $homePage += @"
-  <main>
+  <main id="main-content">
     <section class="hero">
       <div>
         <p class="eyebrow">yuvaclub.karmabro.com</p>
@@ -3270,7 +3272,7 @@ $challengesPage = @()
 $challengesPage += Page-Head "Leadership Challenge" "Yuva Club challenge stages, scoring rubric, recognition, and championship pathway." ""
 $challengesPage += Site-Header ""
 $challengesPage += @"
-  <main>
+  <main id="main-content">
     <section class="band">
       <div class="section-head">
         <p class="eyebrow">Leadership Challenge</p>
@@ -3358,7 +3360,7 @@ $appPage = @()
 $appPage += Page-Head "YUVA Club App" "Install YUVA Club on Android and iPhone and use the student leadership portal as an app." ""
 $appPage += Site-Header ""
 $appPage += @"
-  <main>
+  <main id="main-content">
     <section class="band">
       <div class="section-head">
         <p class="eyebrow">Android & iPhone</p>
@@ -3409,7 +3411,7 @@ $programsPage = @()
 $programsPage += Page-Head "Programs" "Yuva Club membership groups and leadership journey." ""
 $programsPage += Site-Header ""
 $programsPage += @"
-  <main>
+  <main id="main-content">
     <section class="band">
       <div class="section-head">
         <p class="eyebrow">Membership Groups</p>
@@ -3443,7 +3445,7 @@ $safetyPage = @()
 $safetyPage += Page-Head "Safety" "Yuva Club youth safety, privacy, and parent trust practices." ""
 $safetyPage += Site-Header ""
 $safetyPage += @"
-  <main>
+  <main id="main-content">
     <section class="band">
       <div class="section-head">
         <p class="eyebrow">Parent Trust</p>
@@ -3489,7 +3491,7 @@ $curriculum = @()
 $curriculum += Page-Head "Topics We Explore" "A flexible global Yuva Club learning journey for leadership, curiosity, public speaking, research, and student presentations." ""
 $curriculum += Site-Header ""
 $curriculum += @"
-  <main>
+  <main id="main-content">
     <section class="band">
       <div class="section-head">
         <p class="eyebrow">Learning Journey</p>
@@ -3509,7 +3511,7 @@ $stories = @()
 $stories += Page-Head "Inspirational Stories and Leaders" "All Yuva Club story, leader, innovator, and tradition pages." ""
 $stories += Site-Header ""
 $stories += @"
-  <main>
+  <main id="main-content">
     <section class="band">
       <div class="section-head">
         <p class="eyebrow">Reading Library</p>
@@ -3529,7 +3531,7 @@ $resources = @()
 $resources += Page-Head "Resources" "Recommended source and reading resources for Yuva Club." ""
 $resources += Site-Header ""
 $resources += @"
-  <main>
+  <main id="main-content">
     <section class="band">
       <div class="section-head">
         <p class="eyebrow">Research & Reading</p>
@@ -3576,7 +3578,7 @@ foreach ($item in $items) {
   $page += Page-Head $item.title $item.subtitle "../"
   $page += Site-Header "../"
   $page += @"
-  <main>
+  <main id="main-content">
     <section class="story-hero">
       <div>
         <span class="story-badge">$((Escape-Html $item.category)) - $((Escape-Html $item.type))</span>

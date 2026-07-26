@@ -23,9 +23,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     redirect_to('portal-login.php?status=error');
 }
 
-portal_header('Student Portal Login');
+portal_header('Student Portal Login', false, ['assets/public-site.css?v=1']);
 ?>
-<main>
+<a class="public-skip-link" href="#main-content">Skip to main content</a>
+<main id="main-content">
   <section class="band">
     <div class="form-shell portal-narrow">
       <div class="section-head">

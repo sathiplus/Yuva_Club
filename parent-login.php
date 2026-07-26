@@ -51,9 +51,10 @@ if ($step === 'children') {
     }
 }
 
-portal_header('Parent Dashboard Login');
+portal_header('Parent Dashboard Login', false, ['assets/public-site.css?v=1']);
 ?>
-<main>
+<a class="public-skip-link" href="#main-content">Skip to main content</a>
+<main id="main-content">
   <section class="band">
     <div class="form-shell portal-narrow">
       <div class="section-head">
