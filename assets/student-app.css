@@ -2238,3 +2238,423 @@ body.student-app {
     left: -19px;
   }
 }
+
+/* AI Mentor: approved guidance presented as encouragement, not a dashboard */
+.student-app #app-ai-coach {
+  color: var(--text-primary);
+  background:
+    radial-gradient(circle at 90% 3%, rgba(109, 61, 214, .09), transparent 25rem),
+    linear-gradient(180deg, #fbfaff, var(--surface-secondary));
+}
+
+.student-app #app-ai-coach .eyebrow {
+  color: var(--yuva-purple);
+}
+
+.student-app #app-ai-coach .ai-mentor-hero {
+  min-height: 320px;
+  margin-bottom: var(--space-6);
+  padding: clamp(36px, 5vw, 60px) 44% clamp(36px, 5vw, 60px) clamp(30px, 5vw, 58px);
+  border-color: rgba(255, 255, 255, .13);
+  border-radius: var(--radius-feature);
+  background:
+    radial-gradient(circle at 77% 23%, rgba(0, 196, 154, .18), transparent 25%),
+    radial-gradient(circle at 91% 78%, rgba(139, 92, 246, .26), transparent 28%),
+    linear-gradient(135deg, var(--yuva-navy), #131d5b 58%, #351878);
+  box-shadow: var(--shadow-elevated);
+}
+
+.student-app #app-ai-coach .ai-mentor-hero h1 {
+  max-width: 650px;
+  color: #fff;
+  font-size: clamp(39px, 5vw, 62px);
+}
+
+.student-app #app-ai-coach .ai-mentor-hero p:last-child {
+  max-width: 600px;
+  color: #d9e1f2;
+  font-size: var(--type-body);
+}
+
+.student-app #app-ai-coach .ai-mentor-state {
+  position: relative;
+  min-height: 250px;
+  grid-template-columns: 82px minmax(0, 1fr);
+  padding: clamp(28px, 5vw, 48px);
+  overflow: hidden;
+  border-color: rgba(109, 61, 214, .18);
+  border-radius: var(--radius-feature);
+  color: var(--text-primary);
+  background:
+    radial-gradient(circle at 92% 18%, rgba(109, 61, 214, .10), transparent 27%),
+    var(--surface-primary);
+  box-shadow: var(--shadow-elevated);
+}
+
+.student-app #app-ai-coach .ai-mentor-state::after {
+  content: "A thoughtful next step begins when your approved guidance is ready.";
+  position: absolute;
+  right: 38px;
+  bottom: 28px;
+  max-width: 330px;
+  color: rgba(109, 61, 214, .55);
+  font-size: 13px;
+  font-style: italic;
+}
+
+.student-app #app-ai-coach .ai-mentor-state h2 {
+  color: var(--text-primary);
+  font-size: clamp(24px, 3vw, 34px);
+}
+
+.student-app #app-ai-coach .ai-mentor-state p:last-of-type {
+  max-width: 650px;
+  color: var(--text-secondary);
+}
+
+.student-app #app-ai-coach .ai-studio-state-icon {
+  width: 72px;
+  height: 72px;
+  border-radius: 22px;
+  background: linear-gradient(145deg, #9360ed, var(--yuva-purple));
+  box-shadow: 0 14px 28px rgba(109, 61, 214, .22);
+}
+
+.student-app #app-ai-coach .ai-mentor-state .button {
+  border-color: var(--yuva-purple);
+  background: linear-gradient(135deg, #8552e3, var(--yuva-purple));
+  box-shadow: 0 10px 22px rgba(109, 61, 214, .20);
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.student-app #app-ai-coach .ai-studio-approved-banner {
+  border-color: rgba(0, 169, 133, .24);
+  color: var(--text-primary);
+  background: linear-gradient(135deg, rgba(0, 169, 133, .09), rgba(255, 255, 255, .96));
+  box-shadow: var(--shadow-soft);
+}
+
+.student-app #app-ai-coach .ai-studio-approved-banner small {
+  color: var(--text-secondary);
+}
+
+.student-app #app-ai-coach .ai-studio-overview {
+  grid-template-columns: minmax(0, 1.55fr) minmax(280px, .45fr);
+  gap: var(--space-5);
+}
+
+.student-app #app-ai-coach :where(
+  .ai-score-card,
+  .ai-topic-card,
+  .ai-research-review-card,
+  .ai-feedback-card,
+  .ai-presentation-rubric
+) {
+  border-color: var(--border-soft);
+  color: var(--text-primary);
+  background: var(--surface-primary);
+  box-shadow: var(--shadow-soft);
+}
+
+.student-app #app-ai-coach .ai-mentor-guidance-card {
+  position: relative;
+  min-height: 280px;
+  grid-template-columns: 112px minmax(0, 1fr);
+  padding: clamp(25px, 4vw, 38px);
+  overflow: hidden;
+  border-top: 5px solid var(--yuva-purple);
+  background:
+    radial-gradient(circle at 92% 14%, rgba(109, 61, 214, .10), transparent 28%),
+    var(--surface-primary);
+}
+
+.student-app #app-ai-coach .ai-mentor-guidance-card::before {
+  content: "“";
+  position: absolute;
+  top: 8px;
+  right: 32px;
+  color: rgba(109, 61, 214, .09);
+  font-family: Georgia, serif;
+  font-size: 150px;
+  line-height: 1;
+}
+
+.student-app #app-ai-coach .ai-mentor-guidance-card h2 {
+  color: var(--text-primary);
+  font-size: clamp(25px, 3vw, 35px);
+}
+
+.student-app #app-ai-coach .ai-mentor-guidance-card p {
+  color: var(--text-secondary);
+  font-size: 16px;
+  line-height: 1.65;
+}
+
+.student-app #app-ai-coach .ai-score-ring {
+  width: 108px;
+  height: 108px;
+  background:
+    radial-gradient(circle, #fff 61%, transparent 63%),
+    conic-gradient(var(--yuva-purple) calc(var(--ai-score) * 1%), #e7e1f5 0);
+  box-shadow: 0 10px 24px rgba(109, 61, 214, .14);
+}
+
+.student-app #app-ai-coach .ai-score-ring strong {
+  color: var(--text-primary);
+  font-size: 36px;
+}
+
+.student-app #app-ai-coach .ai-score-ring span {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.student-app #app-ai-coach .ai-token-award {
+  color: var(--yuva-purple);
+  background: rgba(109, 61, 214, .09);
+}
+
+.student-app #app-ai-coach .ai-mentor-topic-card {
+  position: relative;
+  padding: 28px;
+  overflow: hidden;
+  border-top: 5px solid var(--yuva-green);
+}
+
+.student-app #app-ai-coach .ai-mentor-topic-card::after {
+  content: "";
+  position: absolute;
+  right: -30px;
+  bottom: -30px;
+  width: 110px;
+  height: 110px;
+  border-radius: 50%;
+  background: rgba(0, 169, 133, .08);
+}
+
+.student-app #app-ai-coach .ai-topic-card h2 {
+  color: var(--text-primary);
+}
+
+.student-app #app-ai-coach .ai-topic-card p,
+.student-app #app-ai-coach .ai-topic-card small {
+  color: var(--text-secondary);
+}
+
+.student-app #app-ai-coach .ai-studio-section-heading h2 {
+  color: var(--text-primary);
+}
+
+.student-app #app-ai-coach .ai-studio-section-heading p:last-child {
+  color: var(--text-secondary);
+}
+
+.student-app #app-ai-coach .ai-mentor-perspective-heading {
+  max-width: 760px;
+  margin-top: var(--space-10);
+}
+
+.student-app #app-ai-coach .ai-research-review-card {
+  gap: 22px 32px;
+  padding: clamp(22px, 4vw, 32px);
+}
+
+.student-app #app-ai-coach .ai-research-metric span,
+.student-app #app-ai-coach .ai-research-metric strong {
+  color: var(--text-primary);
+}
+
+.student-app #app-ai-coach .ai-metric-track {
+  background: #e8eaf3;
+}
+
+.student-app #app-ai-coach .ai-metric-track i {
+  background: linear-gradient(90deg, #9360ed, var(--yuva-purple));
+}
+
+.student-app #app-ai-coach .ai-feedback-grid {
+  gap: var(--space-5);
+  margin-top: var(--space-5);
+}
+
+.student-app #app-ai-coach .ai-feedback-card {
+  min-height: 230px;
+  padding: clamp(22px, 4vw, 30px);
+}
+
+.student-app #app-ai-coach .ai-feedback-card h2 {
+  color: var(--text-primary);
+  font-size: clamp(21px, 2.5vw, 28px);
+}
+
+.student-app #app-ai-coach .ai-feedback-card > p:last-child,
+.student-app #app-ai-coach .ai-feedback-card li {
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.student-app #app-ai-coach .ai-strengths-card {
+  border-top: 5px solid var(--yuva-green);
+  background:
+    radial-gradient(circle at 93% 10%, rgba(0, 169, 133, .09), transparent 27%),
+    var(--surface-primary);
+}
+
+.student-app #app-ai-coach .ai-improvements-card {
+  border-top: 5px solid var(--yuva-orange);
+  background:
+    radial-gradient(circle at 93% 10%, rgba(255, 146, 0, .09), transparent 27%),
+    var(--surface-primary);
+}
+
+.student-app #app-ai-coach .ai-coaching-note {
+  border-left: 5px solid var(--yuva-purple);
+  background: linear-gradient(135deg, rgba(109, 61, 214, .07), #fff 42%);
+}
+
+.student-app #app-ai-coach .ai-milestone-note {
+  border-left: 5px solid var(--yuva-green);
+  background: linear-gradient(135deg, rgba(0, 169, 133, .07), #fff 42%);
+}
+
+.student-app #app-ai-coach .ai-rubric-heading {
+  padding-top: var(--space-6);
+  border-color: var(--border-soft);
+}
+
+.student-app #app-ai-coach .ai-presentation-rubric {
+  grid-template-columns: 230px minmax(0, 1fr);
+}
+
+.student-app #app-ai-coach .ai-rubric-total {
+  background: linear-gradient(145deg, rgba(109, 61, 214, .12), rgba(30, 77, 190, .06));
+}
+
+.student-app #app-ai-coach .ai-rubric-total span,
+.student-app #app-ai-coach .ai-rubric-total p,
+.student-app #app-ai-coach .ai-rubric-list span {
+  color: var(--text-secondary);
+}
+
+.student-app #app-ai-coach .ai-rubric-total strong,
+.student-app #app-ai-coach .ai-rubric-list strong {
+  color: var(--text-primary);
+}
+
+.student-app #app-ai-coach .ai-rubric-list p {
+  border-color: var(--border-soft);
+}
+
+.student-app #app-ai-coach .ai-roadmap-heading {
+  padding-top: var(--space-6);
+  border-top: 1px solid var(--border-soft);
+}
+
+.student-app #app-ai-coach .ai-roadmap-card {
+  min-height: 160px;
+  border-color: var(--border-soft);
+  background: var(--surface-primary);
+  box-shadow: var(--shadow-soft);
+}
+
+.student-app #app-ai-coach .ai-roadmap-card h3 {
+  color: var(--text-primary);
+}
+
+.student-app #app-ai-coach .ai-roadmap-card p {
+  color: var(--text-secondary);
+}
+
+@media (max-width: 900px) {
+  .student-app #app-ai-coach .ai-studio-overview {
+    grid-template-columns: 1fr;
+  }
+
+  .student-app #app-ai-coach .ai-mentor-topic-card {
+    min-height: 180px;
+  }
+
+  .student-app #app-ai-coach .ai-mentor-state::after {
+    display: none;
+  }
+}
+
+@media (max-width: 760px) {
+  .student-app #app-ai-coach {
+    padding-top: 0;
+  }
+
+  .student-app #app-ai-coach .ai-mentor-hero {
+    min-height: 280px;
+    margin: 0 -14px var(--space-5);
+    padding: 48px 42% 28px 18px;
+    border-radius: 0 0 var(--radius-card) var(--radius-card);
+  }
+
+  .student-app #app-ai-coach .ai-mentor-hero h1 {
+    font-size: 31px;
+  }
+
+  .student-app #app-ai-coach .ai-mentor-state {
+    min-height: 280px;
+    grid-template-columns: 56px minmax(0, 1fr);
+    padding: 22px;
+  }
+
+  .student-app #app-ai-coach .ai-mentor-state::after {
+    display: none;
+  }
+
+  .student-app #app-ai-coach .ai-studio-state-icon {
+    width: 56px;
+    height: 56px;
+  }
+
+  .student-app #app-ai-coach .ai-mentor-guidance-card {
+    grid-template-columns: 88px minmax(0, 1fr);
+    min-height: 0;
+    padding: 20px;
+  }
+
+  .student-app #app-ai-coach .ai-score-ring {
+    width: 86px;
+    height: 86px;
+  }
+
+  .student-app #app-ai-coach .ai-score-ring strong {
+    font-size: 29px;
+  }
+
+  .student-app #app-ai-coach .ai-research-review-card,
+  .student-app #app-ai-coach .ai-feedback-grid,
+  .student-app #app-ai-coach .ai-presentation-rubric,
+  .student-app #app-ai-coach .ai-roadmap-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .student-app #app-ai-coach .ai-feedback-card {
+    min-height: 0;
+  }
+}
+
+@media (max-width: 390px) {
+  .student-app #app-ai-coach .ai-mentor-hero {
+    min-height: 300px;
+    padding-right: 39%;
+  }
+
+  .student-app #app-ai-coach .ai-mentor-state {
+    grid-template-columns: 1fr;
+    padding-bottom: 76px;
+  }
+
+  .student-app #app-ai-coach .ai-mentor-guidance-card {
+    grid-template-columns: 1fr;
+    text-align: left;
+  }
+
+  .student-app #app-ai-coach .ai-score-ring {
+    margin: 0;
+  }
+}

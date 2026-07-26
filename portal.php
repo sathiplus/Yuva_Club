@@ -383,35 +383,35 @@ portal_header('Student Dashboard', true);
   </section>
 
   <section class="band app-section" id="app-ai-coach" data-app-section="practice">
-    <div class="ai-studio-hero">
-      <div><p class="eyebrow">AI Coach Studio</p><h1>Grow your voice with thoughtful feedback.</h1><p>Your approved coaching review brings together research insights, strengths, and clear next steps.</p></div>
+    <div class="ai-studio-hero ai-mentor-hero">
+      <div><p class="eyebrow">AI Mentor</p><h1>A trusted guide for your next step.</h1><p>Your approved mentor guidance helps you notice your strengths, reflect with confidence, and keep growing as a leader.</p></div>
       <img src="assets/student-ai-coach-illustration.svg" alt="" aria-hidden="true">
     </div>
 
     <?php if ($aiReviewState !== 'approved'): ?>
-      <div class="ai-studio-state ai-state-<?php echo e($aiReviewState); ?>">
+      <div class="ai-studio-state ai-mentor-state ai-state-<?php echo e($aiReviewState); ?>">
         <span class="ai-studio-state-icon" aria-hidden="true"></span>
         <div>
-          <?php if ($aiReviewState === 'no-research'): ?><p class="eyebrow">Start with research</p><h2>No research submitted</h2><p>Complete your Research Workspace before an AI Coach review can be prepared.</p><a class="button primary" href="#research-submission">Open Research Workspace</a>
-          <?php elseif ($aiReviewState === 'not-created'): ?><p class="eyebrow">Coach review</p><h2>No AI review created yet</h2><p>Your approved coaching feedback will appear here after an administrator creates and reviews it.</p>
-          <?php elseif ($aiReviewState === 'awaiting-approval'): ?><p class="eyebrow">Adult review in progress</p><h2>Your feedback is being reviewed</h2><p>An administrator is checking the AI Coach draft before it becomes visible to you.</p>
-          <?php else: ?><p class="eyebrow">Coach review</p><h2>Review temporarily unavailable</h2><p>Your coaching review cannot be displayed right now. Please check back later.</p>
+          <?php if ($aiReviewState === 'no-research'): ?><p class="eyebrow">Begin with preparation</p><h2>Your mentor journey starts with research</h2><p>Complete your Research Workspace before approved AI Mentor guidance can be prepared.</p><a class="button primary" href="#research-submission">Open Research Workspace</a>
+          <?php elseif ($aiReviewState === 'not-created'): ?><p class="eyebrow">Mentor guidance</p><h2>Your guidance has not been prepared yet</h2><p>Approved AI Mentor feedback will appear here after an administrator creates and reviews it.</p>
+          <?php elseif ($aiReviewState === 'awaiting-approval'): ?><p class="eyebrow">Adult review in progress</p><h2>Your guidance is being carefully reviewed</h2><p>An administrator is checking the AI Mentor draft before it becomes visible to you.</p>
+          <?php else: ?><p class="eyebrow">Mentor guidance</p><h2>Your guidance is temporarily unavailable</h2><p>Your AI Mentor review cannot be displayed right now. Please check back later.</p>
           <?php endif; ?>
         </div>
       </div>
     <?php else: ?>
-      <div class="ai-studio-approved-banner"><span class="ai-approved-mark" aria-hidden="true"></span><div><p class="eyebrow">Approved review available</p><strong>Reviewed and approved by a YUVA Club administrator</strong></div><small><?php echo e($aiReviewDate); ?></small></div>
+      <div class="ai-studio-approved-banner"><span class="ai-approved-mark" aria-hidden="true"></span><div><p class="eyebrow">Mentor guidance approved</p><strong>Carefully reviewed by a YUVA Club administrator</strong></div><small><?php echo e($aiReviewDate); ?></small></div>
 
       <div class="ai-studio-overview">
-        <article class="ai-score-card">
-          <p class="eyebrow">Overall Score</p>
+        <article class="ai-score-card ai-mentor-guidance-card">
+          <p class="eyebrow">A Note for Your Growth</p>
           <div class="ai-score-ring" style="--ai-score: <?php echo e((string) max(0, min(100, (int) ($approvedAiReview['total_points'] ?? 0)))); ?>"><strong><?php echo e((string) ($approvedAiReview['total_points'] ?? '0')); ?></strong><span>/100</span></div>
-          <div><h2>Keep growing!</h2><p><?php echo e($approvedAiReview['summary'] ?? 'Your approved AI Coach summary will appear here.'); ?></p><span class="ai-token-award"><?php echo e((string) ($approvedAiReview['suggested_tokens'] ?? '0')); ?> approved tokens</span></div>
+          <div><h2>Keep growing with purpose.</h2><p><?php echo e($approvedAiReview['summary'] ?? 'Your approved AI Mentor summary will appear here.'); ?></p><span class="ai-token-award"><?php echo e((string) ($approvedAiReview['suggested_tokens'] ?? '0')); ?> approved tokens</span></div>
         </article>
-        <article class="ai-topic-card"><p class="eyebrow">Reviewed Preparation</p><h2><?php echo e($aiReviewRecord['topic_title'] ?? ($selection['topic_title'] ?? 'Presentation Research')); ?></h2><p><?php echo e($aiReviewRecord['topic_category'] ?? ($selection['topic_category'] ?? '')); ?></p><small>Approval status: <?php echo e($aiReviewRecord['status']); ?></small></article>
+        <article class="ai-topic-card ai-mentor-topic-card"><p class="eyebrow">Your Preparation</p><h2><?php echo e($aiReviewRecord['topic_title'] ?? ($selection['topic_title'] ?? 'Presentation Research')); ?></h2><p><?php echo e($aiReviewRecord['topic_category'] ?? ($selection['topic_category'] ?? '')); ?></p><small>Approval status: <?php echo e($aiReviewRecord['status']); ?></small></article>
       </div>
 
-      <div class="ai-studio-section-heading"><p class="eyebrow">AI Coach Research Review</p><h2>Preparation insights</h2><p>This review evaluates the student’s submitted research and presentation preparation.</p></div>
+      <div class="ai-studio-section-heading ai-mentor-perspective-heading"><p class="eyebrow">Mentor Perspective</p><h2>What your preparation shows</h2><p>These approved insights reflect your submitted research and presentation preparation.</p></div>
       <div class="ai-research-review-card">
         <?php foreach ($aiResearchCategories as $aiKey => [$aiLabel, $aiMaximum]): ?>
           <?php $aiCategoryScore = max(0, min($aiMaximum, (int) ($approvedAiReview[$aiKey] ?? 0))); ?>
@@ -420,17 +420,17 @@ portal_header('Student Dashboard', true);
       </div>
 
       <div class="ai-feedback-grid">
-        <article class="ai-feedback-card ai-strengths-card"><div class="ai-feedback-title"><span aria-hidden="true"></span><div><p class="eyebrow">Strengths</p><h2>What is working well</h2></div></div><?php if (!empty($approvedAiReview['strengths']) && is_array($approvedAiReview['strengths'])): ?><ul><?php foreach ($approvedAiReview['strengths'] as $strength): ?><li><?php echo e((string) $strength); ?></li><?php endforeach; ?></ul><?php else: ?><p>No detailed strengths were included in this approved review.</p><?php endif; ?></article>
-        <article class="ai-feedback-card ai-improvements-card"><div class="ai-feedback-title"><span aria-hidden="true"></span><div><p class="eyebrow">Next Steps</p><h2>Ways to improve</h2></div></div><?php if (!empty($approvedAiReview['improvements']) && is_array($approvedAiReview['improvements'])): ?><ul><?php foreach ($approvedAiReview['improvements'] as $improvement): ?><li><?php echo e((string) $improvement); ?></li><?php endforeach; ?></ul><?php else: ?><p>No detailed improvements were included in this approved review.</p><?php endif; ?></article>
-        <article class="ai-feedback-card ai-coaching-note"><p class="eyebrow">Communication Preparation</p><h2>Clarity and organization</h2><p><?php echo e($approvedAiReview['communication_skills'] ?? 'No communication preparation note was included.'); ?></p></article>
-        <article class="ai-feedback-card ai-milestone-note"><p class="eyebrow">Leadership Milestone</p><h2>Your next leadership step</h2><p><?php echo e($approvedAiReview['leadership_milestones'] ?? 'No leadership milestone note was included.'); ?></p></article>
+        <article class="ai-feedback-card ai-strengths-card"><div class="ai-feedback-title"><span aria-hidden="true"></span><div><p class="eyebrow">Strengths</p><h2>Carry these strengths forward</h2></div></div><?php if (!empty($approvedAiReview['strengths']) && is_array($approvedAiReview['strengths'])): ?><ul><?php foreach ($approvedAiReview['strengths'] as $strength): ?><li><?php echo e((string) $strength); ?></li><?php endforeach; ?></ul><?php else: ?><p>No detailed strengths were included in this approved review.</p><?php endif; ?></article>
+        <article class="ai-feedback-card ai-improvements-card"><div class="ai-feedback-title"><span aria-hidden="true"></span><div><p class="eyebrow">Next Step</p><h2>One step at a time</h2></div></div><?php if (!empty($approvedAiReview['improvements']) && is_array($approvedAiReview['improvements'])): ?><ul><?php foreach ($approvedAiReview['improvements'] as $improvement): ?><li><?php echo e((string) $improvement); ?></li><?php endforeach; ?></ul><?php else: ?><p>No detailed improvements were included in this approved review.</p><?php endif; ?></article>
+        <article class="ai-feedback-card ai-coaching-note"><p class="eyebrow">Reflection</p><h2>Clarity and communication</h2><p><?php echo e($approvedAiReview['communication_skills'] ?? 'No communication preparation note was included.'); ?></p></article>
+        <article class="ai-feedback-card ai-milestone-note"><p class="eyebrow">Leadership Growth</p><h2>The leader you are becoming</h2><p><?php echo e($approvedAiReview['leadership_milestones'] ?? 'No leadership milestone note was included.'); ?></p></article>
       </div>
 
       <div class="ai-studio-section-heading ai-rubric-heading"><p class="eyebrow">Presentation Rubric</p><h2>Official presentation evaluation</h2><p>This separate rubric is completed through the YUVA Club presentation evaluation process. It is not the AI research review above.</p></div>
       <div class="ai-presentation-rubric"><div class="ai-rubric-total"><span>Official rubric total</span><strong><?php echo e((string) $rubricScore); ?> <small>/ 100</small></strong><p><?php echo e((string) $rubricCompleted); ?> of <?php echo e((string) count(rubric_categories())); ?> categories scored</p></div><div class="ai-rubric-list"><?php foreach (rubric_categories() as $rubricKey => $rubricLabel): ?><p><span><?php echo e($rubricLabel); ?></span><strong><?php echo ($record['rubric_' . $rubricKey] ?? '') !== '' ? e((string) $record['rubric_' . $rubricKey]) . ' / 10' : 'Not scored'; ?></strong></p><?php endforeach; ?></div></div>
     <?php endif; ?>
 
-    <div class="ai-studio-section-heading ai-roadmap-heading"><p class="eyebrow">Studio Roadmap</p><h2>Future coaching capabilities</h2><p>These experiences are planned for future YUVA Club updates.</p></div>
+    <div class="ai-studio-section-heading ai-roadmap-heading"><p class="eyebrow">Looking Ahead</p><h2>Future mentor experiences</h2><p>These experiences are planned for future YUVA Club updates.</p></div>
     <div class="ai-roadmap-grid">
       <?php foreach ([['replay','Replay','Review a presentation recording.','Coming Soon'],['video','Video Feedback','Receive visual delivery guidance.','Future Update'],['moments','Key Moments','Jump to important presentation moments.','Coming Soon'],['voice','Voice Analytics','Explore pacing and vocal delivery.','Future Update'],['confidence','Confidence Analytics','Understand confidence patterns.','Future Update'],['eye','Eye-Contact Analytics','Review audience engagement cues.','Future Update']] as [$roadmapClass,$roadmapTitle,$roadmapText,$roadmapStatus]): ?><article class="ai-roadmap-card ai-roadmap-<?php echo e($roadmapClass); ?>"><span class="ai-roadmap-icon" aria-hidden="true"></span><div><h3><?php echo e($roadmapTitle); ?></h3><p><?php echo e($roadmapText); ?></p></div><strong><?php echo e($roadmapStatus); ?></strong></article><?php endforeach; ?>
     </div>
