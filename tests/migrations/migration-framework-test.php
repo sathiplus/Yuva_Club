@@ -36,6 +36,7 @@ try {
             '02-schema-migrations.azure-sql.sql',
             '03-phase-a-identity-approval.azure-sql.sql',
             '04-phase-a-portal-student-view.azure-sql.sql',
+            '05-organization-admin-foundation.azure-sql.sql',
         ],
         'Repository migrations are not discovered in deterministic order.'
     );

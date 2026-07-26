@@ -61,6 +61,62 @@ integration_assert(
     in_array('02-schema-migrations.azure-sql.sql', $firstRun['applied'], true),
     'The blank database did not record the migration ledger migration.'
 );
+integration_assert(
+    in_array(
+        '05-organization-admin-foundation.azure-sql.sql',
+        $firstRun['applied'],
+        true
+    ),
+    'The blank database did not receive the Organization Foundation migration.'
+);
+
+foreach (
+    [
+        'organizations',
+        'organization_memberships',
+        'organization_students',
+        'organization_settings',
+        'organization_announcements',
+    ] as $organizationTable
+) {
+    $tableStatement = $pdo->prepare(
+        "SELECT CASE
+            WHEN OBJECT_ID(:table_name, N'U') IS NULL THEN 0
+            ELSE 1
+         END"
+    );
+    $tableStatement->execute([
+        'table_name' => 'dbo.' . $organizationTable,
+    ]);
+    integration_assert(
+        (int) $tableStatement->fetchColumn() === 1,
+        'Organization Foundation table is missing: ' . $organizationTable
+    );
+}
+
+foreach (
+    [
+        ['registrations', 'organization_id'],
+        ['sessions', 'organization_id'],
+        ['activity_logs', 'organization_id'],
+    ] as [$tableName, $columnName]
+) {
+    $columnStatement = $pdo->prepare(
+        'SELECT CASE
+            WHEN COL_LENGTH(:table_name, :column_name) IS NULL THEN 0
+            ELSE 1
+         END'
+    );
+    $columnStatement->execute([
+        'table_name' => 'dbo.' . $tableName,
+        'column_name' => $columnName,
+    ]);
+    integration_assert(
+        (int) $columnStatement->fetchColumn() === 1,
+        'Organization Foundation column is missing: '
+            . $tableName . '.' . $columnName
+    );
+}
 
 $secondRun = migration_run($pdo, $migrations);
 integration_assert(
@@ -123,3 +179,4 @@ fwrite(STDOUT, "PASS blank-database migration\n");
 fwrite(STDOUT, "PASS rerun idempotency\n");
 fwrite(STDOUT, "PASS checksum mismatch refusal\n");
 fwrite(STDOUT, "PASS SQL Server application lock exclusion\n");
+fwrite(STDOUT, "PASS Organization Foundation schema\n");
