@@ -97,7 +97,7 @@ portal_header('Student Dashboard', true);
           default => 'Build your preparation one thoughtful step at a time.',
       };
     ?>
-    <div class="home-welcome">
+    <div class="home-welcome ds-story-hero">
       <div class="home-welcome-copy">
         <p class="home-greeting">Welcome back</p>
         <h1><?php echo e($name); ?>!</h1>
@@ -222,7 +222,7 @@ portal_header('Student Dashboard', true);
       $nextRankInfo = $rankDefinitions[$nextRank] ?? $currentRankInfo;
       $certificateTitle = $currentRankInfo['certificate'] ?? 'Certificate of Participation';
     ?>
-    <div class="journey-hero">
+    <div class="journey-hero ds-story-hero">
       <div class="journey-hero-copy"><p class="eyebrow">Leadership Journey</p><h1>Your leadership story is unfolding.</h1><p>Every presentation, act of service, and brave new step becomes part of the leader you are growing into.</p><div class="journey-hero-status"><span>Leadership Level<strong><?php echo e($level); ?></strong></span><span>Current Chapter<strong><?php echo e($challengeStage); ?></strong></span></div></div>
       <img src="assets/student-leadership-journey-illustration.svg" alt="" aria-hidden="true">
     </div>
@@ -286,12 +286,12 @@ portal_header('Student Dashboard', true);
       ];
       $hasAchievementNotes = count(array_filter($achievementNotes, fn($note) => $note !== '')) > 0;
     ?>
-    <div class="achievements-hero">
+    <div class="achievements-hero ds-story-hero">
       <div class="achievements-hero-copy"><a class="achievements-back" href="#app-progress">← Leadership Journey</a><p class="eyebrow">Achievements</p><h1>Celebrate how far you've come.</h1><p>Your presentations, service, badges, and leadership growth tell the story of the leader you are becoming.</p><div class="achievements-hero-stats"><span>Leadership Rank<strong><?php echo e($level); ?></strong></span><span>Badges Earned<strong><?php echo e((string) count($badges)); ?></strong></span></div></div>
       <img src="assets/student-achievements-illustration.svg" alt="" aria-hidden="true">
     </div>
 
-    <div class="achievements-section-heading"><p class="eyebrow">Recognition Snapshot</p><h2>Your proud moments</h2></div>
+    <div class="achievements-section-heading ds-section-heading"><p class="eyebrow">Recognition Snapshot</p><h2>Recognition you have earned</h2><p>Every item here comes from your verified YUVA Club participation.</p></div>
     <div class="achievements-metrics">
       <article class="achievement-metric achievement-metric-badges"><span class="achievement-metric-icon" aria-hidden="true"></span><p>Earned Badges</p><strong><?php echo e((string) count($badges)); ?></strong></article>
       <article class="achievement-metric achievement-metric-presentations"><span class="achievement-metric-icon" aria-hidden="true"></span><p>Presentations</p><strong><?php echo e($record['presentations'] ?? '0'); ?></strong></article>
@@ -305,7 +305,7 @@ portal_header('Student Dashboard', true);
       <div class="achievements-certificate-copy"><p class="eyebrow">Current Certificate</p><h2><?php echo e($achievementCertificateTitle); ?></h2><p>Recognizing your current approved leadership rank and participation in YUVA Club.</p><div class="achievements-certificate-meta"><span>Certificate Status<strong><?php echo e($achievementCertificateStatus); ?></strong></span><span>Leadership Rank<strong><?php echo e($level); ?></strong></span></div><?php if (!$certificateReady): ?><p class="achievements-honest-note" role="status">Your current achievement certificate will become available after the required progress is reviewed and approved.</p><?php endif; ?><?php if ($certificateReady): ?><div class="achievements-actions"><a class="button primary" href="certificate.php?id=<?php echo e($studentId); ?>">View Certificate</a><a class="button ghost" href="certificate.php?id=<?php echo e($studentId); ?>" target="_blank" rel="noopener">Open to Print</a></div><?php endif; ?></div>
     </article>
 
-    <div class="achievements-section-heading"><p class="eyebrow">Earned Badges</p><h2>Milestones worth celebrating</h2><p>Only badges earned from your real YUVA Club progress appear here.</p></div>
+    <div class="achievements-section-heading ds-section-heading"><p class="eyebrow">Earned Badges</p><h2>Milestones worth celebrating</h2><p>Only badges earned from your real YUVA Club progress appear here.</p></div>
     <?php if ($badges): ?><div class="achievements-badge-grid"><?php foreach ($badges as $index => $badge): ?><article class="achievements-badge achievements-badge-<?php echo e((string) (($index % 5) + 1)); ?>"><span class="achievements-badge-shield" aria-hidden="true"><i></i></span><h3><?php echo e($badge); ?></h3><strong>Earned</strong></article><?php endforeach; ?></div><?php else: ?><div class="achievements-empty"><span aria-hidden="true"></span><div><h2>Your first badge is waiting</h2><p>Your first badge will appear as you participate and complete real milestones.</p></div></div><?php endif; ?>
 
     <div class="achievements-two-grid">
@@ -313,15 +313,15 @@ portal_header('Student Dashboard', true);
       <article class="achievements-card achievements-evidence-card"><div class="achievements-card-heading"><span class="achievements-card-icon achievements-evidence-icon" aria-hidden="true"></span><div><p class="eyebrow">Growth Evidence</p><h2>Your current contribution</h2></div></div><div class="achievements-detail-list"><p><span>Presentations</span><strong><?php echo e($record['presentations'] ?? '0'); ?></strong></p><p><span>Volunteer/Leadership Hours</span><strong><?php echo e($record['service_hours'] ?? '0'); ?></strong></p><p><span>Sessions Attended</span><strong><?php echo e($record['attendance'] ?? '0'); ?></strong></p><p><span>Current Topic</span><strong><?php echo e($selection['topic_title'] ?? 'No topic selected yet'); ?></strong></p><p><span>Official Rubric</span><strong><?php echo e((string) $rubricScore); ?> / 100</strong></p></div></article>
     </div>
 
-    <div class="achievements-section-heading"><p class="eyebrow">Recognition Notes</p><h2>Encouragement from your community</h2></div>
+    <div class="achievements-section-heading ds-section-heading"><p class="eyebrow">Recognition Notes</p><h2>Encouragement from your community</h2><p>Approved words from the people supporting your leadership growth.</p></div>
     <?php if ($hasAchievementNotes): ?><div class="achievements-notes-grid"><?php foreach ($achievementNotes as $noteTitle => $noteText): ?><?php if ($noteText !== ''): ?><article class="achievements-note"><span aria-hidden="true"></span><h3><?php echo e($noteTitle); ?></h3><p><?php echo e($noteText); ?></p></article><?php endif; ?><?php endforeach; ?></div><?php else: ?><div class="achievements-empty achievements-notes-empty"><span aria-hidden="true"></span><div><h2>Recognition notes will appear here</h2><p>Recognition notes will appear after a mentor, teacher, or judge reviews your progress.</p></div></div><?php endif; ?>
 
-    <div class="achievements-section-heading achievements-future-heading"><p class="eyebrow">Future Portfolio</p><h2>More ways to preserve your journey</h2><p>These portfolio capabilities are planned for future YUVA Club updates.</p></div>
+    <div class="achievements-section-heading achievements-future-heading ds-section-heading"><p class="eyebrow">Future Portfolio</p><h2>More ways to preserve your journey</h2><p>These portfolio capabilities are planned for future YUVA Club updates.</p></div>
     <div class="achievements-roadmap-grid"><article class="achievements-roadmap"><span class="achievements-roadmap-icon" aria-hidden="true"></span><div><h3>Certificate History</h3><p>Review certificates earned over time.</p></div><strong>Coming Soon</strong></article><article class="achievements-roadmap"><span class="achievements-roadmap-icon" aria-hidden="true"></span><div><h3>Achievement Timeline</h3><p>See milestones in a future dated timeline.</p></div><strong>Coming Soon</strong></article><article class="achievements-roadmap"><span class="achievements-roadmap-icon" aria-hidden="true"></span><div><h3>Share Achievements</h3><p>Share approved recognition safely.</p></div><strong>Future Update</strong></article><article class="achievements-roadmap"><span class="achievements-roadmap-icon" aria-hidden="true"></span><div><h3>Download Portfolio</h3><p>Create a future portable achievement record.</p></div><strong>Future Update</strong></article></div>
   </section>
 
   <section class="band app-section" id="app-present" data-app-section="present">
-    <div class="present-hero studio-hero studio-hero-present">
+    <div class="present-hero studio-hero studio-hero-present ds-workspace-hero">
       <div class="present-hero-copy studio-hero-copy"><p class="eyebrow">Presentation Studio</p><h1>Your voice inspires!</h1><p>Prepare your ideas, join your session, and lead the change.</p></div>
       <img src="assets/student-presentation-illustration.svg" alt="" aria-hidden="true">
     </div>
@@ -383,7 +383,7 @@ portal_header('Student Dashboard', true);
   </section>
 
   <section class="band app-section" id="app-ai-coach" data-app-section="practice">
-    <div class="ai-studio-hero ai-mentor-hero">
+    <div class="ai-studio-hero ai-mentor-hero ds-story-hero">
       <div><p class="eyebrow">AI Mentor</p><h1>A trusted guide for your next step.</h1><p>Your approved mentor guidance helps you notice your strengths, reflect with confidence, and keep growing as a leader.</p></div>
       <img src="assets/student-ai-coach-illustration.svg" alt="" aria-hidden="true">
     </div>
@@ -445,12 +445,12 @@ portal_header('Student Dashboard', true);
       $profileParentConnected = trim((string) ($student['Parent Email'] ?? '')) !== '' || trim((string) ($student['Parent/Guardian Name'] ?? '')) !== '';
       $profileValue = static fn(array $source, string $key, string $fallback): string => trim((string) ($source[$key] ?? '')) !== '' ? trim((string) $source[$key]) : $fallback;
     ?>
-    <div class="profile-identity-header">
+    <div class="profile-identity-header ds-story-hero profile-story-hero">
       <div class="profile-initials" aria-label="Student initials"><?php echo e($profileInitials); ?></div>
-      <div class="profile-identity-copy"><p class="eyebrow">My Profile</p><h1><?php echo e($name); ?></h1><p>YUVA Club ID: <strong><?php echo e($studentId); ?></strong></p><div class="profile-identity-badges"><span><?php echo e($level); ?></span><span><?php echo e($membershipGroupLabel); ?></span></div></div>
+      <div class="profile-identity-copy"><p class="eyebrow">My Journey</p><h1><?php echo e($name); ?></h1><p>This is your YUVA Club identity and leadership story.</p><p>YUVA Club ID: <strong><?php echo e($studentId); ?></strong></p><div class="profile-identity-badges"><span><?php echo e($level); ?></span><span><?php echo e($membershipGroupLabel); ?></span></div></div>
     </div>
 
-    <div class="profile-section-heading"><p class="eyebrow">Identity</p><h2>About me</h2><p>Your registered YUVA Club information is shown here as read-only.</p></div>
+    <div class="profile-section-heading ds-section-heading"><p class="eyebrow">Identity</p><h2>About me</h2><p>Your registered YUVA Club information is shown here as read-only.</p></div>
     <div class="profile-two-grid">
       <article class="profile-card profile-about-card"><div class="profile-card-heading"><span class="profile-card-icon profile-about-icon" aria-hidden="true"></span><div><h2>About Me</h2><p>The details that make your profile yours.</p></div></div><div class="profile-detail-list"><p><span>Full Name</span><strong><?php echo e($profileFullName !== '' ? $profileFullName : 'Full name has not been added yet.'); ?></strong></p><p><span>Preferred Name</span><strong><?php echo e($profilePreferredName !== '' ? $profilePreferredName : 'Preferred name has not been added yet.'); ?></strong></p><p><span>Grade</span><strong><?php echo e($profileValue($student, 'Grade', 'Grade has not been added yet.')); ?></strong></p><p><span>School</span><strong><?php echo e($profileValue($student, 'School', 'School information has not been added yet.')); ?></strong></p><p><span>City / State</span><strong><?php echo e($profileValue($student, 'City/State', 'Location has not been added yet.')); ?></strong></p><p><span>Interests</span><strong><?php echo e($profileValue($student, 'Interests', 'Interests have not been added yet.')); ?></strong></p><p><span>My Motivation</span><strong><?php echo e($profileValue($student, 'Why Join', 'Your motivation has not been recorded yet.')); ?></strong></p></div></article>
 
@@ -471,7 +471,7 @@ portal_header('Student Dashboard', true);
       <article class="profile-card profile-account-card"><div class="profile-card-heading"><span class="profile-card-icon profile-account-icon" aria-hidden="true"></span><div><h2>Account</h2><p>Account access and help.</p></div></div><div class="profile-detail-list"><p><span>YUVA Club ID</span><strong><?php echo e($studentId); ?></strong></p><p><span>Account Help</span><strong>Password management is not available in the student app yet. Contact the YUVA Club team if you need account help.</strong></p></div><a class="button ghost profile-logout-button" href="portal-logout.php">Log Out</a></article>
     </div>
 
-    <div class="profile-section-heading profile-future-heading"><p class="eyebrow">Future Profile</p><h2>More ways to make it yours</h2><p>These profile capabilities are planned for future updates.</p></div>
+    <div class="profile-section-heading profile-future-heading ds-section-heading"><p class="eyebrow">Future Profile</p><h2>More ways to make it yours</h2><p>These profile capabilities are planned for future updates.</p></div>
     <div class="profile-roadmap-grid"><article class="profile-roadmap"><span class="profile-roadmap-icon" aria-hidden="true"></span><div><h3>Profile Photo</h3><p>Add a safely managed profile photo in a future update.</p></div><strong>Future Update</strong></article><article class="profile-roadmap"><span class="profile-roadmap-icon" aria-hidden="true"></span><div><h3>Personal Goals</h3><p>Create and track personal growth goals.</p></div><strong>Coming Soon</strong></article><article class="profile-roadmap"><span class="profile-roadmap-icon" aria-hidden="true"></span><div><h3>Notification Preferences</h3><p>Choose future reminder and update preferences.</p></div><strong>Future Update</strong></article></div>
   </section>
 
@@ -518,7 +518,7 @@ portal_header('Student Dashboard', true);
       }
       $practiceResearchStatus = $research['status'] ?? 'Not submitted yet';
     ?>
-    <div class="practice-hero studio-hero studio-hero-practice">
+    <div class="practice-hero studio-hero studio-hero-practice ds-workspace-hero">
       <div>
         <p class="eyebrow">Practice Studio</p>
         <h1>Build your speaking skills</h1>

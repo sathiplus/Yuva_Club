@@ -2658,3 +2658,310 @@ body.student-app {
     margin: 0;
   }
 }
+
+/* Student Experience V1: shared release-candidate primitives */
+.student-app {
+  --font-student: "Poppins", "Aptos", "Segoe UI", Arial, sans-serif;
+  --layout-gutter: clamp(14px, 2.5vw, 40px);
+  --layout-hero-gap: clamp(18px, 2.4vw, 32px);
+  --layout-section-gap: clamp(30px, 4vw, 48px);
+  --layout-card-padding: clamp(18px, 2.2vw, 28px);
+  --layout-heading-gap: 6px;
+  --layout-mobile-nav-clearance: 88px;
+  --motion-fast: 170ms;
+  --motion-standard: 230ms;
+  --motion-ease: cubic-bezier(.2, .7, .2, 1);
+  --semantic-primary: var(--yuva-blue);
+  --semantic-structure: var(--yuva-navy);
+  --semantic-progress: var(--yuva-green);
+  --semantic-achievement: var(--yuva-gold);
+  --semantic-learning: var(--yuva-purple);
+  --semantic-danger: var(--yuva-red);
+  font-family: var(--font-student);
+}
+
+.student-app .app-section {
+  scroll-margin-top: var(--layout-gutter);
+}
+
+.student-app :where(.ds-story-hero, .ds-workspace-hero) {
+  margin-bottom: var(--layout-hero-gap);
+}
+
+.student-app .ds-story-hero {
+  border-radius: var(--radius-feature);
+  box-shadow: var(--shadow-elevated);
+}
+
+.student-app .ds-workspace-hero {
+  border-radius: var(--radius-feature);
+  box-shadow: var(--shadow-elevated);
+}
+
+.student-app .ds-section-heading {
+  display: grid;
+  gap: var(--layout-heading-gap);
+  margin-top: var(--layout-section-gap);
+  margin-bottom: 16px;
+}
+
+.student-app .ds-section-heading :where(h2, p) {
+  margin: 0;
+}
+
+.student-app :where(
+  .studio-card,
+  .journey-card,
+  .achievements-card,
+  .profile-card,
+  .ai-feedback-card
+) {
+  padding: var(--layout-card-padding);
+}
+
+.student-app :where(
+  .student-app-bottom-nav a,
+  .student-app-rail-nav a,
+  .button,
+  button
+) {
+  transition:
+    color var(--motion-fast) var(--motion-ease),
+    border-color var(--motion-fast) var(--motion-ease),
+    background-color var(--motion-fast) var(--motion-ease),
+    box-shadow var(--motion-standard) var(--motion-ease),
+    transform var(--motion-standard) var(--motion-ease);
+}
+
+/* Achievements: verified recognition, distinct from the Journey narrative */
+.student-app #app-achievements {
+  color: var(--yuva-navy);
+  background:
+    radial-gradient(circle at 84% 8%, rgba(245, 181, 27, .13), transparent 22rem),
+    linear-gradient(180deg, #f8faff, #fff 58%, #f7f4ff);
+}
+
+.student-app #app-achievements .achievements-hero {
+  min-height: 340px;
+  padding: clamp(28px, 5vw, 62px);
+  background:
+    radial-gradient(circle at 72% 30%, rgba(245, 181, 27, .16), transparent 17rem),
+    linear-gradient(125deg, var(--yuva-navy-deep), var(--yuva-navy) 58%, #43228f);
+}
+
+.student-app #app-achievements .achievements-hero-copy {
+  max-width: 650px;
+}
+
+.student-app #app-achievements .achievements-back {
+  display: inline-flex;
+  margin-bottom: 20px;
+  color: #d8e3ff;
+  font-weight: 750;
+  text-decoration: none;
+}
+
+.student-app #app-achievements .achievements-hero h1 {
+  max-width: 720px;
+  margin: 6px 0 12px;
+  color: #fff;
+  font-size: clamp(38px, 5.3vw, 66px);
+  line-height: 1.02;
+  letter-spacing: -.045em;
+}
+
+.student-app #app-achievements .achievements-hero-copy > p:not(.eyebrow) {
+  max-width: 580px;
+  color: #c5d1e9;
+  font-size: 16px;
+  line-height: 1.65;
+}
+
+.student-app #app-achievements .achievements-hero-stats span {
+  border-color: rgba(255,255,255,.15);
+  background: rgba(255,255,255,.08);
+  backdrop-filter: blur(8px);
+}
+
+.student-app #app-achievements .achievements-section-heading h2 {
+  color: var(--yuva-navy);
+  font-size: clamp(26px, 3vw, 36px);
+}
+
+.student-app #app-achievements .achievements-section-heading > p:last-child:not(.eyebrow) {
+  color: #65738d;
+}
+
+.student-app #app-achievements .achievements-metrics {
+  gap: 14px;
+}
+
+.student-app #app-achievements .achievement-metric {
+  min-height: 150px;
+  border-color: #dde5f1;
+  background: #fff;
+  box-shadow: var(--shadow-soft);
+}
+
+.student-app #app-achievements .achievement-metric p {
+  color: #67758f;
+}
+
+.student-app #app-achievements .achievement-metric strong {
+  color: var(--yuva-navy);
+}
+
+.student-app #app-achievements .achievements-certificate-card {
+  overflow: hidden;
+  margin-top: var(--layout-section-gap);
+  border: 0;
+  background:
+    radial-gradient(circle at 12% 50%, rgba(245,181,27,.25), transparent 18rem),
+    linear-gradient(125deg, #071a46, #102d70 60%, #5b2ab8);
+  box-shadow: var(--shadow-elevated);
+}
+
+.student-app #app-achievements :where(.achievements-card, .achievements-note, .achievements-roadmap) {
+  border-color: #dce4ef;
+  background: #fff;
+  box-shadow: var(--shadow-soft);
+}
+
+.student-app #app-achievements :where(.achievements-card-heading h2, .achievements-note h3, .achievements-roadmap h3) {
+  color: var(--yuva-navy);
+}
+
+.student-app #app-achievements :where(.achievements-detail-list strong, .achievements-note p, .achievements-roadmap p) {
+  color: #53627c;
+}
+
+.student-app #app-achievements .achievements-detail-list p {
+  border-bottom-color: #e8edf4;
+}
+
+.student-app #app-achievements .achievements-empty {
+  border-color: #cfd9e9;
+  color: var(--yuva-navy);
+  background: linear-gradient(135deg, #fff, #f7f4ff);
+  box-shadow: var(--shadow-soft);
+}
+
+.student-app #app-achievements .achievements-empty h2 {
+  color: var(--yuva-navy);
+}
+
+.student-app #app-achievements .achievements-empty p {
+  color: #687791;
+}
+
+/* My Journey: identity first, private details second */
+.student-app #app-profile {
+  background:
+    radial-gradient(circle at 90% 5%, rgba(10,169,133,.10), transparent 22rem),
+    linear-gradient(180deg, #f8faff, #fff);
+}
+
+.student-app #app-profile .profile-story-hero {
+  position: relative;
+  min-height: 300px;
+  padding: clamp(28px, 5vw, 58px);
+  background:
+    radial-gradient(circle at 86% 25%, rgba(109,61,214,.32), transparent 18rem),
+    linear-gradient(125deg, var(--yuva-navy-deep), var(--yuva-navy) 62%, #164b7f);
+}
+
+.student-app #app-profile .profile-initials {
+  width: 132px;
+  height: 132px;
+  flex-basis: 132px;
+}
+
+.student-app #app-profile .profile-identity-copy {
+  max-width: 690px;
+}
+
+.student-app #app-profile .profile-identity-copy h1 {
+  font-size: clamp(40px, 5.4vw, 66px);
+}
+
+.student-app #app-profile .profile-identity-copy > p:not(.eyebrow) {
+  max-width: 590px;
+  margin-top: 5px;
+  line-height: 1.55;
+}
+
+.student-app #app-profile .profile-card {
+  border-color: #dce4ef;
+  box-shadow: var(--shadow-soft);
+}
+
+.student-app #app-profile .profile-leadership-card {
+  border-top: 4px solid var(--semantic-learning);
+}
+
+.student-app #app-profile .profile-account-card {
+  border-top: 4px solid #71809a;
+}
+
+.student-app #app-profile .profile-logout-button {
+  color: var(--semantic-danger);
+}
+
+@media (max-width: 760px) {
+  .student-app {
+    padding-bottom: var(--layout-mobile-nav-clearance);
+  }
+
+  .student-app :where(.ds-story-hero, .ds-workspace-hero) {
+    margin-bottom: 18px;
+    border-radius: 0 0 24px 24px;
+  }
+
+  .student-app #app-achievements .achievements-hero {
+    min-height: 350px;
+    margin-inline: calc(-1 * var(--layout-gutter));
+    padding: 38px 40% 28px 18px;
+  }
+
+  .student-app #app-achievements .achievements-hero h1 {
+    font-size: 34px;
+  }
+
+  .student-app #app-achievements .achievements-hero img {
+    right: -9%;
+    width: 51%;
+  }
+
+  .student-app #app-profile {
+    padding-top: 68px;
+  }
+
+  .student-app #app-profile .profile-story-hero {
+    min-height: 330px;
+    align-items: flex-start;
+    flex-direction: column;
+    margin-inline: -14px;
+    padding: 34px 20px 28px;
+  }
+
+  .student-app #app-profile .profile-initials {
+    width: 92px;
+    height: 92px;
+    flex-basis: 92px;
+  }
+
+  .student-app #app-profile .profile-identity-copy h1 {
+    font-size: 36px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .student-app *,
+  .student-app *::before,
+  .student-app *::after {
+    scroll-behavior: auto !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}
