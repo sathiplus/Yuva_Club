@@ -88,12 +88,20 @@ portal_header('Student Dashboard', true);
       $homeSessionEnd = $hasStudentZoom ? $studentSessionEnd : ($session['end'] ?? '');
       $homeSessionStatus = $hasStudentZoom ? $studentSessionStatus : ($session['status'] ?? 'Not scheduled');
       $homeAnnouncements = text_lines($hub['announcements']);
+      $homeRecentBadge = $badges ? (string) end($badges) : '';
+      $homeMentorMessage = match ($aiReviewState) {
+          'approved' => (string) ($approvedAiReview['summary'] ?? 'Your approved guidance is ready.'),
+          'awaiting-approval' => 'Your latest guidance is being reviewed by a YUVA Club administrator.',
+          'no-research' => 'Complete your research workspace when you are ready for guided feedback.',
+          'unavailable' => 'Guidance is temporarily unavailable. Keep preparing and check back later.',
+          default => 'Build your preparation one thoughtful step at a time.',
+      };
     ?>
     <div class="home-welcome">
       <div class="home-welcome-copy">
-        <p class="home-greeting">Good morning,</p>
+        <p class="home-greeting">Welcome back</p>
         <h1><?php echo e($name); ?>!</h1>
-        <p>Keep learning, keep growing.<br>Your future is yours to build.</p>
+        <p>Lead with confidence. Grow with purpose. Make today count.</p>
       </div>
       <div class="home-welcome-actions">
         <a class="home-notification" href="#announcements" aria-label="View announcements">
@@ -102,7 +110,7 @@ portal_header('Student Dashboard', true);
         </a>
         <a class="home-avatar" href="#app-profile" aria-label="Open student profile"><?php echo e($studentInitials); ?></a>
       </div>
-      <img class="home-welcome-art" src="assets/logo.png" alt="" aria-hidden="true">
+      <img class="home-welcome-art" src="assets/student-hero-illustration.svg" alt="" aria-hidden="true">
       <span class="home-spark home-spark-one" aria-hidden="true"></span>
       <span class="home-spark home-spark-two" aria-hidden="true"></span>
       <span class="home-spark home-spark-three" aria-hidden="true"></span>
@@ -126,15 +134,15 @@ portal_header('Student Dashboard', true);
 
     <div class="home-dashboard-grid">
       <div class="form-card next-action-card home-card-wide">
-        <p class="eyebrow">Next action</p>
+        <p class="eyebrow">Today’s Mission</p>
         <h2><?php echo e($nextAction['title']); ?></h2>
         <p><?php echo e($nextAction['body']); ?></p>
         <a class="button primary" href="<?php echo e($nextAction['href']); ?>"><?php echo e($nextAction['button']); ?></a>
       </div>
 
       <div class="form-card home-quick-access">
-        <p class="eyebrow">Quick access</p>
-        <h2>Jump back in</h2>
+        <p class="eyebrow">Continue Practice</p>
+        <h2>Practice Studio</h2>
         <div class="home-quick-links">
           <a href="#app-practice"><span>Practice</span><small>Choose a topic or submit research</small></a>
           <a href="#app-present"><span>Present</span><small>View sessions and presentations</small></a>
@@ -153,7 +161,7 @@ portal_header('Student Dashboard', true);
       </div>
 
       <div class="form-card home-progress-card">
-        <p class="eyebrow">Current progress</p>
+        <p class="eyebrow">Leadership Journey</p>
         <h2><?php echo e($challengeStage); ?></h2>
         <div class="home-progress-list">
           <p><span>Presentations</span><strong><?php echo e($record['presentations'] ?? '0'); ?></strong></p>
@@ -161,7 +169,35 @@ portal_header('Student Dashboard', true);
           <p><span>Service hours</span><strong><?php echo e($record['service_hours'] ?? '0'); ?> hours</strong></p>
           <p><span>Rubric score</span><strong><?php echo e((string) $rubricScore); ?> / 100</strong></p>
         </div>
-        <a class="button ghost" href="#app-progress">View full progress</a>
+        <a class="button ghost" href="#app-progress">View your journey</a>
+      </div>
+
+      <div class="form-card home-mentor-card">
+        <span class="home-mentor-mark" aria-hidden="true"><?php echo student_app_icon('sparkles'); ?></span>
+        <div>
+          <p class="eyebrow">AI Mentor</p>
+          <h2><?php echo $aiReviewState === 'approved' ? 'Your approved guidance' : 'A thoughtful next step'; ?></h2>
+          <p><?php echo e($homeMentorMessage); ?></p>
+          <a class="button ghost" href="#app-ai-coach"><?php echo $aiReviewState === 'approved' ? 'Read approved guidance' : 'View mentor status'; ?></a>
+        </div>
+      </div>
+
+      <div class="form-card home-achievement-card">
+        <span class="home-achievement-mark" aria-hidden="true"><?php echo student_app_icon('award'); ?></span>
+        <div>
+          <p class="eyebrow">Recent Achievement</p>
+          <?php if ($homeRecentBadge !== ''): ?>
+            <h2><?php echo e($homeRecentBadge); ?></h2>
+            <p>This earned milestone is part of your real YUVA Club journey.</p>
+          <?php elseif ($certificateReady): ?>
+            <h2><?php echo e($certificateStatus); ?> certificate</h2>
+            <p>Your approved certificate is ready to view.</p>
+          <?php else: ?>
+            <h2>Your first milestone is ahead</h2>
+            <p>Real achievements will appear here as you complete approved activities.</p>
+          <?php endif; ?>
+          <a class="button ghost" href="#app-achievements">View achievements</a>
+        </div>
       </div>
 
       <div class="form-card home-announcements home-card-wide">
@@ -172,7 +208,7 @@ portal_header('Student Dashboard', true);
             <?php foreach ($homeAnnouncements as $line): ?><p><?php echo e($line); ?></p><?php endforeach; ?>
           </div>
         <?php else: ?>
-          <p>No announcements yet.</p>
+          <p>You’re all caught up. Approved club announcements will appear here.</p>
         <?php endif; ?>
         <a class="button ghost" href="#announcements">View announcements</a>
       </div>
@@ -282,14 +318,14 @@ portal_header('Student Dashboard', true);
   </section>
 
   <section class="band app-section" id="app-present" data-app-section="present">
-    <div class="present-hero">
-      <div class="present-hero-copy"><p class="eyebrow">Presentation Center</p><h1>Your voice inspires!</h1><p>Prepare your ideas, join your session, and lead the change.</p></div>
+    <div class="present-hero studio-hero studio-hero-present">
+      <div class="present-hero-copy studio-hero-copy"><p class="eyebrow">Presentation Studio</p><h1>Your voice inspires!</h1><p>Prepare your ideas, join your session, and lead the change.</p></div>
       <img src="assets/student-presentation-illustration.svg" alt="" aria-hidden="true">
     </div>
 
     <div class="present-center-grid">
-      <section class="present-session-card present-card-wide" aria-labelledby="present-upcoming-title">
-        <div class="present-card-heading"><span class="present-icon present-icon-calendar" aria-hidden="true"></span><div><p class="eyebrow">Upcoming Presentation</p><h2 id="present-upcoming-title"><?php echo e($hasStudentZoom ? ($studentSessionTitle ?: 'Yuva Club Session') : ($session['title'] ?? 'Yuva Club Session')); ?></h2></div></div>
+      <section class="present-session-card present-card-wide studio-card studio-card-featured" aria-labelledby="present-upcoming-title">
+        <div class="present-card-heading studio-card-heading"><span class="present-icon present-icon-calendar" aria-hidden="true"></span><div><p class="eyebrow">Upcoming Presentation</p><h2 id="present-upcoming-title"><?php echo e($hasStudentZoom ? ($studentSessionTitle ?: 'Yuva Club Session') : ($session['title'] ?? 'Yuva Club Session')); ?></h2></div></div>
         <?php if ($hasStudentZoom): ?>
           <div class="present-session-details"><p><span>Presentation Schedule</span><strong><?php echo e($studentSessionDate ?: 'Date to be announced'); ?></strong><small><?php echo e($studentSessionStart ?: '--:--'); ?> - <?php echo e($studentSessionEnd ?: '--:--'); ?></small></p><p><span>Session Status</span><strong><?php echo e($studentSessionStatus); ?></strong></p></div>
           <?php if ($studentZoomMeetingId !== '' || $studentZoomPassword !== ''): ?>
@@ -314,15 +350,15 @@ portal_header('Student Dashboard', true);
         <?php endif; ?>
       </section>
 
-      <article class="present-info-card present-topic-card"><span class="present-icon present-icon-topic" aria-hidden="true"></span><div><p class="eyebrow">Presentation Topic</p><?php if ($selection): ?><h2><?php echo e($selection['topic_title']); ?></h2><p><?php echo e($selection['topic_category']); ?></p><small><?php echo e($selection['presentation_date']); ?> at <?php echo e($selection['presentation_time']); ?> · <?php echo e($selection['status'] ?? 'Pending Admin Review'); ?></small><?php else: ?><h2>No topic selected yet</h2><p>Choose a topic in your Practice Workspace to prepare for your next presentation.</p><a href="#topic-selection">Choose a Topic</a><?php endif; ?></div></article>
+      <article class="present-info-card present-topic-card studio-card"><span class="present-icon present-icon-topic" aria-hidden="true"></span><div><p class="eyebrow">Presentation Topic</p><?php if ($selection): ?><h2><?php echo e($selection['topic_title']); ?></h2><p><?php echo e($selection['topic_category']); ?></p><small><?php echo e($selection['presentation_date']); ?> at <?php echo e($selection['presentation_time']); ?> · <?php echo e($selection['status'] ?? 'Pending Admin Review'); ?></small><?php else: ?><h2>No topic selected yet</h2><p>Choose a topic in your Practice Workspace to prepare for your next presentation.</p><a href="#topic-selection">Choose a Topic</a><?php endif; ?></div></article>
 
-      <article class="present-info-card present-readiness-card"><span class="present-icon present-icon-check" aria-hidden="true"></span><div><p class="eyebrow">Research Readiness</p><h2><?php echo e($research['status'] ?? 'Not Submitted'); ?></h2><p><?php echo $research ? 'Your saved preparation is ready to review.' : 'Build your notes, sources, outline, and questions in Practice Workspace.'; ?></p><a href="#research-submission">Open Research Workspace</a></div></article>
+      <article class="present-info-card present-readiness-card studio-card"><span class="present-icon present-icon-check" aria-hidden="true"></span><div><p class="eyebrow">Research Readiness</p><h2><?php echo e($research['status'] ?? 'Not Submitted'); ?></h2><p><?php echo $research ? 'Your saved preparation is ready to review.' : 'Build your notes, sources, outline, and questions in Practice Workspace.'; ?></p><a href="#research-submission">Open Research Workspace</a></div></article>
 
-      <article class="present-info-card present-upload-card"><span class="present-icon present-icon-upload" aria-hidden="true"></span><div><p class="eyebrow">Upload Slides</p><h2><?php echo !empty($research['file_original']) ? e($research['file_original']) : 'No slides uploaded yet'; ?></h2><p>Upload or replace PDF, PowerPoint, document, or image files using the existing Research upload.</p><?php if (!empty($research['file_original'])): ?><a href="portal-download.php?id=<?php echo e($studentId); ?>">View current upload</a><?php endif; ?><a href="#research-submission">Upload or Replace Slides</a></div></article>
+      <article class="present-info-card present-upload-card studio-card"><span class="present-icon present-icon-upload" aria-hidden="true"></span><div><p class="eyebrow">Upload Slides</p><h2><?php echo !empty($research['file_original']) ? e($research['file_original']) : 'No slides uploaded yet'; ?></h2><p>Upload or replace PDF, PowerPoint, document, or image files using the existing Research upload.</p><?php if (!empty($research['file_original'])): ?><a href="portal-download.php?id=<?php echo e($studentId); ?>">View current upload</a><?php endif; ?><a href="#research-submission">Upload or Replace Slides</a></div></article>
 
-      <article class="present-info-card present-questions-card"><span class="present-icon present-icon-question" aria-hidden="true"></span><div><p class="eyebrow">Prepared Questions</p><?php if (!empty($research['prepared_questions'])): ?><h2>Questions ready</h2><p class="present-question-preview"><?php echo nl2br(e($research['prepared_questions'])); ?></p><?php else: ?><h2>No questions prepared yet</h2><p>Add possible audience questions and your answers in Practice Workspace.</p><?php endif; ?><a href="#research-submission">Review Questions</a></div></article>
+      <article class="present-info-card present-questions-card studio-card"><span class="present-icon present-icon-question" aria-hidden="true"></span><div><p class="eyebrow">Prepared Questions</p><?php if (!empty($research['prepared_questions'])): ?><h2>Questions ready</h2><p class="present-question-preview"><?php echo nl2br(e($research['prepared_questions'])); ?></p><?php else: ?><h2>No questions prepared yet</h2><p>Add possible audience questions and your answers in Practice Workspace.</p><?php endif; ?><a href="#research-submission">Review Questions</a></div></article>
 
-      <section class="present-scheduler-card present-card-wide" aria-labelledby="present-schedule-title"><div class="present-card-heading"><span class="present-icon present-icon-schedule" aria-hidden="true"></span><div><p class="eyebrow">Presentation Schedule</p><h2 id="present-schedule-title">Schedule your session</h2><p>Use the official YUVA Club Zoom Scheduler.</p></div></div>
+      <section class="present-scheduler-card present-card-wide studio-card" aria-labelledby="present-schedule-title"><div class="present-card-heading studio-card-heading"><span class="present-icon present-icon-schedule" aria-hidden="true"></span><div><p class="eyebrow">Presentation Schedule</p><h2 id="present-schedule-title">Schedule your session</h2><p>Use the official YUVA Club Zoom Scheduler.</p></div></div>
       <?php if ($schedulerSrc !== ''): ?>
         <a class="button ghost present-scheduler-link" href="<?php echo e($schedulerPageUrl ?: $schedulerSrc); ?>" target="_blank" rel="noopener">Open Scheduler in New Tab</a>
         <div class="zoom-scheduler-frame">
@@ -479,9 +515,9 @@ portal_header('Student Dashboard', true);
       }
       $practiceResearchStatus = $research['status'] ?? 'Not submitted yet';
     ?>
-    <div class="practice-hero">
+    <div class="practice-hero studio-hero studio-hero-practice">
       <div>
-        <p class="eyebrow">Practice</p>
+        <p class="eyebrow">Practice Studio</p>
         <h1>Build your speaking skills</h1>
         <p>Choose a topic, organize your research, and prepare with confidence.</p>
       </div>
@@ -490,7 +526,7 @@ portal_header('Student Dashboard', true);
       </div>
     </div>
 
-    <div class="practice-continue-card">
+    <div class="practice-continue-card studio-card studio-card-featured">
       <div class="practice-topic-art">
         <?php if ($practiceTopicImage !== ''): ?>
           <img src="<?php echo e($practiceTopicImage); ?>" alt="">
@@ -519,9 +555,9 @@ portal_header('Student Dashboard', true);
 
     <span class="app-anchor" id="topic-selection" aria-hidden="true"></span>
     <div class="practice-primary-grid">
-      <form class="form-card practice-workspace-card practice-topic-card" action="portal-submit-topic.php" method="post">
+      <form class="form-card practice-workspace-card practice-topic-card studio-card" action="portal-submit-topic.php" method="post">
         <?php echo csrf_field(); ?>
-        <div class="practice-card-heading">
+        <div class="practice-card-heading studio-card-heading">
           <span class="practice-tool-icon practice-tool-topic" aria-hidden="true"></span>
           <div><p class="eyebrow">Topic</p><h2>Topic Selection</h2><p>Choose the subject for your next presentation.</p></div>
         </div>
@@ -551,8 +587,8 @@ portal_header('Student Dashboard', true);
         <button class="button primary" type="submit">Save Topic</button>
       </form>
 
-      <div class="form-card practice-workspace-card practice-selection-summary">
-        <div class="practice-card-heading">
+      <div class="form-card practice-workspace-card practice-selection-summary studio-card">
+        <div class="practice-card-heading studio-card-heading">
           <span class="practice-tool-icon practice-tool-presentation" aria-hidden="true"></span>
           <div><p class="eyebrow">My Topic</p><h2 id="presentations">Current Presentation</h2><p>Your saved presentation plan.</p></div>
         </div>
@@ -570,9 +606,9 @@ portal_header('Student Dashboard', true);
     </div>
 
     <span class="app-anchor" id="research-submission" aria-hidden="true"></span>
-    <form class="form-card practice-workspace-card practice-research-card" action="portal-submit-research.php" method="post" enctype="multipart/form-data">
+    <form class="form-card practice-workspace-card practice-research-card studio-card" action="portal-submit-research.php" method="post" enctype="multipart/form-data">
       <?php echo csrf_field(); ?>
-      <div class="practice-card-heading">
+      <div class="practice-card-heading studio-card-heading">
         <span class="practice-tool-icon practice-tool-research" aria-hidden="true"></span>
         <div><p class="eyebrow">Research</p><h2>Research Submission</h2><p>Organize your notes, sources, outline, questions, and supporting files.</p></div>
       </div>

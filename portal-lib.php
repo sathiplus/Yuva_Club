@@ -1425,6 +1425,8 @@ function student_app_icon(string $name): string {
         'present' => '<path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><path d="M12 19v3"></path>',
         'progress' => '<path d="M4 19V9"></path><path d="M10 19V5"></path><path d="M16 19v-7"></path><path d="M22 19V2"></path>',
         'profile' => '<circle cx="12" cy="8" r="4"></circle><path d="M4 22a8 8 0 0 1 16 0"></path>',
+        'award' => '<circle cx="12" cy="8" r="6"></circle><path d="M15.5 13 17 22l-5-3-5 3 1.5-9"></path>',
+        'sparkles' => '<path d="m12 3-1.7 4.3L6 9l4.3 1.7L12 15l1.7-4.3L18 9l-4.3-1.7Z"></path><path d="m5 16-.8 2.2L2 19l2.2.8L5 22l.8-2.2L8 19l-2.2-.8Z"></path><path d="m19 14-.8 2.2L16 17l2.2.8L19 20l.8-2.2L22 17l-2.2-.8Z"></path>',
     ];
     $paths = $icons[$name] ?? $icons['home'];
     return '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">' . $paths . '</svg>';
@@ -1435,7 +1437,7 @@ function student_app_navigation(string $className, string $label): string {
         ['home', 'Home', 'portal.php#app-home'],
         ['practice', 'Practice', 'portal.php#app-practice'],
         ['present', 'Present', 'portal.php#app-present'],
-        ['progress', 'Progress', 'portal.php#app-progress'],
+        ['progress', 'Journey', 'portal.php#app-progress'],
         ['profile', 'Profile', 'portal.php#app-profile'],
     ];
     $html = '<nav class="' . e($className) . '" aria-label="' . e($label) . '">';
@@ -1467,9 +1469,9 @@ function portal_header(string $title, bool $studentApp = false): void {
     echo '</head><body' . ($studentApp ? ' class="student-app is-loading"' : '') . '>';
     if ($studentApp) {
         echo '<a class="app-skip-link" href="#app-main">Skip to content</a>';
-        echo '<div class="app-loading" role="status" aria-live="polite"><img src="assets/logo.png" alt=""><span>Loading your YUVA Club app&hellip;</span></div>';
-        echo '<header class="student-app-header"><a class="student-app-brand" href="portal.php#app-home"><img src="assets/logo.png" alt="YUVA Club"><span><strong>YUVA</strong> Club</span></a><div class="student-app-header-actions"><span class="student-app-page-title">' . e($title) . '</span><a class="student-app-profile-link" href="portal.php#app-profile" aria-label="Open profile">' . student_app_icon('profile') . '</a></div></header>';
-        echo '<aside class="student-app-rail"><a class="student-app-rail-brand" href="portal.php#app-home"><img src="assets/logo.png" alt="YUVA Club"><span>YUVA <strong>Club</strong></span></a>' . student_app_navigation('student-app-rail-nav', 'Student app navigation') . '<a class="student-app-logout" href="portal-logout.php">Log out</a></aside>';
+        echo '<div class="app-loading" role="status" aria-live="polite"><img src="assets/yuva-symbol.png" alt=""><span>Loading your YUVA Club app&hellip;</span></div>';
+        echo '<header class="student-app-header"><a class="student-app-brand" href="portal.php#app-home"><img src="assets/yuva-symbol.png" alt=""><span><strong>YUVA</strong> Club</span></a><div class="student-app-header-actions"><span class="student-app-page-title">Leadership Journey</span><a class="student-app-profile-link" href="portal.php#app-profile" aria-label="Open My Journey">' . student_app_icon('profile') . '</a></div></header>';
+        echo '<aside class="student-app-rail"><a class="student-app-rail-brand" href="portal.php#app-home"><img src="assets/logo.png" alt=""><span>YUVA <strong>Club</strong></span></a>' . student_app_navigation('student-app-rail-nav', 'Student app navigation') . '<a class="student-app-logout" href="portal-logout.php">Log out</a></aside>';
         echo '<div class="student-app-frame">';
         return;
     }

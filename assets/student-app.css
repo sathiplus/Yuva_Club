@@ -800,3 +800,937 @@ body.student-app {
     animation-iteration-count: 1 !important;
   }
 }
+
+/* YUVA Club Version 2 — Phase 1 design foundation.
+   These semantic tokens and components intentionally coexist with the
+   Version 1 aliases until later screens receive separate approval. */
+:root {
+  --yuva-blue: #1e4dbe;
+  --yuva-blue-bright: #2563eb;
+  --yuva-navy: #071a46;
+  --yuva-navy-deep: #04112f;
+  --yuva-orange: #ff9200;
+  --yuva-green: #0aa985;
+  --yuva-purple: #6d3dd6;
+  --yuva-gold: #f5b51b;
+  --yuva-red: #d93f4f;
+  --surface-primary: #ffffff;
+  --surface-secondary: #f4f7fc;
+  --surface-emphasis: #edf3ff;
+  --text-primary: #101b3e;
+  --text-secondary: #61708c;
+  --border-soft: #dfe6f1;
+  --shadow-soft: 0 10px 28px rgba(14, 31, 70, .07);
+  --shadow-elevated: 0 20px 52px rgba(5, 22, 60, .15);
+  --focus-ring: #ffd166;
+  --radius-control: 12px;
+  --radius-card: 20px;
+  --radius-feature: 28px;
+  --space-1: .25rem;
+  --space-2: .5rem;
+  --space-3: .75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --type-display: clamp(2rem, 5vw, 3.35rem);
+  --type-page-title: clamp(1.75rem, 4vw, 2.5rem);
+  --type-section-title: clamp(1.3rem, 2.5vw, 1.7rem);
+  --type-card-title: clamp(1.08rem, 2vw, 1.28rem);
+  --type-body: 1rem;
+  --type-small: .875rem;
+  --type-label: .75rem;
+}
+
+.student-app {
+  --app-blue: var(--yuva-blue-bright);
+  --app-teal: var(--yuva-green);
+  --app-purple: var(--yuva-purple);
+  --app-orange: var(--yuva-orange);
+  --app-red: var(--yuva-red);
+  --app-bg: var(--surface-secondary);
+  --app-surface: var(--surface-primary);
+  --app-text: var(--text-primary);
+  --app-muted: var(--text-secondary);
+  --app-line: var(--border-soft);
+}
+
+body.student-app {
+  color: var(--text-primary);
+  background:
+    radial-gradient(circle at 100% 0, rgba(37, 99, 235, .06), transparent 31rem),
+    var(--surface-secondary);
+  font-family: "Poppins", "Aptos", "Segoe UI", Arial, sans-serif;
+}
+
+.student-app :where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 3px;
+}
+
+.student-app .button {
+  display: inline-flex;
+  min-height: 48px;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+}
+
+.student-app .button.primary {
+  border-color: var(--yuva-blue);
+  background: linear-gradient(135deg, var(--yuva-blue), var(--yuva-blue-bright));
+}
+
+.student-app .button.ghost {
+  color: var(--yuva-blue);
+  border-color: rgba(30, 77, 190, .28);
+}
+
+.student-app .yuva-card {
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-card);
+  background: var(--surface-primary);
+  box-shadow: var(--shadow-soft);
+}
+
+.student-app .yuva-chip {
+  display: inline-flex;
+  min-height: 28px;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  color: var(--yuva-blue);
+  background: var(--surface-emphasis);
+  font-size: var(--type-label);
+  font-weight: 800;
+}
+
+.student-app .yuva-empty-state {
+  padding: var(--space-5);
+  border: 1px dashed var(--border-soft);
+  border-radius: var(--radius-control);
+  color: var(--text-secondary);
+  background: var(--surface-secondary);
+}
+
+/* Approved Phase 1 shell */
+.student-app-header {
+  border-bottom: 1px solid rgba(255, 255, 255, .09);
+  background:
+    radial-gradient(circle at 82% -40%, rgba(109, 61, 214, .48), transparent 55%),
+    linear-gradient(135deg, var(--yuva-navy-deep), var(--yuva-navy));
+  box-shadow: 0 10px 30px rgba(4, 17, 47, .24);
+}
+
+.student-app-brand img {
+  padding: 2px;
+  background: rgba(255, 255, 255, .96);
+}
+
+.student-app-bottom-nav {
+  color: #cbd7ef;
+  background: rgba(4, 17, 47, .98);
+}
+
+.student-app-bottom-nav a {
+  min-height: 58px;
+  transition: color .18s ease, background-color .18s ease, transform .18s ease;
+}
+
+.student-app-bottom-nav a.is-active {
+  color: #fff;
+  background: rgba(30, 77, 190, .42);
+}
+
+.student-app-bottom-nav a.is-active svg {
+  color: #31d8b9;
+}
+
+/* Approved Phase 1 Student Home */
+.student-app #app-home {
+  display: flex;
+  max-width: 1240px;
+  flex-direction: column;
+}
+
+.student-app #app-home > .home-welcome {
+  order: 0;
+}
+
+.student-app #app-home > .home-dashboard-grid {
+  order: 1;
+}
+
+.student-app #app-home > .home-metrics {
+  order: 2;
+  margin-top: 20px;
+}
+
+.student-app #app-home > .form-status {
+  order: 0;
+}
+
+.student-app .home-welcome {
+  min-height: 256px;
+  align-items: flex-end;
+  padding: clamp(30px, 5vw, 52px);
+  border-radius: 0 0 var(--radius-feature) var(--radius-feature);
+  background:
+    radial-gradient(circle at 78% 18%, rgba(67, 113, 255, .28), transparent 28%),
+    radial-gradient(circle at 100% 100%, rgba(109, 61, 214, .25), transparent 38%),
+    linear-gradient(135deg, var(--yuva-navy-deep), var(--yuva-navy));
+  box-shadow: var(--shadow-elevated);
+}
+
+.student-app .home-welcome .home-greeting {
+  color: #38dbbd;
+  font-size: var(--type-small);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.student-app .home-welcome h1 {
+  font-size: var(--type-display);
+}
+
+.student-app .home-welcome-copy > p:last-child {
+  max-width: 38rem;
+  font-size: var(--type-body);
+}
+
+.student-app .home-welcome-art {
+  right: clamp(58px, 9vw, 110px);
+  bottom: -1px;
+  width: clamp(180px, 28vw, 315px);
+  height: 92%;
+  opacity: 1;
+  filter: drop-shadow(0 18px 24px rgba(0, 0, 0, .22));
+}
+
+.student-app .home-dashboard-grid {
+  gap: 18px;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+}
+
+.student-app .home-dashboard-grid > .form-card {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  grid-column: span 6;
+  border-color: var(--border-soft);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-soft);
+}
+
+.student-app .home-dashboard-grid > .next-action-card {
+  order: 1;
+  min-height: 230px;
+  grid-column: span 8;
+  justify-content: center;
+  padding-right: min(28%, 250px);
+  border: 0;
+  color: #fff;
+  background:
+    radial-gradient(circle at 88% 25%, rgba(49, 216, 185, .24), transparent 28%),
+    linear-gradient(135deg, var(--yuva-navy), #102c6c);
+  box-shadow: var(--shadow-elevated);
+}
+
+.student-app .next-action-card::after {
+  top: 42px;
+  right: 55px;
+  width: 112px;
+  height: 112px;
+  border: 18px solid rgba(255, 255, 255, .12);
+  background: transparent;
+}
+
+.student-app .next-action-card :where(h2, p) {
+  position: relative;
+  z-index: 1;
+  color: #fff;
+}
+
+.student-app .next-action-card .eyebrow {
+  color: #45dfc3;
+}
+
+.student-app .next-action-card .button {
+  position: relative;
+  z-index: 1;
+  align-self: flex-start;
+  border-color: var(--yuva-orange);
+  background: var(--yuva-orange);
+}
+
+.student-app .home-dashboard-grid > .home-progress-card {
+  order: 2;
+  grid-column: span 4;
+  background: linear-gradient(145deg, #fff, #f6f3ff);
+}
+
+.student-app .home-progress-card .button {
+  width: 100%;
+  padding-inline: 10px;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.student-app .home-quick-access {
+  order: 3;
+}
+
+.student-app .home-session-card {
+  order: 4;
+}
+
+.student-app .home-mentor-card {
+  order: 5;
+  display: grid !important;
+  grid-template-columns: 58px minmax(0, 1fr);
+  gap: 16px;
+  background: linear-gradient(145deg, #fff, #f5f1ff);
+}
+
+.student-app .home-mentor-mark,
+.student-app .home-achievement-mark {
+  display: grid;
+  width: 56px;
+  height: 56px;
+  place-items: center;
+  border-radius: 18px;
+  color: #fff;
+  background: linear-gradient(145deg, #8b5cf6, var(--yuva-purple));
+  box-shadow: 0 10px 22px rgba(109, 61, 214, .22);
+}
+
+.student-app .home-achievement-card {
+  order: 6;
+  display: grid !important;
+  grid-template-columns: 58px minmax(0, 1fr);
+  gap: 16px;
+  background: linear-gradient(145deg, #fff, #fff9e9);
+}
+
+.student-app .home-achievement-mark {
+  color: var(--yuva-navy);
+  background: linear-gradient(145deg, #ffd862, var(--yuva-gold));
+  box-shadow: 0 10px 22px rgba(245, 181, 27, .24);
+}
+
+.student-app .home-announcements {
+  order: 7;
+  grid-column: 1 / -1 !important;
+}
+
+.student-app .home-dashboard-grid :where(.home-mentor-card, .home-achievement-card) h2 {
+  font-size: var(--type-card-title);
+}
+
+.student-app .home-dashboard-grid :where(.home-mentor-card, .home-achievement-card) .button {
+  align-self: flex-start;
+}
+
+.student-app .home-quick-links a {
+  background: var(--surface-secondary);
+}
+
+.student-app .home-metrics {
+  padding: 16px;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-card);
+  background: var(--surface-primary);
+  box-shadow: var(--shadow-soft);
+}
+
+.student-app .home-metric {
+  border: 0;
+  border-right: 1px solid var(--border-soft);
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.student-app .home-metric:last-child {
+  border-right: 0;
+}
+
+.student-app .home-announcement-list p {
+  border-left-color: var(--yuva-orange);
+  background: #fff8e8;
+}
+
+@media (min-width: 900px) {
+  .student-app-rail {
+    width: 238px;
+    padding: 28px 18px 24px;
+    background:
+      radial-gradient(circle at 0 100%, rgba(109, 61, 214, .2), transparent 34%),
+      linear-gradient(180deg, var(--yuva-navy-deep), var(--yuva-navy));
+  }
+
+  .student-app-rail-brand {
+    font-size: 19px;
+  }
+
+  .student-app-rail-nav a {
+    min-height: 54px;
+    border: 1px solid transparent;
+  }
+
+  .student-app-rail-nav a:hover {
+    background: rgba(255, 255, 255, .07);
+  }
+
+  .student-app-rail-nav a.is-active {
+    border-color: rgba(75, 128, 255, .28);
+    background: rgba(30, 77, 190, .38);
+  }
+
+  .student-app-frame {
+    padding-left: 238px;
+  }
+}
+
+@media (max-width: 899px) {
+  .student-app #app-home {
+    padding-top: 0;
+  }
+
+  .student-app .home-welcome {
+    margin-right: -14px;
+    margin-left: -14px;
+  }
+}
+
+@media (max-width: 760px) {
+  .student-app .home-dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .student-app .home-dashboard-grid > .form-card,
+  .student-app .home-dashboard-grid > .next-action-card,
+  .student-app .home-progress-card {
+    grid-column: 1;
+  }
+
+  .student-app .home-dashboard-grid > .next-action-card {
+    min-height: 250px;
+    padding: 26px 34% 26px 22px;
+  }
+
+  .student-app .next-action-card::after {
+    top: 62px;
+    right: 24px;
+    width: 82px;
+    height: 82px;
+    border-width: 13px;
+  }
+
+  .student-app .home-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .student-app .home-metric:nth-child(2) {
+    border-right: 0;
+  }
+
+  .student-app .home-metric:nth-child(-n + 2) {
+    border-bottom: 1px solid var(--border-soft);
+  }
+}
+
+@media (max-width: 430px) {
+  .student-app-header {
+    padding-inline: 12px;
+  }
+
+  .student-app-brand span {
+    font-size: 16px;
+  }
+
+  .student-app-page-title {
+    display: none;
+  }
+
+  .student-app .home-welcome {
+    min-height: 235px;
+    align-items: flex-start;
+    padding: 30px 38% 26px 18px;
+  }
+
+  .student-app .home-welcome h1 {
+    font-size: 31px;
+  }
+
+  .student-app .home-welcome-copy > p:last-child {
+    font-size: 13px;
+  }
+
+  .student-app .home-welcome-actions {
+    top: 18px;
+    right: 14px;
+  }
+
+  .student-app .home-notification {
+    width: 40px;
+    height: 40px;
+  }
+
+  .student-app .home-avatar {
+    width: 44px;
+    height: 44px;
+  }
+
+  .student-app .home-welcome-art {
+    right: -28px;
+    bottom: 0;
+    width: 48%;
+    height: 72%;
+  }
+
+  .student-app .home-dashboard-grid > .next-action-card {
+    min-height: 270px;
+    padding-right: 28px;
+    padding-bottom: 92px;
+  }
+
+  .student-app .next-action-card::after {
+    top: auto;
+    right: 24px;
+    bottom: 24px;
+  }
+
+  .student-app .home-mentor-card,
+  .student-app .home-achievement-card {
+    grid-template-columns: 48px minmax(0, 1fr);
+    padding: 18px;
+  }
+
+  .student-app .home-mentor-mark,
+  .student-app .home-achievement-mark {
+    width: 48px;
+    height: 48px;
+    border-radius: 15px;
+  }
+
+  .student-app-bottom-nav a {
+    font-size: 10px;
+  }
+
+  .student-app-bottom-nav svg {
+    width: 22px;
+    height: 22px;
+  }
+}
+
+/* Phase 2: shared Practice and Presentation studio system */
+.student-app #app-practice,
+.student-app #app-present {
+  color: var(--text-primary);
+  background:
+    radial-gradient(circle at 92% 2%, rgba(139, 92, 246, .08), transparent 24rem),
+    linear-gradient(180deg, #f8faff 0%, var(--surface-secondary) 100%);
+}
+
+.student-app #app-practice .eyebrow,
+.student-app #app-present .eyebrow {
+  color: var(--yuva-purple);
+}
+
+.student-app .studio-hero {
+  position: relative;
+  min-height: 220px;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  margin: 0 0 var(--space-6);
+  padding: clamp(28px, 5vw, 52px);
+  border: 1px solid rgba(255, 255, 255, .12);
+  border-radius: var(--radius-feature);
+  color: #fff;
+  background:
+    radial-gradient(circle at 78% 22%, rgba(37, 99, 235, .32), transparent 30%),
+    linear-gradient(135deg, var(--yuva-navy), #09265e 62%, #101f54);
+  box-shadow: var(--shadow-elevated);
+}
+
+.student-app .studio-hero::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: .16;
+  background-image: radial-gradient(circle, #fff 0 1px, transparent 1.5px);
+  background-size: 31px 31px;
+  mask-image: linear-gradient(90deg, transparent 25%, #000);
+}
+
+.student-app .studio-hero-copy,
+.student-app .studio-hero > div:first-child {
+  position: relative;
+  z-index: 2;
+}
+
+.student-app .studio-hero .eyebrow {
+  color: #6ee7d2;
+}
+
+.student-app .studio-hero h1 {
+  margin: 4px 0 10px;
+  color: #fff;
+  font-size: clamp(34px, 4.6vw, 54px);
+  line-height: 1.04;
+  letter-spacing: -.04em;
+}
+
+.student-app .studio-hero p:last-child {
+  max-width: 560px;
+  margin: 0;
+  color: #d6e1f5;
+  font-size: var(--type-body);
+}
+
+.student-app .studio-card {
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-card);
+  color: var(--text-primary);
+  background: var(--surface-primary);
+  box-shadow: var(--shadow-soft);
+}
+
+.student-app .studio-card-featured {
+  border-color: rgba(30, 78, 216, .18);
+  background:
+    radial-gradient(circle at 88% 10%, rgba(0, 196, 154, .10), transparent 28%),
+    var(--surface-primary);
+}
+
+.student-app .studio-card-heading h2 {
+  color: var(--text-primary);
+}
+
+.student-app .studio-card-heading p:last-child {
+  color: var(--text-secondary);
+}
+
+/* Practice Studio */
+.student-app #app-practice {
+  max-width: none;
+}
+
+.student-app #app-practice .practice-hero {
+  justify-content: space-between;
+  margin-top: 0;
+  background:
+    radial-gradient(circle at 81% 22%, rgba(0, 196, 154, .27), transparent 24%),
+    linear-gradient(135deg, var(--yuva-navy), #0a2a67);
+}
+
+.student-app #app-practice .practice-hero-mark {
+  background: linear-gradient(145deg, var(--yuva-orange), #f07800);
+  box-shadow: 0 18px 30px rgba(255, 143, 0, .25);
+}
+
+.student-app #app-practice .practice-continue-card {
+  min-height: 196px;
+  color: var(--text-primary);
+  background:
+    radial-gradient(circle at 92% 8%, rgba(0, 196, 154, .10), transparent 30%),
+    var(--surface-primary);
+  box-shadow: var(--shadow-elevated);
+}
+
+.student-app #app-practice .practice-topic-art {
+  color: var(--yuva-blue);
+  background: linear-gradient(145deg, #edf4ff, #e2ebff);
+  box-shadow: inset 0 0 0 1px rgba(30, 78, 216, .10);
+}
+
+.student-app #app-practice .practice-continue-copy .eyebrow {
+  color: var(--yuva-green);
+}
+
+.student-app #app-practice .practice-continue-copy h2 {
+  color: var(--text-primary);
+}
+
+.student-app #app-practice .practice-continue-copy > p:not(.eyebrow) {
+  color: var(--text-secondary);
+}
+
+.student-app #app-practice .practice-status-row {
+  border-color: var(--border-soft);
+  color: var(--text-secondary);
+}
+
+.student-app #app-practice .practice-status-row strong {
+  color: var(--yuva-green);
+}
+
+.student-app #app-practice .practice-continue-button,
+.student-app #app-practice .button.primary {
+  min-height: 46px;
+  border-color: var(--yuva-green) !important;
+  border-radius: var(--radius-control) !important;
+  background: linear-gradient(135deg, var(--yuva-green), #079a79) !important;
+  box-shadow: 0 10px 22px rgba(0, 196, 154, .20) !important;
+}
+
+.student-app #app-practice .practice-section-heading h2 {
+  color: var(--text-primary);
+}
+
+.student-app #app-practice .practice-section-heading > p:last-child:not(.eyebrow) {
+  color: var(--text-secondary);
+}
+
+.student-app #app-practice .practice-workspace-card {
+  border-color: var(--border-soft);
+  color: var(--text-primary);
+  background: var(--surface-primary);
+  box-shadow: var(--shadow-soft);
+}
+
+.student-app #app-practice .practice-card-heading h2,
+.student-app #app-practice .practice-summary-list strong,
+.student-app #app-practice .practice-empty-state strong {
+  color: var(--text-primary);
+}
+
+.student-app #app-practice .practice-card-heading p:last-child,
+.student-app #app-practice .practice-summary-list span,
+.student-app #app-practice .practice-submit-row,
+.student-app #app-practice .practice-current-upload span {
+  color: var(--text-secondary);
+}
+
+.student-app #app-practice .practice-workspace-card .field label {
+  color: var(--text-primary);
+}
+
+.student-app #app-practice .practice-workspace-card .field input,
+.student-app #app-practice .practice-workspace-card .field select,
+.student-app #app-practice .practice-workspace-card .field textarea {
+  color: var(--text-primary);
+  border-color: var(--border-soft);
+  background: #fbfcff;
+  box-shadow: inset 0 1px 2px rgba(10, 31, 72, .035);
+}
+
+.student-app #app-practice .practice-workspace-card .field input:focus,
+.student-app #app-practice .practice-workspace-card .field select:focus,
+.student-app #app-practice .practice-workspace-card .field textarea:focus {
+  border-color: var(--yuva-blue);
+  box-shadow: 0 0 0 3px rgba(30, 78, 216, .14);
+}
+
+.student-app #app-practice .practice-workspace-card .field select option {
+  color: var(--text-primary);
+  background: #fff;
+}
+
+.student-app #app-practice .practice-summary-list p,
+.student-app #app-practice .practice-submit-row {
+  border-color: var(--border-soft);
+}
+
+.student-app #app-practice .practice-empty-state,
+.student-app #app-practice .practice-current-upload {
+  border-color: var(--border-soft);
+  color: var(--text-primary);
+  background: var(--surface-secondary);
+}
+
+.student-app #app-practice .practice-empty-state p {
+  color: var(--text-secondary);
+}
+
+.student-app #app-practice .practice-current-upload a {
+  color: var(--yuva-blue);
+}
+
+.student-app #app-practice .practice-future-card {
+  border-color: var(--border-soft);
+  color: var(--text-primary);
+  background: var(--surface-primary);
+  box-shadow: var(--shadow-soft);
+}
+
+.student-app #app-practice .practice-future-card h3 {
+  color: var(--text-primary);
+}
+
+.student-app #app-practice .practice-future-card p {
+  color: var(--text-secondary);
+}
+
+/* Presentation Studio */
+.student-app #app-present .present-hero {
+  padding-right: min(42%, 430px);
+  background:
+    radial-gradient(circle at 78% 22%, rgba(139, 92, 246, .36), transparent 29%),
+    linear-gradient(135deg, var(--yuva-navy), #121d5b 58%, #321978);
+}
+
+.student-app #app-present .present-hero h1 {
+  color: #fff;
+}
+
+.student-app #app-present .present-center-grid {
+  gap: var(--space-5);
+}
+
+.student-app #app-present :where(.present-session-card, .present-info-card, .present-scheduler-card) {
+  border-color: var(--border-soft);
+  color: var(--text-primary);
+  background: var(--surface-primary);
+  box-shadow: var(--shadow-soft);
+}
+
+.student-app #app-present .present-session-card {
+  padding: var(--space-6);
+}
+
+.student-app #app-present .present-card-heading h2,
+.student-app #app-present .present-info-card h2 {
+  color: var(--text-primary);
+}
+
+.student-app #app-present .present-session-details p {
+  border-color: var(--border-soft);
+  background: var(--surface-secondary);
+}
+
+.student-app #app-present .present-session-details span,
+.student-app #app-present .present-credentials span {
+  color: var(--text-secondary);
+}
+
+.student-app #app-present .present-session-details strong,
+.student-app #app-present .present-credentials {
+  color: var(--text-primary);
+}
+
+.student-app #app-present .present-session-details small {
+  color: var(--text-secondary);
+}
+
+.student-app #app-present .present-empty-note {
+  border-color: var(--border-soft);
+  color: var(--text-secondary);
+  background: var(--surface-secondary);
+}
+
+.student-app #app-present .present-info-card {
+  min-height: 190px;
+  padding: var(--space-5);
+}
+
+.student-app #app-present .present-info-card p:not(.eyebrow),
+.student-app #app-present .present-info-card small {
+  color: var(--text-secondary);
+}
+
+.student-app #app-present .present-info-card a {
+  color: var(--yuva-blue);
+}
+
+.student-app #app-present .present-scheduler-card {
+  padding: var(--space-6);
+}
+
+.student-app #app-present .present-future-heading h2,
+.student-app #app-present .present-future-card h3 {
+  color: var(--text-primary);
+}
+
+.student-app #app-present .present-future-heading p:last-child,
+.student-app #app-present .present-future-card p {
+  color: var(--text-secondary);
+}
+
+.student-app #app-present .present-future-card {
+  border-color: var(--border-soft);
+  background: var(--surface-primary);
+  box-shadow: var(--shadow-soft);
+}
+
+.student-app #app-present .present-zoom-button {
+  background: linear-gradient(135deg, var(--yuva-blue), #164bc4);
+  box-shadow: 0 12px 24px rgba(30, 78, 216, .22);
+}
+
+@media (max-width: 760px) {
+  .student-app #app-practice,
+.student-app #app-present {
+    padding-top: 0;
+    background: var(--surface-secondary);
+  }
+
+  .student-app .studio-hero {
+    min-height: 190px;
+    margin: 0 -14px var(--space-4);
+    padding: 48px 18px 26px;
+    border-radius: 0 0 var(--radius-card) var(--radius-card);
+  }
+
+  .student-app .studio-hero h1 {
+    font-size: 30px;
+  }
+
+  .student-app .studio-hero p:last-child {
+    max-width: 250px;
+    font-size: 13px;
+  }
+
+  .student-app #app-practice .practice-continue-card {
+    grid-template-columns: 78px minmax(0, 1fr);
+    padding: var(--space-4);
+  }
+
+  .student-app #app-practice .practice-topic-art {
+    width: 78px;
+    height: 78px;
+  }
+
+  .student-app #app-practice .practice-workspace-card,
+  .student-app #app-present :where(.present-session-card, .present-scheduler-card) {
+    padding: 18px;
+    border-radius: var(--radius-control);
+  }
+
+  .student-app #app-present .present-hero {
+    padding-right: 43%;
+  }
+
+  .student-app #app-present .present-info-card {
+    min-height: 0;
+    padding: var(--space-4);
+    border-radius: var(--radius-control);
+  }
+
+  .student-app #app-present .present-join-actions .button {
+    width: 100%;
+  }
+}
+
+@media (max-width: 430px) {
+  .student-app #app-practice .practice-hero-mark {
+    width: 58px;
+    height: 58px;
+  }
+
+  .student-app #app-present .present-hero {
+    min-height: 226px;
+    padding-right: 44%;
+  }
+
+  .student-app #app-present .present-hero-copy {
+    max-width: 60%;
+  }
+
+  .student-app #app-present .present-session-details {
+    grid-template-columns: 1fr;
+  }
+}
