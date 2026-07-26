@@ -19,6 +19,7 @@ organization_test_assert(
     $documentation !== false,
     'Organization foundation documentation is missing.'
 );
+$sql = str_replace(["\r\n", "\r"], "\n", $sql);
 
 foreach (
     [
