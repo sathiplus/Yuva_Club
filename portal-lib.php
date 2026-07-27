@@ -2377,6 +2377,42 @@ function clear_student_authentication_session(): void {
     );
 }
 
+function clear_parent_authentication_session(): void {
+    unset(
+        $_SESSION['parent_student_id'],
+        $_SESSION['parent_auth_source'],
+        $_SESSION['parent_user_id'],
+        $_SESSION['parent_id'],
+        $_SESSION['portal_role']
+    );
+}
+
+function require_parent_student(): array {
+    $studentId = normalize_yuva_id((string) ($_SESSION['parent_student_id'] ?? ''));
+    if ($studentId === '') {
+        redirect_to('parent-login.php');
+    }
+
+    $source = $_SESSION['parent_auth_source'] ?? null;
+    $authMode = portal_auth_mode();
+    if ($source === null && in_array($authMode, ['filesystem', 'hybrid'], true)) {
+        $student = require_parent_for_student($studentId);
+    } elseif (
+        $source === 'sql'
+        && in_array($authMode, ['sql', 'hybrid'], true)
+    ) {
+        $student = portal_parent_login_workflow()->revalidateSqlChildAccess($_SESSION);
+    } else {
+        $student = null;
+    }
+
+    if (!is_array($student)) {
+        clear_parent_authentication_session();
+        redirect_to('parent-login.php?status=error');
+    }
+    return $student;
+}
+
 function require_student(): array {
     $studentId = logged_in_student_id();
     if ($studentId === null) {
