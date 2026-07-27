@@ -79,22 +79,6 @@ $registrationId = $_GET['registration'] ?? '';
           <?php echo csrf_field(); ?>
           <input type="hidden" name="form_name" value="Yuva Club Registration">
 
-          <h2>Membership Path</h2>
-          <div class="field-grid">
-            <div class="field">
-              <label for="membership_type">How are you joining? *</label>
-              <select id="membership_type" name="membership_type" required>
-                <option value="individual">Individual Membership</option>
-                <option value="organization">Join an Organization</option>
-              </select>
-            </div>
-            <div class="field">
-              <label for="organization_code">Organization Invitation or Join Code</label>
-              <input id="organization_code" name="organization_code" type="text" placeholder="Enter code if provided">
-              <p class="form-note">Organization accounts are created by YUVA Club platform administrators. Students may join an organization only with an invitation or valid organization code.</p>
-            </div>
-          </div>
-
           <h2>Student Information & Contact</h2>
           <div class="field-grid">
             <div class="field">

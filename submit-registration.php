@@ -128,8 +128,8 @@ if (!verify_csrf_token($_POST['csrf_token'] ?? null)) {
 
 $studentFirstName = clean_text($_POST['student_first_name'] ?? '');
 $studentLastName = clean_text($_POST['student_last_name'] ?? '');
-$membershipType = clean_text($_POST['membership_type'] ?? 'individual');
-$organizationCode = strtoupper(clean_text($_POST['organization_code'] ?? ''));
+$membershipType = 'individual';
+$organizationCode = '';
 $preferredName = clean_text($_POST['preferred_name'] ?? '');
 $dateOfBirth = clean_text($_POST['date_of_birth'] ?? '');
 $age = clean_text($_POST['age'] ?? '');
@@ -152,11 +152,6 @@ $passwordError = password_policy_error($accountPassword);
 
 if ($passwordError !== '' || !hash_equals($accountPassword, $accountPasswordConfirm)) {
     header('Location: registration.php?status=password-error');
-    exit;
-}
-
-if (!in_array($membershipType, ['individual', 'organization'], true) || ($membershipType === 'organization' && $organizationCode === '')) {
-    header('Location: registration.php?status=error');
     exit;
 }
 
@@ -378,10 +373,6 @@ if (!$storedInDatabase) {
     append_registration_row($fullCsvPath, $headers, $row, $studentIdYear, $idScanPaths);
     create_student_account($studentId, $studentEmail, $parentEmail, $accountPassword);
     create_parent_account($parentEmail, $accountPassword, $studentId);
-}
-
-if ($membershipType === 'organization' && $organizationCode !== '' && $studentEmail !== '') {
-    activate_organization_student_membership_from_registration($organizationCode, $studentId, $studentEmail);
 }
 
 if ($notificationEmail !== '') {

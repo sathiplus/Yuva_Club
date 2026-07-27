@@ -1,0 +1,323 @@
+name: Student V1 RC1 Validation
+
+on:
+  push:
+    branches:
+      - main
+      - release/v2.0-main-rc-reconciliation
+
+  pull_request:
+
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate Student V1 RC1
+    if: >-
+      github.event_name != 'pull_request' ||
+      github.event.pull_request.head.ref == 'release/v2.0-main-rc-reconciliation'
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out release candidate
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          coverage: none
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Lint Student V1 PHP files
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          php -l portal.php
+          php -l portal-lib.php
+          php -l certificate.php
+          php -l portal-submit-topic.php
+          php -l portal-submit-research.php
+          php -l portal-report-issue.php
+
+      - name: Lint Azure SQL migration framework PHP files
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          php -l tools/run-azure-sql-migrations.php
+          php -l tests/migrations/migration-framework-test.php
+          php -l tests/migrations/migration-framework-integration.php
+
+      - name: Test Azure SQL migration framework without a database
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          php tests/migrations/migration-framework-test.php
+
+      - name: Lint Azure SQL approval repository PHP files
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          php -l backend/database.php
+          php -l backend/repositories.php
+          php -l backend/auth.php
+          php -l tests/backend/backend-approval-test.php
+          php -l tests/backend/backend-approval-integration.php
+          php -l backend/config.php
+          php -l admin.php
+          php -l admin-login.php
+          php -l admin-registration-approve.php
+          php -l tests/backend/admin-registration-approval-test.php
+          php -l tests/backend/staging-readiness-test.php
+
+      - name: Test staging smoke-test fixtures without a database
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          php tests/backend/staging-readiness-test.php
+
+      - name: Test guarded admin registration approval without a database
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          php tests/backend/admin-registration-approval-test.php
+
+      - name: Test Azure SQL approval repository without a database
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          php tests/backend/backend-approval-test.php
+
+      - name: Scan migration framework for committed secrets
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          python3 - <<'PY'
+          import pathlib
+          import re
+          import sys
+
+          files = [
+              pathlib.Path("database/02-schema-migrations.azure-sql.sql"),
+              pathlib.Path("tools/run-azure-sql-migrations.php"),
+              pathlib.Path("tests/migrations/migration-framework-test.php"),
+              pathlib.Path("tests/migrations/migration-framework-integration.php"),
+          ]
+          patterns = [
+              (
+                  "storage credential",
+                  re.compile(r"(?i)\b(?:AccountKey|SharedAccessSignature)\s*="),
+              ),
+              (
+                  "OpenAI API key",
+                  re.compile(r"\bsk-[A-Za-z0-9_-]{20,}\b"),
+              ),
+              (
+                  "hardcoded password assignment",
+                  re.compile(
+                      r"""(?ix)
+                      \b(?:password|pwd)\s*[:=]\s*
+                      ["'][^"'$<{][^"']{7,}["']
+                      """
+                  ),
+              ),
+              (
+                  "credential-bearing SQL connection string",
+                  re.compile(
+                      r"""(?ix)
+                      \b(?:Server|Data\ Source)\s*=\s*[^;\s]+;
+                      [^\n]*(?:Password|PWD)\s*=\s*[^;\s"']+
+                      """
+                  ),
+              ),
+          ]
+
+          findings = []
+          for path in files:
+              text = path.read_text(encoding="utf-8")
+              for line_number, line in enumerate(text.splitlines(), start=1):
+                  for label, pattern in patterns:
+                      if not pattern.search(line):
+                          continue
+
+                      # These deterministic values exist only in assertions
+                      # that prove database exception output is redacted.
+                      if (
+                          path.name == "migration-framework-test.php"
+                          and "private-database-" in line
+                      ):
+                          continue
+
+                      findings.append(f"{path}:{line_number}: {label}")
+
+          if findings:
+              print("Potential committed secret patterns found:", file=sys.stderr)
+              print("\n".join(findings), file=sys.stderr)
+              raise SystemExit(1)
+
+          print("No committed migration-framework secret patterns found.")
+          PY
+
+      - name: Scan approval repository for committed secrets
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          python3 - <<'PY'
+          import pathlib
+          import re
+          import sys
+
+          files = [
+              pathlib.Path("backend/database.php"),
+              pathlib.Path("backend/repositories.php"),
+              pathlib.Path("backend/auth.php"),
+              pathlib.Path("tests/backend/backend-approval-test.php"),
+              pathlib.Path("tests/backend/backend-approval-integration.php"),
+              pathlib.Path("backend/config.php"),
+              pathlib.Path("admin.php"),
+              pathlib.Path("admin-login.php"),
+              pathlib.Path("admin-registration-approve.php"),
+              pathlib.Path("portal-lib.php"),
+              pathlib.Path("tests/backend/admin-registration-approval-test.php"),
+              pathlib.Path("tests/backend/staging-readiness-test.php"),
+          ]
+          patterns = [
+              (
+                  "Azure storage credential",
+                  re.compile(r"(?i)\b(?:AccountKey|SharedAccessSignature)\s*="),
+              ),
+              (
+                  "OpenAI-style API key",
+                  re.compile(r"\bsk-[A-Za-z0-9_-]{20,}\b"),
+              ),
+              (
+                  "private key",
+                  re.compile(
+                      r"-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----"
+                  ),
+              ),
+              (
+                  "hardcoded bearer token",
+                  re.compile(
+                      r"""(?ix)
+                      \bBearer\s+
+                      [A-Za-z0-9][A-Za-z0-9._~-]{19,}
+                      """
+                  ),
+              ),
+              (
+                  "hardcoded password assignment",
+                  re.compile(
+                      r"""(?ix)
+                      \b(?:password|pwd)\s*[:=]\s*
+                      ["'][^"'$<{][^"']{7,}["']
+                      """
+                  ),
+              ),
+              (
+                  "credential-bearing database connection string",
+                  re.compile(
+                      r"""(?ix)
+                      \b(?:Server|Data\ Source)\s*=\s*[^;\s]+;
+                      [^\n]*(?:Password|PWD)\s*=\s*[^;\s"']+
+                      """
+                  ),
+              ),
+          ]
+
+          findings = []
+          for path in files:
+              text = path.read_text(encoding="utf-8")
+              for line_number, line in enumerate(text.splitlines(), start=1):
+                  for label, pattern in patterns:
+                      if pattern.search(line):
+                          if (
+                              label == "hardcoded password assignment"
+                              and "rawurlencode((string) $params['pwd'])" in line
+                          ):
+                              continue
+
+                          findings.append(f"{path}:{line_number}: {label}")
+
+          if findings:
+              print(
+                  "Potential committed secret patterns found:",
+                  file=sys.stderr,
+              )
+              print("\n".join(findings), file=sys.stderr)
+              raise SystemExit(1)
+
+          print("No committed approval-repository secret patterns found.")
+          PY
+
+      - name: Validate Student V1 JavaScript syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check assets/student-app.js
+
+      - name: Check Git whitespace
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BEFORE_SHA: ${{ github.event.before }}
+          CURRENT_SHA: ${{ github.sha }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+
+          git diff --check
+
+          if [[ "$EVENT_NAME" == "pull_request" ]]; then
+            git diff --check "$PR_BASE_SHA" "$PR_HEAD_SHA"
+          elif [[ "$EVENT_NAME" == "push" && \
+                  -n "$BEFORE_SHA" && \
+                  "$BEFORE_SHA" != "0000000000000000000000000000000000000000" ]]; then
+            git diff --check "$BEFORE_SHA" "$CURRENT_SHA"
+          elif git rev-parse HEAD^ >/dev/null 2>&1; then
+            git diff --check HEAD^ HEAD
+          fi
+
+      - name: Confirm Student V1 visual assets
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          required_files=(
+            "assets/student-hero-illustration.svg"
+            "assets/student-action-clipboard.svg"
+            "assets/student-presentation-illustration.svg"
+            "assets/student-ai-coach-illustration.svg"
+            "assets/student-leadership-journey-illustration.svg"
+            "assets/student-achievements-illustration.svg"
+            "assets/student-app.css"
+          )
+
+          for file in "${required_files[@]}"; do
+            if [[ ! -s "$file" ]]; then
+              echo "::error file=$file::Required Student V1 asset is missing or empty."
+              exit 1
+            fi
+
+            echo "Verified: $file"
+          done
