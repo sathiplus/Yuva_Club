@@ -2343,6 +2343,35 @@ function portal_students(): array {
             $students[$student['Yuva Club ID']] = $student;
         }
     }
+    return merge_staging_test_student($students);
+}
+
+function staging_test_student_fixture(): ?array {
+    $fixture = staging_test_fixture_config();
+    if ($fixture === null) {
+        return null;
+    }
+
+    $student = array_fill_keys(registration_headers(), '');
+    $student['Yuva Club ID'] = $fixture['student_id'];
+    $student['Student First Name'] = 'Staging';
+    $student['Student Last Name'] = 'Test Student';
+    $student['Preferred Name'] = 'Staging';
+    $student['Date of Birth'] = $fixture['student_dob'];
+    $student['Age'] = (string) $fixture['student_age'];
+    $student['Program Group'] = $fixture['student_program_group'];
+    return $student;
+}
+
+function merge_staging_test_student(array $students): array {
+    $fixture = staging_test_student_fixture();
+    if ($fixture === null) {
+        return $students;
+    }
+    $studentId = (string) $fixture['Yuva Club ID'];
+    if (!array_key_exists($studentId, $students)) {
+        $students[$studentId] = $fixture;
+    }
     return $students;
 }
 
@@ -2375,6 +2404,22 @@ function clear_student_authentication_session(): void {
         $_SESSION['student_user_id'],
         $_SESSION['portal_role']
     );
+}
+
+function filesystem_parent_identities(string $email): array {
+    $normalizedEmail = strtolower(trim($email));
+    if ($normalizedEmail === '') {
+        return [];
+    }
+
+    $matches = [];
+    foreach (portal_students() as $student) {
+        $parentEmail = strtolower(trim((string) ($student['Parent Email'] ?? '')));
+        if ($parentEmail !== '' && hash_equals($normalizedEmail, $parentEmail)) {
+            $matches[] = $student;
+        }
+    }
+    return $matches;
 }
 
 function clear_parent_authentication_session(): void {
@@ -2657,6 +2702,52 @@ function ai_reviews(): array {
     return read_json_file(ai_reviews_file(), []);
 }
 
+function ai_review_identifier(string $studentId, array $reviewRecord): string {
+    $reviewId = trim((string) ($reviewRecord['review_id'] ?? ''));
+    if ($reviewId !== '') {
+        return $reviewId;
+    }
+    return hash('sha256', json_encode([
+        'student_id' => normalize_yuva_id($studentId),
+        'reviewed_at' => $reviewRecord['reviewed_at'] ?? '',
+        'review' => $reviewRecord['review'] ?? [],
+    ], JSON_UNESCAPED_SLASHES) ?: '');
+}
+
+function mark_ai_review_stale(string $studentId, string $reason): void {
+    $reviews = ai_reviews();
+    if (!isset($reviews[$studentId]) || !is_array($reviews[$studentId])) {
+        return;
+    }
+    $currentStatus = (string) ($reviews[$studentId]['status'] ?? '');
+    if (str_starts_with($currentStatus, 'Stale - ')) {
+        return;
+    }
+    $reviews[$studentId]['previous_status'] = $currentStatus;
+    $reviews[$studentId]['status'] = 'Stale - ' . $reason;
+    $reviews[$studentId]['stale_at'] = date('Y-m-d H:i:s');
+    $reviews[$studentId]['stale_reason'] = $reason;
+    write_json_file(ai_reviews_file(), $reviews);
+}
+
+function with_ai_apply_lock(callable $callback): mixed {
+    ensure_portal_dirs();
+    $lockPath = portal_path('portal-data') . DIRECTORY_SEPARATOR . 'ai-apply.lock';
+    $handle = fopen($lockPath, 'c+');
+    if ($handle === false || !flock($handle, LOCK_EX)) {
+        if (is_resource($handle)) {
+            fclose($handle);
+        }
+        throw new RuntimeException('Could not secure the AI review operation.');
+    }
+    try {
+        return $callback();
+    } finally {
+        flock($handle, LOCK_UN);
+        fclose($handle);
+    }
+}
+
 function openai_api_key(): string {
     $key = trim((string) (getenv('OPENAI_API_KEY') ?: ($_SERVER['OPENAI_API_KEY'] ?? '')));
     if ($key !== '') {
@@ -2885,7 +2976,36 @@ function parse_link_lines(string $value): array {
     return $links;
 }
 
-function portal_header(string $title, string $bodyClass = ''): void {
+function student_app_icon(string $name): string {
+    $icons = [
+        'home' => '<path d="M3 11.5 12 4l9 7.5"></path><path d="M5 10.5V20h5v-6h4v6h5v-9.5"></path>',
+        'practice' => '<circle cx="12" cy="12" r="8"></circle><circle cx="12" cy="12" r="4"></circle><path d="m15 9 6-6"></path><path d="M18 3h3v3"></path>',
+        'present' => '<path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><path d="M12 19v3"></path>',
+        'progress' => '<path d="M4 19V9"></path><path d="M10 19V5"></path><path d="M16 19v-7"></path><path d="M22 19V2"></path>',
+        'profile' => '<circle cx="12" cy="8" r="4"></circle><path d="M4 22a8 8 0 0 1 16 0"></path>',
+        'award' => '<circle cx="12" cy="8" r="6"></circle><path d="M15.5 13 17 22l-5-3-5 3 1.5-9"></path>',
+        'sparkles' => '<path d="m12 3-1.7 4.3L6 9l4.3 1.7L12 15l1.7-4.3L18 9l-4.3-1.7Z"></path>',
+    ];
+    $paths = $icons[$name] ?? $icons['home'];
+    return '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">' . $paths . '</svg>';
+}
+
+function student_app_navigation(string $className, string $label): string {
+    $items = [
+        ['home', 'Home', 'portal.php#app-home'],
+        ['practice', 'Practice', 'portal.php#app-practice'],
+        ['present', 'Present', 'portal.php#app-present'],
+        ['progress', 'Journey', 'portal.php#app-progress'],
+        ['profile', 'Profile', 'portal.php#app-profile'],
+    ];
+    $html = '<nav class="' . e($className) . '" aria-label="' . e($label) . '">';
+    foreach ($items as [$key, $text, $href]) {
+        $html .= '<a href="' . e($href) . '" data-app-nav="' . e($key) . '">' . student_app_icon($key) . '<span>' . e($text) . '</span></a>';
+    }
+    return $html . '</nav>';
+}
+
+function portal_header(string $title, bool $studentApp = false, array $localStylesheets = []): void {
     echo '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">';
     echo '<title>' . e($title) . ' | Yuva Club</title>';
     echo '<meta name="description" content="Yuva Club student leadership portal.">';
@@ -2907,13 +3027,37 @@ function portal_header(string $title, string $bodyClass = ''): void {
     echo '<meta name="apple-mobile-web-app-title" content="YUVA Club">';
     echo '<meta name="apple-mobile-web-app-status-bar-style" content="default">';
     echo '<link rel="stylesheet" href="assets/site.css?v=20260714-public-mobile-nav">';
+    if ($studentApp) {
+        echo '<link rel="stylesheet" href="assets/student-app.css?v=1">';
+    }
+    foreach ($localStylesheets as $localStylesheet) {
+        $localStylesheet = trim((string) $localStylesheet);
+        if ($localStylesheet !== '') {
+            echo '<link rel="stylesheet" href="' . e($localStylesheet) . '">';
+        }
+    }
     echo '<script src="assets/app.js?v=20260714-public-mobile-nav" defer></script>';
-    echo '</head><body' . ($bodyClass !== '' ? ' class="' . e($bodyClass) . '"' : '') . '>';
+    if ($studentApp) {
+        echo '<script src="assets/student-app.js?v=1" defer></script>';
+    }
+    echo '</head><body' . ($studentApp ? ' class="student-app is-loading"' : '') . '>';
+    if ($studentApp) {
+        echo '<a class="app-skip-link" href="#app-main">Skip to content</a>';
+        echo '<div class="app-loading" role="status" aria-live="polite"><img src="assets/yuva-symbol.png" alt=""><span>Loading your YUVA Club app&hellip;</span></div>';
+        echo '<header class="student-app-header"><a class="student-app-brand" href="portal.php#app-home"><img src="assets/yuva-symbol.png" alt=""><span><strong>YUVA</strong> Club</span></a><div class="student-app-header-actions"><span class="student-app-page-title">Leadership Journey</span><a class="student-app-profile-link" href="portal.php#app-profile" aria-label="Open My Journey">' . student_app_icon('profile') . '</a></div></header>';
+        echo '<aside class="student-app-rail"><a class="student-app-rail-brand" href="portal.php#app-home"><img src="assets/logo.png" alt=""><span>YUVA <strong>Club</strong></span></a>' . student_app_navigation('student-app-rail-nav', 'Student app navigation') . '<a class="student-app-logout" href="portal-logout.php">Log out</a></aside>';
+        echo '<div class="student-app-frame">';
+        return;
+    }
     echo '<header class="site-header"><a class="brand" href="index.html" aria-label="Yuva Club home"><img src="assets/logo.png" alt="Yuva Club logo" width="78" height="78"><span>Yuva Club</span></a>';
     echo '<nav class="nav" aria-label="Main navigation"><a href="index.html">Home</a><a href="programs.html">Programs</a><a href="curriculum.html">Topics</a><a href="challenges.html">Challenge</a><a href="app.html">App</a><a class="nav-register" href="registration.php">Register</a><details class="signin-menu"><summary>Sign In</summary><div><a href="portal-login.php">Student</a><a href="parent-login.php">Parent</a><a href="admin-login.php">Admin</a></div></details></nav></header>';
 }
 
-function portal_footer(): void {
+function portal_footer(bool $studentApp = false): void {
+    if ($studentApp) {
+        echo '</div>' . student_app_navigation('student-app-bottom-nav', 'Student app navigation') . '</body></html>';
+        return;
+    }
     echo '
   <footer class="site-footer">
     <div>
