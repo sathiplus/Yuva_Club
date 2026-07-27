@@ -1,6 +1,10 @@
 name: Production release - YUVA Club
 
 on:
+  pull_request:
+    paths:
+      - ".github/workflows/main_yuvaclub.yml"
+      - "docs/PRODUCTION_DEPLOYMENT_PLAYBOOK.md"
   workflow_dispatch:
     inputs:
       operation:
@@ -46,6 +50,7 @@ jobs:
 
     steps:
       - name: Validate release authorization inputs
+        if: ${{ github.event_name == 'workflow_dispatch' }}
         shell: bash
         env:
           EXPECTED_COMMIT: ${{ inputs.expected_commit }}
@@ -60,7 +65,7 @@ jobs:
       - name: Check out expected commit
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.expected_commit }}
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.expected_commit || github.sha }}
           fetch-depth: 0
 
       - name: Verify commit is reviewed on main
@@ -71,9 +76,14 @@ jobs:
         run: |
           set -euo pipefail
           ACTUAL_COMMIT="$(git rev-parse HEAD)"
-          [[ "$ACTUAL_COMMIT" == "$EXPECTED_COMMIT" ]]
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            [[ "$ACTUAL_COMMIT" == "$EXPECTED_COMMIT" ]]
+          else
+            EXPECTED_COMMIT="$ACTUAL_COMMIT"
+          fi
           git fetch --no-tags origin main
-          if [[ "${{ inputs.operation }}" != "validate" ]]; then
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" \
+                && "${{ inputs.operation }}" != "validate" ]]; then
             git merge-base --is-ancestor "$EXPECTED_COMMIT" origin/main
           fi
           [[ -z "$(git status --porcelain)" ]]
@@ -175,7 +185,7 @@ jobs:
   deploy:
     name: Approved production deployment
     needs: validate
-    if: ${{ inputs.operation != 'validate' }}
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.operation != 'validate' }}
     runs-on: ubuntu-latest
     environment: production
 
