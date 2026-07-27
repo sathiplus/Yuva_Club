@@ -11,6 +11,9 @@ const publicPages = [
   'resources.html',
   'app.html',
   'safety.html',
+  'privacy.html',
+  'terms.html',
+  'contact.html',
   'offline.html',
 ];
 const phpPages = [
@@ -53,7 +56,7 @@ for (const name of phpPages) {
 }
 
 const headerSources = await Promise.all(
-  publicPages.slice(0, -1).map((name) => readFile(new URL(name, root), 'utf8'))
+  publicPages.slice(0, 8).map((name) => readFile(new URL(name, root), 'utf8'))
 );
 const expectedNavigation = [
   'index.html',
@@ -73,6 +76,18 @@ const expectedNavigation = [
 for (const [index, source] of headerSources.entries()) {
   for (const href of expectedNavigation) {
     assert.ok(source.includes(`href="${href}"`), `${publicPages[index]} navigation misses ${href}`);
+  }
+}
+
+const home = await readFile(new URL('index.html', root), 'utf8');
+for (const href of ['privacy.html', 'terms.html', 'contact.html']) {
+  assert.ok(home.includes(`href="${href}"`), `Homepage footer misses ${href}`);
+}
+
+for (const name of ['privacy.html', 'terms.html', 'contact.html']) {
+  const source = await readFile(new URL(name, root), 'utf8');
+  for (const href of ['index.html', 'safety.html', 'privacy.html', 'terms.html', 'contact.html']) {
+    assert.ok(source.includes(`href="${href}"`), `${name} navigation misses ${href}`);
   }
 }
 
