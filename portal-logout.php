@@ -1,15 +1,16 @@
 <?php
 require __DIR__ . '/portal-lib.php';
-unset(
-    $_SESSION['student_id'],
-    $_SESSION['parent_student_id'],
-    $_SESSION['parent_email'],
-    $_SESSION['parent_session_started_at'],
-    $_SESSION['admin_logged_in'],
-    $_SESSION['admin_email'],
-    $_SESSION['admin_role'],
-    $_SESSION['admin_organization_id'],
-    $_SESSION['admin_session_started_at']
-);
-session_regenerate_id(true);
+$_SESSION = [];
+if (ini_get('session.use_cookies')) {
+    $params = session_get_cookie_params();
+    setcookie(session_name(), '', [
+        'expires' => time() - 42000,
+        'path' => $params['path'],
+        'domain' => $params['domain'],
+        'secure' => $params['secure'],
+        'httponly' => $params['httponly'],
+        'samesite' => $params['samesite'] ?? 'Lax',
+    ]);
+}
+session_destroy();
 redirect_to('portal-login.php');
