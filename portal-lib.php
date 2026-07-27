@@ -195,6 +195,14 @@ function security_audit_file(): string {
 }
 
 function admin_credentials(): array {
+    $stagingCredentials = staging_test_admin_credentials();
+    if ($stagingCredentials !== null) {
+        return array_merge([
+            'role' => YUVA_ROLE_MASTER_ADMIN,
+            'organization_id' => YUVA_PLATFORM_ORGANIZATION_ID,
+        ], $stagingCredentials);
+    }
+
     return array_merge([
         'email' => YUVA_ADMIN_EMAIL,
         'password_hash' => YUVA_ADMIN_PASSWORD_HASH,
@@ -215,6 +223,18 @@ function write_admin_credentials(array $credentials): void {
 
 function password_hash_for_admin(string $password): string {
     return hash('sha256', YUVA_ADMIN_SALT . $password);
+}
+
+function staging_test_admin_credentials(): ?array {
+    $fixture = staging_test_fixture_config();
+    if ($fixture === null) {
+        return null;
+    }
+
+    return [
+        'email' => $fixture['admin_email'],
+        'password_hash' => $fixture['admin_password_hash'],
+    ];
 }
 
 function request_ip(): string {
