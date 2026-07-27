@@ -1,15 +1,69 @@
-# Yuva Club Azure SQL Migration Package
+# YUVA Club Azure SQL Database
 
-Run these in Azure SQL Database Query Editor, in order:
+This directory contains the Azure SQL baseline and ordered migrations.
 
-1. `01-schema.azure-sql.sql`
-2. `02-import-hostinger-data.azure-sql.sql`
+## Current files
 
-Data counts from Hostinger backup:
+1. `01-schema.azure-sql.sql` — original Azure SQL application baseline.
+2. `02-schema-migrations.azure-sql.sql` — idempotent migration ledger.
+3. `03-phase-a-identity-approval.azure-sql.sql` — Phase A identity, approval, and portal lookup additions.
+4. `04-phase-a-portal-student-view.azure-sql.sql` — read-only portal compatibility view.
 
-- Registrations: 2
-- Student records: 2
-- Topic selections: 1
-- Uploaded files: 0
+The previously documented `02-import-hostinger-data.azure-sql.sql` is not
+present in this repository and is not part of the automated migration set.
+Legacy data import will use a separately reviewed, idempotent data-migration
+process.
 
-Database target: Azure SQL Database `yuva_club`.
+## Running migrations
+
+Use the CLI-only runner from the repository root:
+
+```text
+php tools/run-azure-sql-migrations.php
+```
+
+The runner uses `backend/config.php` and `backend/database.php`. It requires the
+PDO SQL Server driver and the existing `DB_*` environment variables. It acquires
+a SQL Server application lock, validates SHA-256 checksums, and applies pending
+files in deterministic filename order.
+
+Do not run migrations against production during Phase A development or staging
+validation. See `database/MIGRATIONS.md` for naming, safety, and validation
+rules.
+
+## Phase A approval service
+
+`backend/repositories.php` contains an Azure SQL-compatible registration
+approval service. The minimal admin action remains disabled unless
+`SQL_APPROVAL_ENABLED=true` is explicitly configured. A missing, false, or
+invalid value disables both the admin controls and endpoint. This gate is
+independent of `PORTAL_STORAGE_MODE`; filesystem portal reads, student login,
+and registration writes remain authoritative and unchanged.
+
+The guarded admin approval list treats `new`, `reviewing`, and `waitlisted`
+registrations as directly actionable. A waitlisted registration therefore does
+not require a separate status transition before an authenticated administrator
+approves it. The repository approval service enforces the same three-state
+allowlist.
+
+Before the SQL approval service is enabled in a later approved phase, the
+current UTC year must have a reconciled row in `dbo.yuva_id_counters`. Normal
+request handling deliberately refuses a missing counter instead of deriving or
+guessing a value from production student records.
+
+SQL approval locking follows one order: registration application lock,
+lexically sorted SHA-256 identity-email application locks, registration row,
+program and level, optional counter row, then identity and relationship rows.
+Raw email addresses are never used as application-lock resource names.
+
+The database-free approval contract test is:
+
+```text
+php tests/backend/backend-approval-test.php
+php tests/backend/admin-registration-approval-test.php
+```
+
+The guarded integration test is excluded from normal CI. It requires
+`APP_ENV=test`, `DB_DRIVER=sqlsrv`, `SQL_APPROVAL_ENABLED=true`,
+`YUVA_RUN_SQL_INTEGRATION=YES`, a disposable database name containing `test`,
+`ci`, `scratch`, or `temp`, and an already migrated Phase A schema.
