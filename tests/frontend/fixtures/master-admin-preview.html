@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Master Admin Preview | YUVA Club</title>
+  <link rel="stylesheet" href="../../../assets/site.css">
+  <link rel="stylesheet" href="../../../assets/master-admin.css">
+</head>
+<body>
+<a class="master-skip-link" href="#master-main">Skip to control center</a>
+<div class="master-shell">
+  <aside class="master-rail" aria-label="Master Admin navigation">
+    <a class="master-brand" href="#overview"><img src="../../../assets/logo.png" alt=""><span><strong>YUVA Club</strong><small>Master Admin</small></span></a>
+    <nav class="master-nav" aria-label="Master Admin sections">
+      <a href="#overview"><span>O</span> Overview</a><a href="#organizations"><span>OR</span> Organizations</a>
+      <a href="#organization-admins"><span>OA</span> Organization Admins</a><a href="#students"><span>ST</span> Students</a>
+      <a href="#parents"><span>PA</span> Parents</a><a href="#approvals"><span>AP</span> Approvals</a>
+      <a href="#certificates"><span>CE</span> Certificates</a><a href="#reports"><span>!</span> Reports</a>
+      <a href="#settings"><span>SE</span> Settings</a><a href="#health"><span>SH</span> System Health</a>
+    </nav>
+    <a class="master-logout" href="#">Log out</a>
+  </aside>
+  <main class="master-main" id="master-main">
+    <header class="master-mobile-header"><a class="master-mobile-brand" href="#"><img src="../../../assets/yuva-symbol.png" alt=""><span>Master Admin</span></a><a class="master-mobile-action" href="#">Log out</a></header>
+    <section class="master-hero" id="overview">
+      <div><p class="master-kicker">System-wide control center</p><h1>Lead the whole YUVA Club platform with clarity.</h1><p>Review access, student operations, program delivery, safety, and platform readiness from one accountable workspace.</p></div>
+      <div class="master-hero-actions"><a class="button primary" href="#">Manage signup students</a><a class="button ghost" href="#approvals">Review approvals</a></div>
+    </section>
+    <section class="master-stat-grid" aria-label="Platform overview">
+      <article><span>Students</span><strong>0</strong><small>No portal records</small></article>
+      <article><span>Pending approvals</span><strong>0</strong><small>SQL approval is disabled</small></article>
+      <article><span>Scheduled sessions</span><strong>0</strong><small>No sessions scheduled</small></article>
+      <article><span>Open safety reports</span><strong>0</strong><small>No open reports</small></article>
+    </section>
+    <section class="master-module-grid">
+      <article id="organizations"><span class="master-module-mark">OR</span><div><p class="master-kicker">Organizations</p><h2>Organization foundation</h2><p>The approved foundation is present. Organization management remains intentionally unavailable until its future implementation phase.</p></div><span class="master-state">Foundation only</span></article>
+      <article id="organization-admins"><span class="master-module-mark admins">OA</span><div><p class="master-kicker">Organization Admins</p><h2>Role foundation</h2><p>No organization administrators are managed from this Version 2.0 control center.</p></div><span class="master-state">Not configured</span></article>
+      <article id="parents"><span class="master-module-mark parents">PA</span><div><p class="master-kicker">Parents</p><h2>Parent identities</h2><p>Parent access continues through the linked-student workflow.</p></div><span class="master-state ready">Operational</span></article>
+      <article id="health"><span class="master-module-mark health">SH</span><div><p class="master-kicker">System Health</p><h2>Current operating state</h2><p>Filesystem portal records are available. SQL registration approval is disabled.</p></div><span class="master-state ready">Available</span></article>
+    </section>
+    <section class="master-workspace">
+      <div class="master-section-heading"><div><p class="master-kicker">Operations</p><h2>Platform management</h2></div><p>Existing administrative workflows, reorganized without changing their behavior.</p></div>
+      <section class="form-card master-panel" id="approvals"><div class="master-panel-heading"><div><p class="master-kicker">Approvals</p><h2>Pending Azure SQL registrations</h2></div><span class="master-count">0</span></div><p class="form-note">Registration approval is unavailable.</p></section>
+      <section class="form-card master-panel" id="students"><div class="master-panel-heading"><div><p class="master-kicker">Students / Certificates</p><h2>Student records and recognition</h2></div><span class="master-count">0 issued</span></div><p>No registered students found yet.</p></section>
+      <section class="form-card master-panel" id="reports"><p class="master-kicker">Reports</p><h2>Safety reports</h2><p>No student safety reports yet.</p></section>
+      <section class="form-card master-panel" id="settings"><p class="master-kicker">Settings</p><h2>Master Admin login</h2><div class="field-grid"><div class="field"><label>Current Admin Email</label><input type="email" value="admin@example.invalid" disabled></div><div class="field"><label>Current Password</label><input type="password" disabled></div></div><button class="button primary" disabled>Update Admin Login</button></section>
+    </section>
+  </main>
+  <nav class="master-bottom-nav" aria-label="Master Admin mobile navigation"><a href="#overview"><span>O</span>Overview</a><a href="#students"><span>ST</span>Students</a><a href="#approvals"><span>AP</span>Approvals</a><a href="#reports"><span>!</span>Reports</a><a href="#settings"><span>SE</span>Settings</a></nav>
+</div>
+</body>
+</html>

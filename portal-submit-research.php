@@ -17,6 +17,11 @@ $record = [
     'status' => $existing['status'] ?? 'Pending Admin Review',
     'updated_at' => date('Y-m-d H:i:s'),
 ];
+$researchChanged = $existing === []
+    || ($existing['research_notes'] ?? '') !== $record['research_notes']
+    || ($existing['sources_used'] ?? '') !== $record['sources_used']
+    || ($existing['presentation_outline'] ?? '') !== $record['presentation_outline']
+    || ($existing['prepared_questions'] ?? '') !== $record['prepared_questions'];
 
 if (in_array('', [$record['research_notes'], $record['sources_used'], $record['presentation_outline'], $record['prepared_questions']], true)) {
     redirect_to('portal.php?status=error');
@@ -28,8 +33,14 @@ if (!empty($_FILES['research_file']['name']) && is_uploaded_file($_FILES['resear
     $allowed = ['pdf', 'ppt', 'pptx', 'doc', 'docx', 'jpg', 'jpeg', 'png'];
 
     if (!in_array($extension, $allowed, true)) {
+        if ($researchChanged) {
+            $record['status'] = 'Pending Admin Review';
+        }
         $researchAll[$studentId] = array_merge($existing, $record);
         write_json_file(research_file(), $researchAll);
+        if ($researchChanged) {
+            mark_ai_review_stale($studentId, 'Research Changed');
+        }
         redirect_to('portal.php?status=upload-error');
     }
 
@@ -42,12 +53,17 @@ if (!empty($_FILES['research_file']['name']) && is_uploaded_file($_FILES['resear
     if (move_uploaded_file($_FILES['research_file']['tmp_name'], $target)) {
         $record['file_original'] = $original;
         $record['file_stored'] = $storedName;
+        $researchChanged = true;
     }
 } else {
     $record['file_original'] = $existing['file_original'] ?? '';
     $record['file_stored'] = $existing['file_stored'] ?? '';
 }
 
+$record['status'] = $researchChanged ? 'Pending Admin Review' : ($existing['status'] ?? 'Pending Admin Review');
 $researchAll[$studentId] = $record;
 write_json_file(research_file(), $researchAll);
+if ($researchChanged) {
+    mark_ai_review_stale($studentId, 'Research Changed');
+}
 redirect_to('portal.php?status=research-saved');
