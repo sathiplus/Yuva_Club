@@ -29,9 +29,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     redirect_to('admin-login.php?status=error');
 }
 
-portal_header('Admin Login');
+portal_header('Admin Login', false, ['assets/public-site.css?v=1']);
 ?>
-<main>
+<a class="public-skip-link" href="#main-content">Skip to main content</a>
+<main id="main-content">
   <section class="band">
     <div class="form-shell portal-narrow">
       <div class="section-head">

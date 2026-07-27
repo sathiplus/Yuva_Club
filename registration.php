@@ -27,8 +27,10 @@ $registrationId = $_GET['registration'] ?? '';
   <script type="application/ld+json">{"@context":"https://schema.org","@type":"EducationalOrganization","name":"YUVA Club","url":"https://www.yuvaclub.app","description":"Empowering Young Minds to Learn, Lead and Inspire."}</script>
   <link rel="icon" href="assets/logo.png" type="image/png">
   <link rel="stylesheet" href="assets/site.css?v=20260714-public-mobile-nav">
+  <link rel="stylesheet" href="assets/public-site.css?v=1">
 </head>
 <body>
+  <a class="public-skip-link" href="#main-content">Skip to main content</a>
   <header class="site-header">
     <a class="brand" href="index.html" aria-label="Yuva Club home">
       <img src="assets/logo.png" alt="Yuva Club logo" width="78" height="78">
@@ -52,7 +54,7 @@ $registrationId = $_GET['registration'] ?? '';
     </nav>
   </header>
 
-  <main>
+  <main id="main-content">
     <section class="band">
       <div class="form-shell">
         <div class="section-head">
