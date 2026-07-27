@@ -1,9 +1,6 @@
 <?php
 require __DIR__ . '/portal-lib.php';
 
-$admin = require_admin([YUVA_ROLE_MASTER_ADMIN]);
-$canViewStudentIds = true;
-
 $programFilter = clean_text($_GET['program'] ?? '');
 $stageFilter = clean_text($_GET['stage'] ?? '');
 $students = portal_students();
@@ -29,8 +26,16 @@ foreach ($students as $student) {
     }
 
     $rows[] = [
-        'student_id' => $studentId,
-        'name' => student_display_name($student),
+        'name' => trim((string) ($student['Preferred Name'] ?? '')) !== ''
+            ? trim((string) $student['Preferred Name'])
+            : trim(
+                (string) ($student['Student First Name'] ?? 'Student')
+                . (
+                    trim((string) ($student['Student Last Name'] ?? '')) !== ''
+                    ? ' ' . strtoupper(substr(trim((string) $student['Student Last Name']), 0, 1)) . '.'
+                    : ''
+                )
+            ),
         'program' => $program,
         'rank' => approved_rank($record),
         'stage' => $stage,
@@ -49,20 +54,20 @@ usort($rows, function (array $a, array $b): int {
 $programs = array_values(array_unique(array_map(fn($student) => membership_group_label($student), $students)));
 sort($programs);
 
-portal_header('Challenge Leaderboard');
+portal_header('Challenge Leaderboard', false, ['assets/public-site.css?v=1']);
 ?>
-<main>
+<a class="public-skip-link" href="#main-content">Skip to main content</a>
+<main id="main-content">
   <section class="band">
     <div class="section-head">
-      <p class="eyebrow">Platform Administration</p>
+      <p class="eyebrow">Leadership Challenge</p>
       <h1>Challenge Leaderboard</h1>
-      <p>Review approved student challenge progress by program, stage, points, tokens, and presentation rubric score.</p>
-      <p><a class="button ghost" href="admin.php">Back to Admin Dashboard</a></p>
+      <p>Track approved student progress by program, challenge stage, points, tokens, and presentation rubric score.</p>
     </div>
     <div class="form-card">
       <h2>What this leaderboard shows</h2>
-      <p>This admin leaderboard summarizes approved YUVA Club challenge records. Use it to review participation, presentations, learning milestones, rubric scores, points, tokens, finalist status, and awards before sharing any public recognition.</p>
-      <p>Student identifiers are visible here because this page is restricted to the platform administrator.</p>
+      <p>The YUVA Club leaderboard highlights approved student progress in leadership challenges. It celebrates participation, presentations, learning milestones, rubric scores, points, tokens, finalist status, and awards.</p>
+      <p>Public visitors can view achievement standings, while private student identifiers remain visible only to authorized students, parents, and administrators.</p>
     </div>
     <form class="form-card" method="get">
       <div class="field-grid">
@@ -111,9 +116,6 @@ portal_header('Challenge Leaderboard');
               <td><?php echo e((string) ($index + 1)); ?></td>
               <td>
                 <?php echo e($row['name']); ?>
-                <?php if ($canViewStudentIds): ?>
-                  <br><small><?php echo e($row['student_id']); ?></small>
-                <?php endif; ?>
               </td>
               <td><?php echo e($row['program']); ?></td>
               <td><?php echo e($row['rank']); ?></td>

@@ -27,8 +27,10 @@ $registrationId = $_GET['registration'] ?? '';
   <script type="application/ld+json">{"@context":"https://schema.org","@type":"EducationalOrganization","name":"YUVA Club","url":"https://www.yuvaclub.app","description":"Empowering Young Minds to Learn, Lead and Inspire."}</script>
   <link rel="icon" href="assets/logo.png" type="image/png">
   <link rel="stylesheet" href="assets/site.css?v=20260714-public-mobile-nav">
+  <link rel="stylesheet" href="assets/public-site.css?v=1">
 </head>
 <body>
+  <a class="public-skip-link" href="#main-content">Skip to main content</a>
   <header class="site-header">
     <a class="brand" href="index.html" aria-label="Yuva Club home">
       <img src="assets/logo.png" alt="Yuva Club logo" width="78" height="78">
@@ -52,7 +54,7 @@ $registrationId = $_GET['registration'] ?? '';
     </nav>
   </header>
 
-  <main>
+  <main id="main-content">
     <section class="band">
       <div class="form-shell">
         <div class="section-head">
@@ -78,22 +80,6 @@ $registrationId = $_GET['registration'] ?? '';
         <form class="form-card" action="submit-registration.php" method="post">
           <?php echo csrf_field(); ?>
           <input type="hidden" name="form_name" value="Yuva Club Registration">
-
-          <h2>Membership Path</h2>
-          <div class="field-grid">
-            <div class="field">
-              <label for="membership_type">How are you joining? *</label>
-              <select id="membership_type" name="membership_type" required>
-                <option value="individual">Individual Membership</option>
-                <option value="organization">Join an Organization</option>
-              </select>
-            </div>
-            <div class="field">
-              <label for="organization_code">Organization Invitation or Join Code</label>
-              <input id="organization_code" name="organization_code" type="text" placeholder="Enter code if provided">
-              <p class="form-note">Organization accounts are created by YUVA Club platform administrators. Students may join an organization only with an invitation or valid organization code.</p>
-            </div>
-          </div>
 
           <h2>Student Information & Contact</h2>
           <div class="field-grid">

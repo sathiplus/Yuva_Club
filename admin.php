@@ -1,6 +1,23 @@
 <?php
 require __DIR__ . '/portal-lib.php';
-$admin = require_admin([YUVA_ROLE_MASTER_ADMIN]);
+require_once __DIR__ . '/backend/repositories.php';
+require_admin();
+
+$sqlApprovalEnabled = sql_approval_enabled();
+$sqlPendingRegistrations = [];
+$sqlRegistrationListAvailable = $sqlApprovalEnabled;
+if ($sqlApprovalEnabled) {
+    try {
+        $sqlPendingRegistrations = pending_sql_registrations();
+    } catch (Throwable $error) {
+        $sqlRegistrationListAvailable = false;
+        error_log(
+            'YUVA SQL registration list failed'
+            . ' correlation=' . bin2hex(random_bytes(12))
+            . ' exception_type=' . get_class($error)
+        );
+    }
+}
 
 $students = portal_students();
 $selections = read_json_file(topic_selections_file());
@@ -13,22 +30,6 @@ $collegeSession = group_session($hub, 'senior');
 $reports = safety_reports();
 $status = $_GET['status'] ?? '';
 $scheduledMeetings = [];
-$organizationAdmins = array_map('organization_admin_public_view', organization_admin_accounts());
-$organizationOptions = organization_options();
-$organizationMemberships = organization_student_memberships();
-$organizationAuditLines = [];
-if (file_exists(security_audit_file())) {
-    $lines = file(security_audit_file(), FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) ?: [];
-    foreach (array_reverse($lines) as $line) {
-        $entry = json_decode($line, true);
-        if (is_array($entry) && (($entry['target_type'] ?? '') === 'organization_admin' || str_starts_with((string) ($entry['action'] ?? ''), 'organization_admin.'))) {
-            $organizationAuditLines[] = $entry;
-        }
-        if (count($organizationAuditLines) >= 12) {
-            break;
-        }
-    }
-}
 
 foreach ($records as $recordStudentId => $record) {
     $recordStudentId = normalize_yuva_id((string) $recordStudentId);
@@ -81,27 +82,95 @@ foreach ($records as $recordStudentId => $record) {
     ];
 }
 
-portal_header('Platform Administrator Dashboard');
-?>
-<main class="admin-dashboard">
-  <section class="band admin-dashboard-band">
-    <div class="section-head">
-      <p class="eyebrow">Platform Administrator Dashboard</p>
-      <h1>YUVA Club Records</h1>
-      <p>Manage platform-level student approvals, topics, attendance, research, service hours, certificates, safety, and configuration.</p>
-      <p><a class="button primary" href="admin-students.php">Registered Students</a> <a class="button ghost" href="leaderboard.php">Challenge Leaderboard</a> <a class="button ghost" href="portal-logout.php">Log Out</a></p>
-    </div>
+$pendingApprovalCount = $sqlRegistrationListAvailable
+    ? count($sqlPendingRegistrations)
+    : 0;
+$openSafetyReportCount = count(array_filter(
+    $reports,
+    static fn (array $report): bool =>
+        strtolower((string) ($report['status'] ?? 'Open')) !== 'closed'
+));
+$issuedCertificateCount = count(array_filter(
+    $records,
+    static fn (array $record): bool =>
+        ($record['certificate_status'] ?? 'Not Ready') === 'Issued'
+));
 
-    <nav class="admin-section-nav" aria-label="Admin dashboard sections">
-      <a href="#platform-login-settings">Login Settings</a>
-      <a href="#organization-admins">Organization Admins</a>
-      <a href="#organization-students">Organization Students</a>
-      <a href="#hub-settings">Hub Settings</a>
-      <a href="#zoom-slots">Zoom Slots</a>
-      <a href="#safety-ai">Safety & AI</a>
-      <a href="#student-records">Student Records</a>
-      <a href="leaderboard.php">Leaderboard</a>
+portal_header('Master Admin', false, ['assets/master-admin.css?v=1']);
+?>
+<a class="master-skip-link" href="#master-main">Skip to control center</a>
+<div class="master-shell">
+  <aside class="master-rail" aria-label="Master Admin navigation">
+    <a class="master-brand" href="#overview">
+      <img src="assets/logo.png" alt="">
+      <span><strong>YUVA Club</strong><small>Master Admin</small></span>
+    </a>
+    <nav class="master-nav" aria-label="Master Admin sections">
+      <a href="#overview"><span aria-hidden="true">O</span> Overview</a>
+      <a href="#organizations"><span aria-hidden="true">OR</span> Organizations</a>
+      <a href="#organization-admins"><span aria-hidden="true">OA</span> Organization Admins</a>
+      <a href="#students"><span aria-hidden="true">ST</span> Students</a>
+      <a href="#parents"><span aria-hidden="true">PA</span> Parents</a>
+      <a href="#sql-registrations"><span aria-hidden="true">AP</span> Approvals</a>
+      <a href="#certificates"><span aria-hidden="true">CE</span> Certificates</a>
+      <a href="#reports"><span aria-hidden="true">!</span> Reports</a>
+      <a href="#settings"><span aria-hidden="true">SE</span> Settings</a>
+      <a href="#system-health"><span aria-hidden="true">SH</span> System Health</a>
     </nav>
+    <a class="master-logout" href="portal-logout.php">Log out</a>
+  </aside>
+  <main class="master-main" id="master-main">
+    <header class="master-mobile-header">
+      <a class="master-mobile-brand" href="#overview"><img src="assets/yuva-symbol.png" alt=""><span>Master Admin</span></a>
+      <a class="master-mobile-action" href="portal-logout.php">Log out</a>
+    </header>
+    <section class="master-hero" id="overview">
+      <div>
+        <p class="master-kicker">System-wide control center</p>
+        <h1>Lead the whole YUVA Club platform with clarity.</h1>
+        <p>Review access, student operations, program delivery, safety, and platform readiness from one accountable workspace.</p>
+      </div>
+      <div class="master-hero-actions">
+        <a class="button primary" href="admin-students.php">Manage signup students</a>
+        <a class="button ghost" href="#sql-registrations">Review approvals</a>
+      </div>
+    </section>
+
+    <section class="master-stat-grid" aria-label="Platform overview">
+      <article><span>Students</span><strong><?php echo count($students); ?></strong><small>Current portal records</small></article>
+      <article><span>Pending approvals</span><strong><?php echo $pendingApprovalCount; ?></strong><small><?php echo $sqlApprovalEnabled ? 'SQL approval queue' : 'SQL approval is disabled'; ?></small></article>
+      <article><span>Scheduled sessions</span><strong><?php echo count($scheduledMeetings); ?></strong><small>Across both programs</small></article>
+      <article><span>Open safety reports</span><strong><?php echo $openSafetyReportCount; ?></strong><small>Require responsible review</small></article>
+    </section>
+
+    <section class="master-module-grid" aria-label="Master Admin areas">
+      <article id="organizations">
+        <span class="master-module-mark organizations" aria-hidden="true">OR</span>
+        <div><p class="master-kicker">Organizations</p><h2>Organization foundation</h2><p>The approved foundation is present. Organization management remains intentionally unavailable until its future implementation phase.</p></div>
+        <span class="master-state neutral">Foundation only</span>
+      </article>
+      <article id="organization-admins">
+        <span class="master-module-mark admins" aria-hidden="true">OA</span>
+        <div><p class="master-kicker">Organization Admins</p><h2>Role foundation</h2><p>No organization administrators are managed from this Version 2.0 control center.</p></div>
+        <span class="master-state neutral">Not configured</span>
+      </article>
+      <article id="parents">
+        <span class="master-module-mark parents" aria-hidden="true">PA</span>
+        <div><p class="master-kicker">Parents</p><h2>Parent identities</h2><p>Parent access continues through the existing linked-student workflow and preserved authentication contract.</p></div>
+        <span class="master-state ready">Operational</span>
+      </article>
+      <article id="system-health">
+        <span class="master-module-mark health" aria-hidden="true">SH</span>
+        <div><p class="master-kicker">System Health</p><h2>Current operating state</h2><p>Filesystem portal records are available. SQL registration approval is <?php echo $sqlApprovalEnabled ? 'enabled' : 'disabled'; ?>.</p></div>
+        <span class="master-state <?php echo $sqlRegistrationListAvailable ? 'ready' : 'attention'; ?>"><?php echo $sqlRegistrationListAvailable ? 'Available' : 'Attention'; ?></span>
+      </article>
+    </section>
+
+    <section class="master-workspace">
+      <div class="master-section-heading">
+        <div><p class="master-kicker">Operations</p><h2>Platform management</h2></div>
+        <p>Existing administrative workflows, reorganized without changing their behavior.</p>
+      </div>
 
     <?php if ($status === 'saved'): ?>
       <div class="form-status success">Student record saved.</div>
@@ -116,249 +185,121 @@ portal_header('Platform Administrator Dashboard');
     <?php elseif ($status === 'meeting-empty'): ?>
       <div class="form-status error">Select at least one student to remove from a scheduled meeting.</div>
     <?php elseif ($status === 'password-saved'): ?>
-      <div class="form-status success">Platform administrator login updated.</div>
+      <div class="form-status success">Admin login updated.</div>
     <?php elseif ($status === 'password-error'): ?>
-      <div class="form-status error">Platform administrator password was not updated. Check the current login and matching password fields.</div>
-    <?php elseif ($status === 'security-error'): ?>
-      <div class="form-status error">This admin form expired. Please try again.</div>
+      <div class="form-status error">Admin login was not updated. Check current login, new email, and matching password fields.</div>
     <?php elseif ($status === 'ai-reviewed'): ?>
       <div class="form-status success">AI Coach draft review created. Please review and apply it before it becomes official.</div>
     <?php elseif ($status === 'ai-applied'): ?>
       <div class="form-status success">AI Coach feedback and points were applied to the student profile.</div>
+    <?php elseif ($status === 'ai-already-applied'): ?>
+      <div class="form-status success">This AI Coach review was already applied. No additional tokens were awarded.</div>
+    <?php elseif ($status === 'ai-stale'): ?>
+      <div class="form-status error">This AI Coach review is out of date. Generate a new review before applying feedback.</div>
     <?php elseif ($status === 'ai-error'): ?>
       <div class="form-status error">AI Coach could not run. Check that OPENAI_API_KEY is configured on the server.</div>
     <?php elseif ($status === 'ai-missing'): ?>
       <div class="form-status error">AI Coach needs a student with a selected topic and submitted research.</div>
-    <?php elseif ($status === 'org-admin-invited'): ?>
-      <div class="form-status success">Organization administrator invitation was created. Check the invitation status below to confirm email delivery.</div>
-    <?php elseif ($status === 'org-admin-updated'): ?>
-      <div class="form-status success">Organization administrator account was updated.</div>
-    <?php elseif ($status === 'org-membership-archived'): ?>
-      <div class="form-status success">Organization student membership was archived. The global student account was not deleted.</div>
-    <?php elseif ($status === 'org-admin-error'): ?>
-      <div class="form-status error">Organization administrator request could not be completed.</div>
+    <?php elseif ($status === 'security-error'): ?>
+      <div class="form-status error">This form expired. Please try again.</div>
+    <?php elseif ($status === 'sql-registration-approved'): ?>
+      <div class="form-status success">Registration approved successfully.</div>
+    <?php elseif ($status === 'sql-registration-unavailable'): ?>
+      <div class="form-status error">Registration approval is unavailable.</div>
+    <?php elseif ($status === 'sql-registration-invalid'): ?>
+      <div class="form-status error">Invalid request.</div>
+    <?php elseif ($status === 'sql-registration-error'): ?>
+      <div class="form-status error">Registration could not be approved.</div>
     <?php endif; ?>
 
-    <form id="platform-login-settings" class="form-card" action="admin-password-actions.php" method="post">
-      <?php echo csrf_field(); ?>
-      <h2>Platform Administrator Login Settings</h2>
+    <section class="form-card master-panel" id="sql-registrations">
+      <div class="master-panel-heading"><div><p class="master-kicker">Approvals</p><h2>Pending Azure SQL registrations</h2></div><span class="master-count"><?php echo $pendingApprovalCount; ?></span></div>
+      <?php if (!$sqlApprovalEnabled || !$sqlRegistrationListAvailable): ?>
+        <p class="form-note">Registration approval is unavailable.</p>
+      <?php elseif ($sqlPendingRegistrations === []): ?>
+        <p class="form-note">No pending Azure SQL registrations.</p>
+      <?php else: ?>
+        <div class="portal-table-wrap">
+          <table class="portal-table">
+            <thead>
+              <tr>
+                <th>Student</th>
+                <th>Submitted</th>
+                <th>Program</th>
+                <th>School</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <?php foreach ($sqlPendingRegistrations as $registration): ?>
+                <?php
+                  $registrationName = trim(
+                      (string) ($registration['student_first_name'] ?? '')
+                      . ' '
+                      . (string) ($registration['student_last_name'] ?? '')
+                  );
+                ?>
+                <tr>
+                  <td>
+                    <strong><?php echo e($registrationName); ?></strong>
+                    <?php if (($registration['preferred_name'] ?? '') !== ''): ?>
+                      <br><span>Preferred: <?php echo e((string) $registration['preferred_name']); ?></span>
+                    <?php endif; ?>
+                    <?php if (($registration['grade'] ?? '') !== ''): ?>
+                      <br><span>Grade: <?php echo e((string) $registration['grade']); ?></span>
+                    <?php endif; ?>
+                  </td>
+                  <td><?php echo e((string) ($registration['submitted_at'] ?? '')); ?></td>
+                  <td><?php echo e((string) ($registration['program_name'] ?? 'Unassigned')); ?></td>
+                  <td><?php echo e((string) ($registration['school'] ?? '')); ?></td>
+                  <td><?php echo e((string) ($registration['status'] ?? '')); ?></td>
+                  <td>
+                    <form action="admin-registration-approve.php" method="post">
+                      <?php echo csrf_field(); ?>
+                      <input type="hidden" name="registration_id" value="<?php echo e((string) ($registration['id'] ?? '')); ?>">
+                      <button class="button primary" type="submit">Approve Registration</button>
+                    </form>
+                  </td>
+                </tr>
+              <?php endforeach; ?>
+            </tbody>
+          </table>
+        </div>
+      <?php endif; ?>
+    </section>
+
+    <form class="form-card master-panel" id="settings" action="admin-password-actions.php" method="post">
+      <p class="master-kicker">Settings</p>
+      <h2>Master Admin login</h2>
       <div class="field-grid">
         <div class="field">
-          <label for="current_email">Current Platform Administrator Email *</label>
-          <input id="current_email" name="current_email" type="email" required value="<?php echo e(YUVA_PLATFORM_ADMIN_EMAIL); ?>" readonly>
+          <label for="current_email">Current Admin Email *</label>
+          <input id="current_email" name="current_email" type="email" required value="<?php echo e($_SESSION['admin_email'] ?? 'admin@karmabro.com'); ?>">
         </div>
         <div class="field">
           <label for="current_password">Current Password *</label>
           <input id="current_password" name="current_password" type="password" required>
         </div>
         <div class="field">
+          <label for="new_email">New Admin Email *</label>
+          <input id="new_email" name="new_email" type="email" required value="<?php echo e($_SESSION['admin_email'] ?? 'admin@karmabro.com'); ?>">
+        </div>
+        <div class="field">
           <label for="new_password">New Password *</label>
-          <input id="new_password" name="new_password" type="password" required minlength="12">
+          <input id="new_password" name="new_password" type="password" required minlength="8">
         </div>
         <div class="field">
           <label for="confirm_password">Confirm New Password *</label>
-          <input id="confirm_password" name="confirm_password" type="password" required minlength="12">
+          <input id="confirm_password" name="confirm_password" type="password" required minlength="8">
         </div>
       </div>
-      <button class="button primary" type="submit">Update Platform Administrator Login</button>
+      <button class="button primary" type="submit">Update Admin Login</button>
     </form>
 
-    <section id="organization-admins" class="form-card">
-      <h2>Organization Administrator Invitations</h2>
-      <p>Create and manage invitation-only organization administrator accounts. Passwords are created only by invited administrators through secure email links.</p>
-      <form action="admin-organization-admin-actions.php" method="post">
-        <?php echo csrf_field(); ?>
-        <input type="hidden" name="action" value="invite">
-        <div class="field-grid">
-          <div class="field">
-            <label for="organization_id">Organization *</label>
-            <input id="organization_id" name="organization_id" type="text" required list="organization_ids" placeholder="Example: SSP-NY">
-            <datalist id="organization_ids">
-              <?php foreach ($organizationOptions as $option): ?>
-                <option value="<?php echo e($option); ?>"></option>
-              <?php endforeach; ?>
-            </datalist>
-          </div>
-          <div class="field">
-            <label for="org_admin_full_name">Admin Full Name *</label>
-            <input id="org_admin_full_name" name="full_name" type="text" required maxlength="160">
-          </div>
-          <div class="field">
-            <label for="org_admin_email">Admin Email *</label>
-            <input id="org_admin_email" name="email" type="email" required autocomplete="off">
-          </div>
-          <div class="field">
-            <label for="org_admin_role">Role *</label>
-            <select id="org_admin_role" name="role" required>
-              <option value="<?php echo e(YUVA_ROLE_ORGANIZATION_ADMIN); ?>">Organization Admin</option>
-            </select>
-          </div>
-          <div class="field">
-            <label for="org_admin_status">Status *</label>
-            <select id="org_admin_status" name="status" required>
-              <option value="pending_invitation">Pending Invitation</option>
-              <option value="suspended">Suspended</option>
-            </select>
-          </div>
-        </div>
-        <button class="button primary" type="submit">Send Invitation</button>
-      </form>
-    </section>
-
-    <section class="form-card">
-      <h2>Organization Administrator Accounts</h2>
-      <?php if ($organizationAdmins === []): ?>
-        <p>No organization administrator accounts have been invited yet.</p>
-      <?php else: ?>
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Email</th>
-                <th>Organization</th>
-                <th>Status</th>
-                <th>Invitation</th>
-                <th>Last Login</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              <?php foreach ($organizationAdmins as $account): ?>
-                <?php $accountEmail = normalize_email((string) ($account['email'] ?? '')); ?>
-                <tr>
-                  <td><?php echo e((string) ($account['full_name'] ?? '')); ?></td>
-                  <td><?php echo e($accountEmail); ?></td>
-                  <td><?php echo e((string) ($account['organization_id'] ?? '')); ?></td>
-                  <td><?php echo e((string) ($account['status'] ?? '')); ?></td>
-                  <td><?php echo e((string) ($account['invitation_status'] ?? '')); ?></td>
-                  <td><?php echo e(display_eastern_time((string) ($account['last_login_at'] ?? '')) ?: 'Never'); ?></td>
-                  <td>
-                    <form action="admin-organization-admin-actions.php" method="post" class="inline-form">
-                      <?php echo csrf_field(); ?>
-                      <input type="hidden" name="email" value="<?php echo e($accountEmail); ?>">
-                      <button class="button ghost" name="action" value="resend" type="submit">Resend</button>
-                      <button class="button ghost" name="action" value="password_reset" type="submit">Reset Link</button>
-                      <?php if (($account['status'] ?? '') === 'suspended'): ?>
-                        <button class="button ghost" name="action" value="reactivate" type="submit">Reactivate</button>
-                      <?php else: ?>
-                        <button class="button ghost" name="action" value="suspend" type="submit">Suspend</button>
-                      <?php endif; ?>
-                    </form>
-                    <form action="admin-organization-admin-actions.php" method="post" class="inline-form">
-                      <?php echo csrf_field(); ?>
-                      <input type="hidden" name="action" value="assignment">
-                      <input type="hidden" name="email" value="<?php echo e($accountEmail); ?>">
-                      <input name="organization_id" type="text" required value="<?php echo e((string) ($account['organization_id'] ?? '')); ?>" list="organization_ids">
-                      <button class="button ghost" type="submit">Change Org</button>
-                    </form>
-                    <form action="admin-organization-admin-actions.php" method="post" class="inline-form" onsubmit="return confirm('Delete this organization admin account? This removes the admin login and pending tokens, but does not delete the organization or students.');">
-                      <?php echo csrf_field(); ?>
-                      <input type="hidden" name="email" value="<?php echo e($accountEmail); ?>">
-                      <button class="button ghost" name="action" value="delete_account" type="submit">Delete Account</button>
-                    </form>
-                  </td>
-                </tr>
-              <?php endforeach; ?>
-            </tbody>
-          </table>
-        </div>
-      <?php endif; ?>
-    </section>
-
-    <section id="organization-students" class="form-card">
-      <h2>Organization Student Membership Cleanup</h2>
-      <p class="form-note">Use this to remove test students from an organization. This archives only the organization membership and does not delete the student's global YUVA account, YUVA ID, certificates, portfolio, or history.</p>
-      <?php if ($organizationMemberships === []): ?>
-        <p>No organization student memberships have been created yet.</p>
-      <?php else: ?>
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Organization</th>
-                <th>Student</th>
-                <th>Status</th>
-                <th>Source</th>
-                <th>Updated</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              <?php foreach ($organizationMemberships as $membershipKey => $membership): ?>
-                <?php
-                  if (!is_array($membership)) {
-                      continue;
-                  }
-                  $studentId = normalize_yuva_id((string) ($membership['student_id'] ?? ''));
-                  $student = $studentId !== '' ? ($students[$studentId] ?? []) : [];
-                  $studentLabel = $student !== [] ? student_display_name($student) . ' / ' . $studentId : 'Invited Student';
-                  $studentEmail = normalize_email((string) ($membership['student_email'] ?? ($student['Student Email'] ?? '')));
-                ?>
-                <tr>
-                  <td><?php echo e((string) ($membership['organization_id'] ?? '')); ?></td>
-                  <td>
-                    <strong><?php echo e($studentLabel); ?></strong><br>
-                    <?php echo e($studentEmail); ?>
-                  </td>
-                  <td><?php echo e((string) ($membership['status'] ?? '')); ?></td>
-                  <td><?php echo e((string) ($membership['source'] ?? '')); ?></td>
-                  <td><?php echo e(display_eastern_time((string) ($membership['updated_at'] ?? ''))); ?></td>
-                  <td>
-                    <?php if (($membership['status'] ?? '') === 'Archived'): ?>
-                      Archived
-                    <?php else: ?>
-                      <form action="admin-organization-student-actions.php" method="post" class="inline-form" onsubmit="return confirm('Archive this organization membership? The global student account will not be deleted.');">
-                        <?php echo csrf_field(); ?>
-                        <input type="hidden" name="action" value="archive_membership">
-                        <input type="hidden" name="membership_key" value="<?php echo e((string) $membershipKey); ?>">
-                        <button class="button ghost" type="submit">Remove From Organization</button>
-                      </form>
-                    <?php endif; ?>
-                  </td>
-                </tr>
-              <?php endforeach; ?>
-            </tbody>
-          </table>
-        </div>
-      <?php endif; ?>
-    </section>
-
-    <section class="form-card">
-      <h2>Organization Administrator Audit History</h2>
-      <?php if ($organizationAuditLines === []): ?>
-        <p>No organization administrator audit events have been recorded yet.</p>
-      <?php else: ?>
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Time</th>
-                <th>Actor</th>
-                <th>Action</th>
-                <th>Target</th>
-                <th>Result</th>
-              </tr>
-            </thead>
-            <tbody>
-              <?php foreach ($organizationAuditLines as $entry): ?>
-                <tr>
-                  <td><?php echo e(display_eastern_time((string) ($entry['timestamp'] ?? ''))); ?></td>
-                  <td><?php echo e((string) ($entry['actor_user_id'] ?? '')); ?></td>
-                  <td><?php echo e((string) ($entry['action'] ?? '')); ?></td>
-                  <td><?php echo e((string) ($entry['target_id'] ?? '')); ?></td>
-                  <td><?php echo !empty($entry['success']) ? 'Success' : 'Failed'; ?></td>
-                </tr>
-              <?php endforeach; ?>
-            </tbody>
-          </table>
-        </div>
-      <?php endif; ?>
-    </section>
-
-    <form id="hub-settings" class="form-card" action="admin-hub-actions.php" method="post">
-      <?php echo csrf_field(); ?>
-      <h2>Portal Hub Settings</h2>
+    <form class="form-card master-panel" action="admin-hub-actions.php" method="post">
+      <p class="master-kicker">Program delivery</p>
+      <h2>Portal hub settings</h2>
       <h2>School Yuva Session (Ages 13-17)</h2>
       <div class="field-grid">
         <div class="field">
@@ -391,7 +332,7 @@ portal_header('Platform Administrator Dashboard');
         </div>
         <div class="field">
           <label for="junior_zoom_meeting_id">Zoom Meeting ID</label>
-          <input id="junior_zoom_meeting_id" name="junior_zoom_meeting_id" type="text" value="<?php echo e($schoolSession['zoom_meeting_id']); ?>" placeholder="820 9486 5538">
+          <input id="junior_zoom_meeting_id" name="junior_zoom_meeting_id" type="text" value="<?php echo e($schoolSession['zoom_meeting_id']); ?>" placeholder="Zoom meeting ID">
         </div>
         <div class="field">
           <label for="junior_zoom_password">Zoom Password</label>
@@ -434,7 +375,7 @@ portal_header('Platform Administrator Dashboard');
         </div>
         <div class="field">
           <label for="senior_zoom_meeting_id">Zoom Meeting ID</label>
-          <input id="senior_zoom_meeting_id" name="senior_zoom_meeting_id" type="text" value="<?php echo e($collegeSession['zoom_meeting_id']); ?>" placeholder="820 9486 5538">
+          <input id="senior_zoom_meeting_id" name="senior_zoom_meeting_id" type="text" value="<?php echo e($collegeSession['zoom_meeting_id']); ?>" placeholder="Zoom meeting ID">
         </div>
         <div class="field">
           <label for="senior_zoom_password">Zoom Password</label>
@@ -460,9 +401,8 @@ portal_header('Platform Administrator Dashboard');
       <button class="button primary" type="submit">Save Hub Settings</button>
     </form>
 
-    <div id="zoom-slots" class="two-grid">
-      <form class="form-card" action="admin-bulk-session-actions.php" method="post">
-        <?php echo csrf_field(); ?>
+    <div class="two-grid master-schedule-grid">
+      <form class="form-card master-panel" action="admin-bulk-session-actions.php" method="post">
         <h2>Bulk Assign School Yuva Zoom Slot</h2>
         <div class="field-grid">
           <div class="field">
@@ -495,7 +435,7 @@ portal_header('Platform Administrator Dashboard');
           </div>
           <div class="field">
             <label>Zoom Meeting ID</label>
-            <input name="student_zoom_meeting_id" type="text" value="<?php echo e($schoolSession['zoom_meeting_id']); ?>" placeholder="820 9486 5538">
+            <input name="student_zoom_meeting_id" type="text" value="<?php echo e($schoolSession['zoom_meeting_id']); ?>" placeholder="Zoom meeting ID">
           </div>
           <div class="field">
             <label>Zoom Password</label>
@@ -514,8 +454,7 @@ portal_header('Platform Administrator Dashboard');
         <button class="button primary" type="submit">Assign School Yuva Slot</button>
       </form>
 
-      <form class="form-card" action="admin-bulk-session-actions.php" method="post">
-        <?php echo csrf_field(); ?>
+      <form class="form-card master-panel" action="admin-bulk-session-actions.php" method="post">
         <h2>Bulk Assign College Yuva Zoom Slot</h2>
         <div class="field-grid">
           <div class="field">
@@ -548,7 +487,7 @@ portal_header('Platform Administrator Dashboard');
           </div>
           <div class="field">
             <label>Zoom Meeting ID</label>
-            <input name="student_zoom_meeting_id" type="text" value="<?php echo e($collegeSession['zoom_meeting_id']); ?>" placeholder="820 9486 5538">
+            <input name="student_zoom_meeting_id" type="text" value="<?php echo e($collegeSession['zoom_meeting_id']); ?>" placeholder="Zoom meeting ID">
           </div>
           <div class="field">
             <label>Zoom Password</label>
@@ -568,7 +507,7 @@ portal_header('Platform Administrator Dashboard');
       </form>
     </div>
 
-    <section class="form-card">
+    <section class="form-card master-panel">
       <h2>Scheduled Meetings</h2>
       <p class="form-note">Students appear here after you assign them with the School Yuva or College Yuva bulk assignment forms. Remove selected students from a meeting without deleting their registration.</p>
       <?php if ($scheduledMeetings === []): ?>
@@ -577,7 +516,6 @@ portal_header('Platform Administrator Dashboard');
         <div class="meeting-list">
           <?php foreach ($scheduledMeetings as $meeting): ?>
             <form class="meeting-card" action="admin-meeting-actions.php" method="post">
-              <?php echo csrf_field(); ?>
               <h3><?php echo e($meeting['title'] ?: 'Yuva Club Session'); ?></h3>
               <p><strong>Date:</strong> <?php echo e($meeting['date'] ?: 'Not set'); ?></p>
               <p><strong>Time:</strong> <?php echo e($meeting['start'] ?: '--:--'); ?> - <?php echo e($meeting['end'] ?: '--:--'); ?></p>
@@ -604,8 +542,9 @@ portal_header('Platform Administrator Dashboard');
       <?php endif; ?>
     </section>
 
-    <section id="safety-ai" class="form-card">
-      <h2>Safety Reports</h2>
+    <section class="form-card master-panel" id="reports">
+      <p class="master-kicker">Reports</p>
+      <h2>Safety reports</h2>
       <p class="form-note">Reports submitted from the student app dashboard. Follow up with the parent or student outside the app as needed.</p>
       <?php if ($reports === []): ?>
         <p>No student safety reports yet.</p>
@@ -642,8 +581,9 @@ portal_header('Platform Administrator Dashboard');
       <?php endif; ?>
     </section>
 
-    <section class="form-card">
-      <h2>AI Coach Reviews</h2>
+    <section class="form-card master-panel">
+      <p class="master-kicker">Review workflow</p>
+      <h2>AI Mentor reviews</h2>
       <p class="form-note">Run AI Coach after a student has selected a topic and submitted research. AI creates a draft score and feedback; admin must apply it before it becomes official.</p>
       <div class="portal-table-wrap">
         <table class="portal-table compact-table">
@@ -721,8 +661,11 @@ portal_header('Platform Administrator Dashboard');
       </div>
     </section>
 
-    <div id="student-records" class="portal-table-wrap">
-      <table class="portal-table student-record-table">
+    <section class="master-panel master-student-panel" id="students">
+      <div class="master-panel-heading" id="certificates"><div><p class="master-kicker">Students / Certificates</p><h2>Student records and recognition</h2></div><span class="master-count"><?php echo $issuedCertificateCount; ?> issued</span></div>
+      <p class="form-note">Manage existing student records, progress evidence, approvals, sessions, and certificate status.</p>
+    <div class="portal-table-wrap">
+      <table class="portal-table">
         <thead>
           <tr>
             <th>Student</th>
@@ -751,7 +694,6 @@ portal_header('Platform Administrator Dashboard');
               </td>
               <td>
                 <form id="admin-form-<?php echo e($studentId); ?>" action="admin-actions.php" method="post">
-                  <?php echo csrf_field(); ?>
                   <input type="hidden" name="student_id" value="<?php echo e($studentId); ?>">
                   <div class="field">
                     <label>Topic Status</label>
@@ -997,7 +939,7 @@ portal_header('Platform Administrator Dashboard');
                   </div>
                   <div class="field">
                     <label>Student Zoom Meeting ID</label>
-                    <input name="student_zoom_meeting_id" type="text" value="<?php echo e($record['student_zoom_meeting_id'] ?? ''); ?>" placeholder="820 9486 5538">
+                    <input name="student_zoom_meeting_id" type="text" value="<?php echo e($record['student_zoom_meeting_id'] ?? ''); ?>" placeholder="Zoom meeting ID">
                   </div>
                   <div class="field">
                     <label>Student Zoom Password</label>
@@ -1029,6 +971,15 @@ portal_header('Platform Administrator Dashboard');
         </tbody>
       </table>
     </div>
-  </section>
-</main>
+    </section>
+    </section>
+  </main>
+  <nav class="master-bottom-nav" aria-label="Master Admin mobile navigation">
+    <a href="#overview"><span aria-hidden="true">O</span>Overview</a>
+    <a href="#students"><span aria-hidden="true">ST</span>Students</a>
+    <a href="#sql-registrations"><span aria-hidden="true">AP</span>Approvals</a>
+    <a href="#reports"><span aria-hidden="true">!</span>Reports</a>
+    <a href="#settings"><span aria-hidden="true">SE</span>Settings</a>
+  </nav>
+</div>
 <?php portal_footer(); ?>

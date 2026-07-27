@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 380 280" role="img" aria-label="">
+  <defs><linearGradient id="medal" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#ffd057"/><stop offset="1" stop-color="#f07715"/></linearGradient><linearGradient id="ribbon" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#9b6cff"/><stop offset="1" stop-color="#5530cc"/></linearGradient><filter id="s"><feDropShadow dx="0" dy="15" stdDeviation="14" flood-color="#020829" flood-opacity=".45"/></filter></defs>
+  <ellipse cx="205" cy="246" rx="125" ry="20" fill="#030a2b" opacity=".42"/>
+  <g filter="url(#s)"><path d="m139 26 52 9-19 98-51-9Z" fill="url(#ribbon)"/><path d="m191 35 52-9 18 98-51 9Z" fill="#2ecdb2"/><circle cx="191" cy="154" r="78" fill="url(#medal)"/><circle cx="191" cy="154" r="60" fill="none" stroke="#fff0b2" stroke-width="7" opacity=".7"/><path d="m191 109 13 27 30 4-22 21 6 30-27-15-27 15 6-30-22-21 30-4Z" fill="#fff6cf"/></g>
+  <rect x="271" y="95" width="86" height="112" rx="12" fill="#f8fbff" transform="rotate(8 314 151)" opacity=".94"/><path d="M286 123h49M286 139h42M286 164h53" stroke="#7762d9" stroke-width="6" stroke-linecap="round" transform="rotate(8 314 151)" opacity=".58"/>
+  <path d="m68 57 6 14 14 6-14 6-6 14-6-14-14-6 14-6Z" fill="#42dfc8"/><path d="m320 39 5 11 11 5-11 5-5 11-5-11-11-5 11-5Z" fill="#ffb020"/><circle cx="73" cy="188" r="7" fill="#8d68ee"/>
+</svg>

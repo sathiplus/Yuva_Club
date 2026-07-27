@@ -20,7 +20,10 @@ function token_hash(string $token): string {
 }
 
 function find_user_by_email(string $email): ?array {
-    $stmt = db()->prepare('SELECT * FROM users WHERE email = :email LIMIT 1');
+    $sql = db_is_sqlsrv()
+        ? 'SELECT TOP (1) * FROM users WHERE email = :email'
+        : 'SELECT * FROM users WHERE email = :email LIMIT 1';
+    $stmt = db()->prepare($sql);
     $stmt->execute(['email' => strtolower(trim($email))]);
     $user = $stmt->fetch();
     return is_array($user) ? $user : null;
@@ -30,14 +33,25 @@ function create_user_account(string $email, string $role, string $displayName, ?
     $hash = $password !== null && $password !== '' ? password_hash_secure($password) : null;
     $verifyToken = random_token();
 
-    $stmt = db()->prepare(
-        'INSERT INTO users (
+    $sql = db_is_sqlsrv()
+        ? 'INSERT INTO users (
+            email, password_hash, role, display_name, status,
+            email_verification_token_hash, email_verification_expires_at
+        )
+        OUTPUT INSERTED.id
+        VALUES (
+            :email, :password_hash, :role, :display_name, :status,
+            :token_hash, DATEADD(HOUR, 48, SYSUTCDATETIME())
+        )'
+        : 'INSERT INTO users (
             email, password_hash, role, display_name, status,
             email_verification_token_hash, email_verification_expires_at
         ) VALUES (
             :email, :password_hash, :role, :display_name, :status,
             :token_hash, DATE_ADD(UTC_TIMESTAMP(), INTERVAL 48 HOUR)
-        )'
+        )';
+    $stmt = db()->prepare(
+        $sql
     );
     $stmt->execute([
         'email' => strtolower(trim($email)),
@@ -48,7 +62,7 @@ function create_user_account(string $email, string $role, string $displayName, ?
         'token_hash' => token_hash($verifyToken),
     ]);
 
-    return (int) db()->lastInsertId();
+    return db_inserted_id(db(), $stmt);
 }
 
 function login_user(string $email, string $password): ?array {
@@ -65,7 +79,9 @@ function login_user(string $email, string $password): ?array {
         return null;
     }
 
-    $stmt = db()->prepare('UPDATE users SET last_login_at = UTC_TIMESTAMP() WHERE id = :id');
+    $stmt = db()->prepare(
+        'UPDATE users SET last_login_at = ' . db_now_sql() . ' WHERE id = :id'
+    );
     $stmt->execute(['id' => $user['id']]);
 
     return $user;
