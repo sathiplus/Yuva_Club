@@ -822,12 +822,12 @@ function complete_password_reset(string $token, string $password): bool {
     }
 
     $accountType = (string) ($record['account_type'] ?? '');
-    $accountKey = (string) ($record['account_key'] ?? '');
+    $accountIdentifier = (string) ($record['account_key'] ?? '');
     $email = normalize_email((string) ($record['email'] ?? ''));
     $ok = false;
 
     if ($accountType === 'student') {
-        $studentId = normalize_yuva_id($accountKey);
+        $studentId = normalize_yuva_id($accountIdentifier);
         $accounts = student_accounts();
         if (is_array($accounts[$studentId] ?? null)) {
             $accounts[$studentId]['password_hash'] = password_hash($password, PASSWORD_DEFAULT);
@@ -860,7 +860,7 @@ function complete_password_reset(string $token, string $password): bool {
     }
 
     if (!$ok) {
-        audit_log_event(null, (string) ($record['role'] ?? YUVA_ROLE_STUDENT), $record['organization_id'] ?? null, 'password_reset.complete', 'account', $email !== '' ? $email : $accountKey, false, ['account_type' => $accountType]);
+        audit_log_event(null, (string) ($record['role'] ?? YUVA_ROLE_STUDENT), $record['organization_id'] ?? null, 'password_reset.complete', 'account', $email !== '' ? $email : $accountIdentifier, false, ['account_type' => $accountType]);
         return false;
     }
 
@@ -872,12 +872,12 @@ function complete_password_reset(string $token, string $password): bool {
     }
 
     audit_log_event(
-        $accountType === 'parent' ? parent_actor_id($email) : ($accountType === 'student' ? normalize_yuva_id($accountKey) : admin_actor_id($email)),
+        $accountType === 'parent' ? parent_actor_id($email) : ($accountType === 'student' ? normalize_yuva_id($accountIdentifier) : admin_actor_id($email)),
         (string) ($record['role'] ?? YUVA_ROLE_STUDENT),
         $record['organization_id'] ?? null,
         'password_reset.complete',
         'account',
-        $accountType === 'student' ? normalize_yuva_id($accountKey) : $email,
+        $accountType === 'student' ? normalize_yuva_id($accountIdentifier) : $email,
         true,
         ['account_type' => $accountType]
     );
