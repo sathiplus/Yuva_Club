@@ -2510,8 +2510,7 @@ function require_student(): array {
 function admin_password_matches(string $email, string $password): bool {
     $credentials = admin_credentials();
     $email = normalize_email($email);
-    return $email === YUVA_PLATFORM_ADMIN_EMAIL
-        && $email === normalize_email((string) ($credentials['email'] ?? ''))
+    return $email === normalize_email((string) ($credentials['email'] ?? ''))
         && hash_equals((string) ($credentials['password_hash'] ?? ''), password_hash_for_admin($password));
 }
 
