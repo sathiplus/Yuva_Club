@@ -56,6 +56,32 @@ function app_config(): array {
                 'PORTAL_AUTH_MODE',
                 'filesystem'
             )),
+            'ai_mentor' => [
+                'foundation_enabled' => env_bool(
+                    'AI_MENTOR_FOUNDATION_ENABLED',
+                    true
+                ),
+                'coach_me_enabled' => env_bool(
+                    'AI_MENTOR_COACH_ME_ENABLED',
+                    false
+                ),
+                'media_analysis_enabled' => env_bool(
+                    'AI_MENTOR_MEDIA_ANALYSIS_ENABLED',
+                    false
+                ),
+                'weekly_reports_enabled' => env_bool(
+                    'AI_MENTOR_WEEKLY_REPORTS_ENABLED',
+                    false
+                ),
+                'guided_mentor_enabled' => env_bool(
+                    'AI_MENTOR_GUIDED_MENTOR_ENABLED',
+                    false
+                ),
+                'premium_entitlement_enabled' => env_bool(
+                    'AI_MENTOR_PREMIUM_ENTITLEMENT_ENABLED',
+                    false
+                ),
+            ],
             'sql_approval_enabled' => env_bool(
                 'SQL_APPROVAL_ENABLED',
                 false
@@ -94,6 +120,11 @@ function portal_auth_mode(): string {
         throw new RuntimeException('Unsupported PORTAL_AUTH_MODE value.');
     }
     return $mode;
+}
+
+function ai_mentor_feature_enabled(string $capability): bool {
+    $features = app_config()['features']['ai_mentor'] ?? [];
+    return is_array($features) && ($features[$capability] ?? false) === true;
 }
 
 function staging_test_fixture_config(): ?array {

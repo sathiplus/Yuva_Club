@@ -11,6 +11,15 @@ require_once __DIR__ . '/backend/authentication/AuthenticationService.php';
 require_once __DIR__ . '/backend/authentication/LoginThrottle.php';
 require_once __DIR__ . '/backend/authentication/StudentLoginWorkflow.php';
 require_once __DIR__ . '/backend/authentication/ParentLoginWorkflow.php';
+require_once __DIR__ . '/backend/ai/AiProvider.php';
+require_once __DIR__ . '/backend/ai/AiPromptCatalog.php';
+require_once __DIR__ . '/backend/ai/AiReviewValidator.php';
+require_once __DIR__ . '/backend/ai/AiReviewState.php';
+require_once __DIR__ . '/backend/ai/AiReviewRepository.php';
+require_once __DIR__ . '/backend/ai/OpenAiResponsesProvider.php';
+require_once __DIR__ . '/backend/ai/AiMentorService.php';
+require_once __DIR__ . '/backend/submission/ResearchUploadValidator.php';
+require_once __DIR__ . '/backend/submission/ResearchSubmissionState.php';
 
 $configuredAppUrl = app_url();
 $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
@@ -2801,54 +2810,43 @@ function openai_model_name(): string {
     return 'gpt-4.1-mini';
 }
 
-function ai_review_prompt(array $student, array $selection, array $research): string {
-    $studentName = student_display_name($student);
-    $category = $selection['topic_category'] ?? 'Not selected';
-    $title = $selection['topic_title'] ?? 'Not selected';
-    $notes = $research['research_notes'] ?? '';
-    $sources = $research['sources_used'] ?? '';
-    $outline = $research['presentation_outline'] ?? '';
-    $questions = $research['prepared_questions'] ?? '';
-
-    return <<<PROMPT
-You are the Yuva Club AI Coach. Review this student's research submission for a youth presentation program.
-
-Audience: students ages 8-18. Be encouraging, specific, and safe. Do not compare the student to other students. Do not shame the student. Do not infer sensitive traits.
-
-Student: {$studentName}
-Topic category: {$category}
-Topic title: {$title}
-
-Research notes:
-{$notes}
-
-Sources used:
-{$sources}
-
-Presentation outline:
-{$outline}
-
-Questions prepared:
-{$questions}
-
-Return only valid JSON with these keys:
-{
-  "research_quality": 0-20,
-  "presentation_structure": 0-20,
-  "topic_understanding": 0-20,
-  "discussion_questions": 0-15,
-  "leadership_lesson": 0-15,
-  "effort_and_readiness": 0-10,
-  "total_points": 0-100,
-  "summary": "2-3 sentence encouraging summary",
-  "strengths": ["strength 1", "strength 2", "strength 3"],
-  "improvements": ["improvement 1", "improvement 2", "improvement 3"],
-  "communication_skills": "short note about clarity, organization, and speaking preparation",
-  "leadership_milestones": "short milestone-style note",
-  "suggested_tokens": 0-4,
-  "admin_notes": "short note for adult reviewer"
+function ai_review_repository(): \YuvaClub\AI\AiReviewRepository {
+    return new \YuvaClub\AI\AiReviewRepository(
+        static fn(): array => ai_reviews(),
+        static function (array $records): void {
+            write_json_file(ai_reviews_file(), $records);
+        }
+    );
 }
-PROMPT;
+
+function ai_mentor_service(
+    ?\YuvaClub\AI\AiProvider $provider = null
+): \YuvaClub\AI\AiMentorService {
+    $provider ??= new \YuvaClub\AI\OpenAiResponsesProvider(
+        openai_api_key(),
+        openai_model_name()
+    );
+    return new \YuvaClub\AI\AiMentorService(
+        $provider,
+        new \YuvaClub\AI\AiPromptCatalog(),
+        new \YuvaClub\AI\AiReviewValidator(),
+        ai_review_repository()
+    );
+}
+
+function ai_review_state(bool $hasResearch, array $reviewRecord): string {
+    return \YuvaClub\AI\AiReviewState::fromRuntime(
+        $hasResearch,
+        $reviewRecord
+    );
+}
+
+function ai_review_prompt(array $student, array $selection, array $research): string {
+    return (new \YuvaClub\AI\AiPromptCatalog())->researchReview(
+        $student,
+        $selection,
+        $research
+    );
 }
 
 function extract_response_text(array $response): string {
@@ -2869,81 +2867,7 @@ function extract_response_text(array $response): string {
 }
 
 function ai_review_research_submission(array $student, array $selection, array $research): array {
-    $apiKey = openai_api_key();
-    if ($apiKey === '') {
-        return [
-            'ok' => false,
-            'error' => 'OPENAI_API_KEY is not configured on the server.',
-        ];
-    }
-
-    $payload = [
-        'model' => openai_model_name(),
-        'input' => [
-            [
-                'role' => 'system',
-                'content' => 'You are a child-safe educational coach. Return only valid JSON.',
-            ],
-            [
-                'role' => 'user',
-                'content' => ai_review_prompt($student, $selection, $research),
-            ],
-        ],
-        'text' => [
-            'format' => [
-                'type' => 'json_object',
-            ],
-        ],
-    ];
-
-    $ch = curl_init('https://api.openai.com/v1/responses');
-    if ($ch === false) {
-        return ['ok' => false, 'error' => 'Could not initialize cURL.'];
-    }
-
-    curl_setopt_array($ch, [
-        CURLOPT_POST => true,
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_TIMEOUT => 45,
-        CURLOPT_HTTPHEADER => [
-            'Content-Type: application/json',
-            'Authorization: Bearer ' . $apiKey,
-        ],
-        CURLOPT_POSTFIELDS => json_encode($payload),
-    ]);
-
-    $raw = curl_exec($ch);
-    $status = (int) curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
-    $curlError = curl_error($ch);
-    curl_close($ch);
-
-    if ($raw === false || $curlError !== '') {
-        return ['ok' => false, 'error' => 'OpenAI request failed: ' . $curlError];
-    }
-
-    $response = json_decode((string) $raw, true);
-    if (!is_array($response)) {
-        return ['ok' => false, 'error' => 'OpenAI returned an unreadable response.'];
-    }
-
-    if ($status < 200 || $status >= 300) {
-        $message = $response['error']['message'] ?? ('OpenAI returned HTTP ' . $status);
-        return ['ok' => false, 'error' => (string) $message];
-    }
-
-    $text = extract_response_text($response);
-    $review = json_decode($text, true);
-    if (!is_array($review)) {
-        return ['ok' => false, 'error' => 'AI response was not valid JSON.'];
-    }
-
-    $review['total_points'] = max(0, min(100, (int) ($review['total_points'] ?? 0)));
-    $review['suggested_tokens'] = max(0, min(4, (int) ($review['suggested_tokens'] ?? intdiv($review['total_points'], 25))));
-
-    return [
-        'ok' => true,
-        'review' => $review,
-    ];
+    return ai_mentor_service()->reviewResearch($student, $selection, $research);
 }
 
 function leadership_level(array $record): string {
@@ -3024,7 +2948,7 @@ function student_app_navigation(string $className, string $label): string {
     return $html . '</nav>';
 }
 
-function portal_header(string $title, bool $studentApp = false, array $localStylesheets = []): void {
+function portal_header(string $title, bool $studentApp = false, array $localStylesheets = [], bool $horizonPublic = false): void {
     echo '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">';
     echo '<title>' . e($title) . ' | Yuva Club</title>';
     echo '<meta name="description" content="Yuva Club student leadership portal.">';
@@ -3059,7 +2983,8 @@ function portal_header(string $title, bool $studentApp = false, array $localStyl
     if ($studentApp) {
         echo '<script src="assets/student-app.js?v=1" defer></script>';
     }
-    echo '</head><body' . ($studentApp ? ' class="student-app is-loading"' : '') . '>';
+    $bodyClass = $studentApp ? 'student-app is-loading' : ($horizonPublic ? 'horizon-home horizon-public-login' : '');
+    echo '</head><body' . ($bodyClass !== '' ? ' class="' . e($bodyClass) . '"' : '') . '>';
     if ($studentApp) {
         echo '<a class="app-skip-link" href="#app-main">Skip to content</a>';
         echo '<div class="app-loading" role="status" aria-live="polite"><img src="assets/yuva-symbol.png" alt=""><span>Loading your YUVA Club app&hellip;</span></div>';
@@ -3068,13 +2993,23 @@ function portal_header(string $title, bool $studentApp = false, array $localStyl
         echo '<div class="student-app-frame">';
         return;
     }
+    if ($horizonPublic) {
+        echo '<header class="site-header horizon-header" data-public-header><a class="brand horizon-brand" href="index.html" aria-label="YUVA Club home"><img src="assets/logo-public.webp" alt="" width="58" height="58"><span><strong>YUVA</strong> Club</span></a>';
+        echo '<button class="public-menu-button" type="button" aria-expanded="false" aria-controls="public-navigation"><span class="sr-only">Open navigation</span><span aria-hidden="true"></span><span aria-hidden="true"></span><span aria-hidden="true"></span></button>';
+        echo '<nav class="nav horizon-nav" id="public-navigation" aria-label="Main navigation"><a href="index.html">Home</a><a href="programs.html">Programs</a><a href="programs.html#how-it-works">How It Works</a><a href="resources.html">Resources</a><a href="about.html">About</a><details class="public-login-menu"><summary>Login <span aria-hidden="true">▾</span></summary><div class="public-login-panel"><a href="portal-login.php"><strong>Student Portal</strong><span>Continue your leadership journey</span></a><a href="parent-login.php"><strong>Parent Portal</strong><span>See how your child is growing</span></a><a href="admin-login.php"><strong>Organization Admin</strong><span>Manage your organization</span></a><a href="admin-login.php"><strong>Master Admin</strong><span>Manage the YUVA platform</span></a></div></details><a class="nav-register" href="registration.php">Register</a></nav></header>';
+        return;
+    }
     echo '<header class="site-header"><a class="brand" href="index.html" aria-label="Yuva Club home"><img src="assets/logo.png" alt="Yuva Club logo" width="78" height="78"><span>Yuva Club</span></a>';
     echo '<nav class="nav" aria-label="Main navigation"><a href="index.html">Home</a><a href="programs.html">Programs</a><a href="curriculum.html">Topics</a><a href="challenges.html">Challenge</a><a href="app.html">App</a><a class="nav-register" href="registration.php">Register</a><details class="signin-menu"><summary>Sign In</summary><div><a href="portal-login.php">Student</a><a href="parent-login.php">Parent</a><a href="admin-login.php">Admin</a></div></details></nav></header>';
 }
 
-function portal_footer(bool $studentApp = false): void {
+function portal_footer(bool $studentApp = false, bool $horizonPublic = false): void {
     if ($studentApp) {
         echo '</div>' . student_app_navigation('student-app-bottom-nav', 'Student app navigation') . '</body></html>';
+        return;
+    }
+    if ($horizonPublic) {
+        echo '<footer class="site-footer horizon-footer"><div class="horizon-container footer-grid"><div class="footer-brand"><a class="brand horizon-brand" href="index.html" aria-label="YUVA Club home"><img src="assets/logo-public.webp" alt="" width="54" height="54"><span><strong>YUVA</strong> Club</span></a><p>Building Tomorrow&rsquo;s Leaders, One Voice at a Time.</p><strong class="footer-motto">Discover. Communicate. Lead. Inspire.</strong></div><div><h2>Explore</h2><a href="programs.html">Programs</a><a href="programs.html#how-it-works">How It Works</a><a href="resources.html">Resources</a><a href="about.html">About</a><a href="faq.html">FAQ</a></div><div><h2>Join</h2><a href="registration.php">Register</a><a href="partners.html">Partner With YUVA</a><a href="portal-login.php">Student Portal</a><a href="parent-login.php">Parent Portal</a></div><div><h2>Trust</h2><a href="privacy.html">Privacy Policy</a><a href="terms.html">Terms of Service</a><a href="safety.html">Child Safety</a><a href="safety.html">Accessibility</a><a href="contact.html">Contact</a></div></div><div class="horizon-container footer-bottom"><p>&copy; 2026 KarmaBro. All rights reserved.</p><p>YUVA Club &middot; Lead. Communicate. Think. Impact.</p></div></footer></body></html>';
         return;
     }
     echo '
