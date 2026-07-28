@@ -29,11 +29,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     redirect_to('admin-login.php?status=error');
 }
 
-portal_header('Admin Login', false, ['assets/public-site.css?v=1']);
+portal_header('Admin Login', false, ['assets/public-site.css?v=1'], true);
 ?>
 <a class="public-skip-link" href="#main-content">Skip to main content</a>
 <main id="main-content">
-  <section class="band">
+  <section class="band horizon-login-page">
     <div class="form-shell portal-narrow">
       <div class="section-head">
         <p class="eyebrow">YUVA Club Administration</p>
@@ -65,4 +65,4 @@ portal_header('Admin Login', false, ['assets/public-site.css?v=1']);
     </div>
   </section>
 </main>
-<?php portal_footer(); ?>
+<?php portal_footer(false, true); ?>

@@ -87,3 +87,76 @@ window.addEventListener('appinstalled', () => {
     }
   }
 })();
+
+(() => {
+  const header = document.querySelector('[data-public-header]');
+  const menuButton = header?.querySelector('.public-menu-button');
+  const navigation = header?.querySelector('#public-navigation');
+
+  if (!header || !menuButton || !navigation) {
+    return;
+  }
+
+  const closeMenu = () => {
+    header.classList.remove('is-menu-open');
+    menuButton.setAttribute('aria-expanded', 'false');
+    menuButton.querySelector('.sr-only').textContent = 'Open navigation';
+  };
+
+  menuButton.addEventListener('click', () => {
+    const isOpen = header.classList.toggle('is-menu-open');
+    menuButton.setAttribute('aria-expanded', String(isOpen));
+    menuButton.querySelector('.sr-only').textContent = isOpen
+      ? 'Close navigation'
+      : 'Open navigation';
+  });
+
+  navigation.addEventListener('click', (event) => {
+    if (event.target.closest('a') && window.matchMedia('(max-width: 1120px)').matches) {
+      closeMenu();
+    }
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') {
+      closeMenu();
+      header.querySelector('.public-login-menu')?.removeAttribute('open');
+    }
+  });
+
+  window.addEventListener('resize', () => {
+    if (!window.matchMedia('(max-width: 1120px)').matches) {
+      closeMenu();
+    }
+  });
+})();
+
+(() => {
+  const page = document.querySelector('.horizon-home');
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+  if (!page || reduceMotion.matches || !('IntersectionObserver' in window)) {
+    return;
+  }
+
+  const sections = Array.from(page.querySelectorAll('main > section'));
+  sections.forEach((section) => section.setAttribute('data-horizon-reveal', ''));
+
+  document.documentElement.classList.add('horizon-motion-ready');
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (!entry.isIntersecting) {
+        return;
+      }
+
+      entry.target.classList.add('is-visible');
+      observer.unobserve(entry.target);
+    });
+  }, {
+    rootMargin: '0px 0px -8% 0px',
+    threshold: 0.08,
+  });
+
+  sections.forEach((section) => observer.observe(section));
+})();
