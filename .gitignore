@@ -1,9 +1,17 @@
 portal-data/
 portal-uploads/
 submissions/
+.codex-tmp/
+artifacts/
+assets/review/
+node_modules/
 server.err.log
 server.out.log
 *.zip
 yuva-env.php
+.env
+.env.*
+!.env.example
+.phpunit.cache/
 .DS_Store
 Thumbs.db
