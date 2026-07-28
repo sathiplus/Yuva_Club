@@ -3442,6 +3442,368 @@ body.student-app {
   }
 }
 
+/* Project Launch L2: private, read-only student profile */
+.student-app #app-profile {
+  --profile-panel: rgba(11, 29, 70, .92);
+  --profile-panel-strong: rgba(14, 35, 83, .97);
+  --profile-line: rgba(113, 145, 211, .24);
+  --profile-muted: #b7c5e1;
+  color: #f8faff;
+  background:
+    radial-gradient(circle at 90% 4%, rgba(124, 58, 237, .18), transparent 26rem),
+    radial-gradient(circle at 8% 44%, rgba(16, 185, 129, .09), transparent 31rem),
+    linear-gradient(180deg, #071536, #050f2d);
+}
+
+.student-app #app-profile .profile-story-hero {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  min-height: 300px;
+  align-items: center;
+  gap: clamp(22px, 4vw, 42px);
+  border-color: rgba(141, 115, 238, .32);
+  background:
+    radial-gradient(circle at 82% 18%, rgba(16, 185, 129, .20), transparent 16rem),
+    radial-gradient(circle at 92% 88%, rgba(124, 58, 237, .32), transparent 19rem),
+    linear-gradient(130deg, #081941, #112965 60%, #341b72);
+  box-shadow: 0 22px 54px rgba(0, 7, 28, .32);
+}
+
+.student-app #app-profile .profile-avatar-state {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+}
+
+.student-app #app-profile .profile-avatar-state > span {
+  max-width: 132px;
+  color: #b7c6e4;
+  font-size: 11px;
+  font-weight: 750;
+  line-height: 1.35;
+  text-align: center;
+}
+
+.student-app #app-profile .profile-initials {
+  border-color: var(--yuva-gold);
+  background: linear-gradient(145deg, var(--yuva-green), var(--yuva-blue) 62%, var(--yuva-purple));
+}
+
+.student-app #app-profile .profile-primary-action {
+  min-width: 210px;
+  align-self: end;
+}
+
+.student-app #app-profile .profile-state-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 18px 0 0;
+  padding: 14px 17px;
+  border: 1px solid rgba(245, 183, 0, .32);
+  border-radius: 16px;
+  color: #e7edfb;
+  background: rgba(245, 183, 0, .09);
+}
+
+.student-app #app-profile .profile-state-banner strong {
+  color: #ffd369;
+}
+
+.student-app #app-profile .profile-state-banner span {
+  color: var(--profile-muted);
+}
+
+.student-app #app-profile .profile-section-heading h2 {
+  color: #fff;
+}
+
+.student-app #app-profile .profile-section-heading > p:last-child:not(.eyebrow) {
+  color: var(--profile-muted);
+}
+
+.student-app #app-profile .profile-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.student-app #app-profile .profile-summary-card {
+  min-height: 158px;
+  padding: 19px;
+  border: 1px solid var(--profile-line);
+  border-top: 4px solid var(--yuva-blue);
+  border-radius: 20px;
+  background:
+    radial-gradient(circle at 90% 6%, rgba(37, 99, 235, .16), transparent 50%),
+    var(--profile-panel);
+  box-shadow: 0 14px 32px rgba(0, 7, 28, .22);
+}
+
+.student-app #app-profile .profile-summary-card > span {
+  color: #91a8d2;
+  font-size: 11px;
+  font-weight: 850;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.student-app #app-profile .profile-summary-card > strong {
+  display: block;
+  margin-top: 12px;
+  color: #fff;
+  font-size: clamp(20px, 2.2vw, 29px);
+  line-height: 1.12;
+}
+
+.student-app #app-profile .profile-summary-card > p {
+  margin: 9px 0 0;
+  color: var(--profile-muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.student-app #app-profile .profile-summary-leadership {
+  border-top-color: var(--yuva-purple);
+}
+
+.student-app #app-profile .profile-summary-service {
+  border-top-color: var(--yuva-green);
+}
+
+.student-app #app-profile .profile-summary-certificates {
+  border-top-color: var(--yuva-gold);
+}
+
+.student-app #app-profile .profile-summary-badges {
+  border-top-color: var(--yuva-orange);
+}
+
+.student-app #app-profile .profile-content-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  margin-top: 22px;
+}
+
+.student-app #app-profile .profile-card {
+  border-color: var(--profile-line);
+  color: #f8faff;
+  background:
+    radial-gradient(circle at 96% 4%, rgba(124, 58, 237, .11), transparent 34%),
+    var(--profile-panel);
+  box-shadow: 0 18px 40px rgba(0, 7, 28, .24);
+}
+
+.student-app #app-profile .profile-card-heading h2 {
+  color: #fff;
+}
+
+.student-app #app-profile .profile-card-heading p {
+  color: var(--profile-muted);
+}
+
+.student-app #app-profile .profile-card-heading .eyebrow {
+  color: #bca8ff;
+}
+
+.student-app #app-profile .profile-goals-icon {
+  position: relative;
+  background: linear-gradient(145deg, #ffb32f, #e26a15);
+}
+
+.student-app #app-profile .profile-goals-icon::after {
+  content: "";
+  position: absolute;
+  inset: 13px;
+  border: 3px solid #fff;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 5px transparent;
+}
+
+.student-app #app-profile .profile-detail-list {
+  margin: 0;
+}
+
+.student-app #app-profile .profile-detail-list > div {
+  display: grid;
+  grid-template-columns: minmax(110px, .38fr) minmax(0, 1fr);
+  gap: 18px;
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(117, 146, 204, .17);
+}
+
+.student-app #app-profile .profile-detail-list > div:last-child {
+  border-bottom: 0;
+}
+
+.student-app #app-profile .profile-detail-list dt {
+  color: #91a8d2;
+  font-size: 11px;
+  font-weight: 850;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+
+.student-app #app-profile .profile-detail-list dd {
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: #f3f6ff;
+  font-size: 14px;
+  font-weight: 720;
+  line-height: 1.5;
+}
+
+.student-app #app-profile .profile-honest-empty {
+  margin-bottom: 10px;
+  padding: 15px;
+  border: 1px dashed rgba(245, 183, 0, .35);
+  border-radius: 15px;
+  background: rgba(245, 183, 0, .07);
+}
+
+.student-app #app-profile .profile-honest-empty strong {
+  color: #ffd369;
+}
+
+.student-app #app-profile .profile-honest-empty p {
+  margin: 5px 0 0;
+  color: var(--profile-muted);
+  line-height: 1.55;
+}
+
+.student-app #app-profile .profile-text-link,
+.student-app #app-profile .profile-security-list a {
+  color: #75a8ff;
+  font-weight: 800;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 4px;
+}
+
+.student-app #app-profile .profile-text-link {
+  display: inline-block;
+  margin-top: 17px;
+}
+
+.student-app #app-profile .profile-connection-state {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  gap: 12px;
+  margin-top: 11px;
+  padding: 14px;
+  border: 1px solid var(--profile-line);
+  border-radius: 15px;
+  background: rgba(4, 18, 49, .46);
+}
+
+.student-app #app-profile .profile-connection-state > span {
+  width: 42px;
+  height: 42px;
+  border-radius: 13px;
+  background: linear-gradient(145deg, #667794, #3d4d6c);
+}
+
+.student-app #app-profile .profile-connection-state.is-connected > span {
+  background: linear-gradient(145deg, #21caa2, #087f6a);
+}
+
+.student-app #app-profile .profile-connection-state strong {
+  color: #fff;
+}
+
+.student-app #app-profile .profile-connection-state p {
+  margin: 4px 0 0;
+  color: var(--profile-muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.student-app #app-profile .profile-account-card {
+  border-top: 1px solid var(--profile-line);
+}
+
+.student-app #app-profile .profile-security-list {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.student-app #app-profile .profile-security-list li {
+  display: grid;
+  gap: 4px;
+  padding: 13px 14px;
+  border: 1px solid var(--profile-line);
+  border-radius: 14px;
+  background: rgba(4, 18, 49, .46);
+}
+
+.student-app #app-profile .profile-security-list strong {
+  color: #fff;
+}
+
+.student-app #app-profile .profile-security-list span {
+  color: var(--profile-muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.student-app #app-profile .profile-logout-button {
+  align-self: flex-start;
+  margin-top: 18px;
+  color: #ff9ca5;
+  border-color: rgba(255, 99, 112, .4);
+}
+
+@media (max-width: 1080px) {
+  .student-app #app-profile .profile-story-hero {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .student-app #app-profile .profile-primary-action {
+    grid-column: 2;
+    justify-self: start;
+    align-self: auto;
+  }
+
+  .student-app #app-profile .profile-summary-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .student-app #app-profile .profile-story-hero {
+    display: flex;
+    min-height: 350px;
+  }
+
+  .student-app #app-profile .profile-primary-action {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .student-app #app-profile .profile-state-banner {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .student-app #app-profile .profile-summary-grid,
+  .student-app #app-profile .profile-content-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .student-app #app-profile .profile-summary-card {
+    min-height: 0;
+  }
+
+  .student-app #app-profile .profile-detail-list > div {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .student-app *,
   .student-app *::before,

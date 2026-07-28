@@ -639,35 +639,107 @@ portal_header('Student Dashboard', true);
       $profileInitials = $profileNameParts ? strtoupper(substr($profileNameParts[0], 0, 1) . (count($profileNameParts) > 1 ? substr($profileNameParts[count($profileNameParts) - 1], 0, 1) : '')) : '?';
       $profileParentConnected = trim((string) ($student['Parent Email'] ?? '')) !== '' || trim((string) ($student['Parent/Guardian Name'] ?? '')) !== '';
       $profileValue = static fn(array $source, string $key, string $fallback): string => trim((string) ($source[$key] ?? '')) !== '' ? trim((string) $source[$key]) : $fallback;
+      $profileSchool = trim((string) ($student['School'] ?? ''));
+      $profileGrade = trim((string) ($student['Grade'] ?? ''));
+      $profilePresentations = max(0, (int) ($record['presentations'] ?? 0));
+      $profileVolunteerHours = max(0, (float) ($record['service_hours'] ?? 0));
+      $profileCertificateCount = $certificateReady ? 1 : 0;
+      $profileBadgeCount = count($badges);
+      $profileIsIncomplete = $profileFullName === '' || $profileGrade === '' || $profileSchool === '';
+      $profileVolunteerLabel = $profileVolunteerHours > 0
+          ? rtrim(rtrim(number_format($profileVolunteerHours, 1, '.', ''), '0'), '.') . ' hours'
+          : 'No volunteer hours recorded';
     ?>
-    <div class="profile-identity-header ds-story-hero profile-story-hero">
-      <div class="profile-initials" aria-label="Student initials"><?php echo e($profileInitials); ?></div>
-      <div class="profile-identity-copy"><p class="eyebrow">My Journey</p><h1><?php echo e($name); ?></h1><p>This is your YUVA Club identity and leadership story.</p><p>YUVA Club ID: <strong><?php echo e($studentId); ?></strong></p><div class="profile-identity-badges"><span><?php echo e($level); ?></span><span><?php echo e($membershipGroupLabel); ?></span></div></div>
+    <header class="profile-identity-header ds-story-hero profile-story-hero">
+      <div class="profile-avatar-state">
+        <div class="profile-initials" aria-label="Profile avatar showing the initials <?php echo e($profileInitials); ?>"><?php echo e($profileInitials); ?></div>
+        <span>Profile photo unavailable</span>
+      </div>
+      <div class="profile-identity-copy">
+        <p class="eyebrow">My Profile</p>
+        <h1><?php echo e($name); ?></h1>
+        <p>Your private YUVA identity and a truthful snapshot of how you are growing through My Journey.</p>
+        <p>YUVA ID: <strong><?php echo e($studentId); ?></strong></p>
+        <div class="profile-identity-badges"><span><?php echo e($level); ?></span><span><?php echo e($membershipGroupLabel); ?></span></div>
+      </div>
+      <a class="button primary profile-primary-action" href="#app-progress">View Leadership Journey</a>
+    </header>
+
+    <?php if ($profileIsIncomplete): ?>
+      <div class="profile-state-banner" role="status" aria-live="polite">
+        <strong>Your profile is still taking shape.</strong>
+        <span>Some registered details are not available yet. The YUVA Club team can help correct identity information safely.</span>
+      </div>
+    <?php endif; ?>
+
+    <section class="profile-overview" aria-labelledby="profile-overview-title">
+      <div class="profile-section-heading ds-section-heading"><p class="eyebrow">Growth Snapshot</p><h2 id="profile-overview-title">Your journey at a glance</h2><p>These summaries use only your current approved YUVA records.</p></div>
+      <div class="profile-summary-grid">
+        <article class="profile-summary-card profile-summary-presentations"><span>Presentations</span><strong><?php echo e((string) $profilePresentations); ?></strong><p><?php echo $profilePresentations > 0 ? 'Recorded in your current progress.' : 'No presentations recorded yet.'; ?></p></article>
+        <article class="profile-summary-card profile-summary-leadership"><span>Leadership level</span><strong><?php echo e($level); ?></strong><p><?php echo e($challengeStage); ?></p></article>
+        <article class="profile-summary-card profile-summary-service"><span>Volunteer hours</span><strong><?php echo e($profileVolunteerLabel); ?></strong><p>Only approved hours appear here.</p></article>
+        <article class="profile-summary-card profile-summary-certificates"><span>Certificates</span><strong><?php echo e((string) $profileCertificateCount); ?></strong><p><?php echo $certificateReady ? e($certificateStatus) : 'No certificate earned yet.'; ?></p></article>
+        <article class="profile-summary-card profile-summary-badges"><span>Earned badges</span><strong><?php echo e((string) $profileBadgeCount); ?></strong><p><?php echo $profileBadgeCount > 0 ? 'Verified badges in your achievements.' : 'No badge earned yet.'; ?></p></article>
+      </div>
+    </section>
+
+    <div class="profile-content-grid">
+      <article class="profile-card profile-about-card">
+        <div class="profile-card-heading"><span class="profile-card-icon profile-about-icon" aria-hidden="true"></span><div><p class="eyebrow">Identity</p><h2>About you</h2><p>Registered identity details are read-only.</p></div></div>
+        <dl class="profile-detail-list">
+          <div><dt>Registered name</dt><dd><?php echo e($profileFullName !== '' ? $profileFullName : 'Registered name is unavailable.'); ?></dd></div>
+          <div><dt>Preferred name</dt><dd><?php echo e($profilePreferredName !== '' ? $profilePreferredName : 'No preferred name recorded.'); ?></dd></div>
+          <div><dt>YUVA ID</dt><dd><?php echo e($studentId); ?></dd></div>
+          <div><dt>Program</dt><dd><?php echo e($membershipGroupLabel); ?></dd></div>
+          <div><dt>School</dt><dd><?php echo e($profileSchool !== '' ? $profileSchool : 'No school recorded.'); ?></dd></div>
+          <div><dt>Grade</dt><dd><?php echo e($profileGrade !== '' ? $profileGrade : 'No grade recorded.'); ?></dd></div>
+          <div><dt>Student email</dt><dd><?php echo e($profileValue($student, 'Student Email', 'No student email recorded.')); ?></dd></div>
+        </dl>
+      </article>
+
+      <article class="profile-card profile-goals-card">
+        <div class="profile-card-heading"><span class="profile-card-icon profile-goals-icon" aria-hidden="true"></span><div><p class="eyebrow">Purpose</p><h2>Your goals</h2><p>Your own growth direction belongs here.</p></div></div>
+        <div class="profile-honest-empty"><strong>No goals recorded.</strong><p>Release 1.0 does not yet have a safe student profile-editing workflow, so goals remain read-only and unavailable.</p></div>
+        <dl class="profile-detail-list">
+          <div><dt>Interests</dt><dd><?php echo e($profileValue($student, 'Interests', 'No interests recorded.')); ?></dd></div>
+          <div><dt>Why you joined</dt><dd><?php echo e($profileValue($student, 'Why Join', 'No motivation recorded.')); ?></dd></div>
+        </dl>
+      </article>
+
+      <article class="profile-card profile-recognition-card">
+        <div class="profile-card-heading"><span class="profile-card-icon profile-leadership-icon" aria-hidden="true"></span><div><p class="eyebrow">Leadership</p><h2>Your current growth</h2><p>Approved progress only.</p></div></div>
+        <dl class="profile-detail-list">
+          <div><dt>Leadership level</dt><dd><?php echo e($level); ?></dd></div>
+          <div><dt>Rank status</dt><dd><?php echo e($record['rank_status'] ?? 'Approved'); ?></dd></div>
+          <div><dt>Points</dt><dd><?php echo e((string) $points); ?></dd></div>
+          <div><dt>Current challenge stage</dt><dd><?php echo e($challengeStage); ?></dd></div>
+          <div><dt>Leadership milestone</dt><dd><?php echo e(($record['leadership_milestones'] ?? '') !== '' ? $record['leadership_milestones'] : 'No leadership milestone recorded yet.'); ?></dd></div>
+        </dl>
+        <a class="profile-text-link" href="#app-achievements">Review achievements</a>
+      </article>
+
+      <article class="profile-card profile-connections-card">
+        <div class="profile-card-heading"><span class="profile-card-icon profile-contact-icon" aria-hidden="true"></span><div><p class="eyebrow">Connections</p><h2>Support around you</h2><p>Private connection status without contact details.</p></div></div>
+        <div class="profile-connection-state <?php echo $profileParentConnected ? 'is-connected' : 'is-unavailable'; ?>">
+          <span aria-hidden="true"></span>
+          <div><strong><?php echo $profileParentConnected ? 'Parent or guardian connected' : 'Parent connection unavailable'; ?></strong><p><?php echo $profileParentConnected ? 'A parent or guardian connection is recorded for your account.' : 'No supported parent or guardian connection is available in your current record.'; ?></p></div>
+        </div>
+        <div class="profile-connection-state is-unavailable">
+          <span aria-hidden="true"></span>
+          <div><strong>Google Login unavailable</strong><p>Google Login is not implemented for YUVA Club accounts in Release 1.0.</p></div>
+        </div>
+      </article>
+
+      <article class="profile-card profile-account-card">
+        <div class="profile-card-heading"><span class="profile-card-icon profile-account-icon" aria-hidden="true"></span><div><p class="eyebrow">Account &amp; Security</p><h2>Protect your account</h2><p>Use the existing secure account routes.</p></div></div>
+        <ul class="profile-security-list">
+          <li><strong>Password help</strong><span>Request a reset through the verified account-recovery flow.</span><a href="forgot-password.php?account=student">Open password help</a></li>
+          <li><strong>Private profile</strong><span>Your profile is available only after student authentication.</span></li>
+          <li><strong>Managed details</strong><span>Identity, program, progress, certificates, and badges cannot be edited here.</span></li>
+        </ul>
+        <a class="button ghost profile-logout-button" href="portal-logout.php">Log Out</a>
+      </article>
     </div>
-
-    <div class="profile-section-heading ds-section-heading"><p class="eyebrow">Identity</p><h2>About me</h2><p>Your registered YUVA Club information is shown here as read-only.</p></div>
-    <div class="profile-two-grid">
-      <article class="profile-card profile-about-card"><div class="profile-card-heading"><span class="profile-card-icon profile-about-icon" aria-hidden="true"></span><div><h2>About Me</h2><p>The details that make your profile yours.</p></div></div><div class="profile-detail-list"><p><span>Full Name</span><strong><?php echo e($profileFullName !== '' ? $profileFullName : 'Full name has not been added yet.'); ?></strong></p><p><span>Preferred Name</span><strong><?php echo e($profilePreferredName !== '' ? $profilePreferredName : 'Preferred name has not been added yet.'); ?></strong></p><p><span>Grade</span><strong><?php echo e($profileValue($student, 'Grade', 'Grade has not been added yet.')); ?></strong></p><p><span>School</span><strong><?php echo e($profileValue($student, 'School', 'School information has not been added yet.')); ?></strong></p><p><span>City / State</span><strong><?php echo e($profileValue($student, 'City/State', 'Location has not been added yet.')); ?></strong></p><p><span>Interests</span><strong><?php echo e($profileValue($student, 'Interests', 'Interests have not been added yet.')); ?></strong></p><p><span>My Motivation</span><strong><?php echo e($profileValue($student, 'Why Join', 'Your motivation has not been recorded yet.')); ?></strong></p></div></article>
-
-      <article class="profile-card profile-school-card"><div class="profile-card-heading"><span class="profile-card-icon profile-school-icon" aria-hidden="true"></span><div><h2>School &amp; Membership</h2><p>Your learning community.</p></div></div><div class="profile-detail-list"><p><span>School</span><strong><?php echo e($profileValue($student, 'School', 'School information has not been added yet.')); ?></strong></p><p><span>Grade</span><strong><?php echo e($profileValue($student, 'Grade', 'Grade has not been added yet.')); ?></strong></p><p><span>Program Group</span><strong><?php echo e($membershipGroupLabel); ?></strong></p><p><span>Membership Type</span><strong><?php echo e($profileValue($student, 'Membership Type', 'Membership type has not been added yet.')); ?></strong></p><p><span>Organization Code</span><strong><?php echo e($profileValue($student, 'Organization Code', 'No organization code connected.')); ?></strong></p></div></article>
-    </div>
-
-    <div class="profile-two-grid profile-contact-grid">
-      <article class="profile-card"><div class="profile-card-heading"><span class="profile-card-icon profile-contact-icon" aria-hidden="true"></span><div><h2>Contact</h2><p>Your student contact information.</p></div></div><div class="profile-detail-list"><p><span>Student Email</span><strong><?php echo e($profileValue($student, 'Student Email', 'Student email has not been provided.')); ?></strong></p><p><span>Student Phone</span><strong><?php echo e($profileValue($student, 'Student Phone Number', 'Student phone has not been provided.')); ?></strong></p><p><span>WhatsApp</span><strong><?php echo e($profileValue($student, 'WhatsApp Username / Number', 'WhatsApp information has not been provided.')); ?></strong></p><p><span>Parent Connection</span><strong class="profile-connected-status"><?php echo $profileParentConnected ? 'Parent / guardian connected' : 'Parent / guardian connection not recorded'; ?></strong></p></div></article>
-
-      <article class="profile-card"><div class="profile-card-heading"><span class="profile-card-icon profile-preferences-icon" aria-hidden="true"></span><div><h2>Participation Preferences</h2><p>Your current read-only participation details.</p></div></div><div class="profile-detail-list"><p><span>Preferred Schedule</span><strong><?php echo e($profileValue($student, 'Preferred Schedule', 'Schedule preferences have not been added yet.')); ?></strong></p><p><span>Presentation Experience</span><strong><?php echo e($profileValue($student, 'Presentation Experience', 'Presentation experience has not been recorded yet.')); ?></strong></p><p><span>Presentation Topics</span><strong><?php echo e($profileValue($student, 'Presentation Topics', 'Presentation-topic interests have not been added yet.')); ?></strong></p><p><span>Suggestions</span><strong><?php echo e($profileValue($student, 'Suggestions', 'No suggestions have been recorded.')); ?></strong></p></div><p class="profile-managed-note">Profile updates are currently managed by the YUVA Club team.</p></article>
-    </div>
-
-    <article class="profile-card profile-leadership-card"><div class="profile-card-heading"><span class="profile-card-icon profile-leadership-icon" aria-hidden="true"></span><div><p class="eyebrow">Leadership Identity</p><h2><?php echo e($level); ?></h2><p>A compact view of your current leadership identity.</p></div></div><div class="profile-leadership-summary"><p><span>Approved Rank</span><strong><?php echo e($level); ?></strong></p><p><span>Rank Status</span><strong><?php echo e($record['rank_status'] ?? 'Approved'); ?></strong></p><p><span>Leadership Milestone</span><strong><?php echo e(($record['leadership_milestones'] ?? '') !== '' ? $record['leadership_milestones'] : 'Your leadership milestone summary has not been recorded yet.'); ?></strong></p></div><div class="profile-actions"><a class="button primary" href="#app-progress">View Leadership Journey</a><a class="button ghost" href="#app-achievements">View Achievements</a></div></article>
-
-    <div class="profile-two-grid profile-security-grid">
-      <article class="profile-card"><div class="profile-card-heading"><span class="profile-card-icon profile-safety-icon" aria-hidden="true"></span><div><h2>Safety &amp; Agreements</h2><p>Your participation protections.</p></div></div><div class="profile-status-list"><p><span>Code of Conduct</span><strong><?php echo e($profileValue($student, 'Code of Conduct Agreement', 'Not recorded')); ?></strong></p><p><span>Recording Agreement</span><strong><?php echo e($profileValue($student, 'Recording Agreement', 'Not recorded')); ?></strong></p><p><span>Parent Permission</span><strong><?php echo e($profileValue($student, 'Parent Permission', 'Not recorded')); ?></strong></p><p><span>Adult Moderation</span><strong>Required for YUVA Club participation</strong></p></div></article>
-
-      <article class="profile-card profile-account-card"><div class="profile-card-heading"><span class="profile-card-icon profile-account-icon" aria-hidden="true"></span><div><h2>Account</h2><p>Account access and help.</p></div></div><div class="profile-detail-list"><p><span>YUVA Club ID</span><strong><?php echo e($studentId); ?></strong></p><p><span>Account Help</span><strong>Password management is not available in the student app yet. Contact the YUVA Club team if you need account help.</strong></p></div><a class="button ghost profile-logout-button" href="portal-logout.php">Log Out</a></article>
-    </div>
-
-    <div class="profile-section-heading profile-future-heading ds-section-heading"><p class="eyebrow">Future Profile</p><h2>More ways to make it yours</h2><p>These profile capabilities are planned for future updates.</p></div>
-    <div class="profile-roadmap-grid"><article class="profile-roadmap"><span class="profile-roadmap-icon" aria-hidden="true"></span><div><h3>Profile Photo</h3><p>Add a safely managed profile photo in a future update.</p></div><strong>Future Update</strong></article><article class="profile-roadmap"><span class="profile-roadmap-icon" aria-hidden="true"></span><div><h3>Personal Goals</h3><p>Create and track personal growth goals.</p></div><strong>Coming Soon</strong></article><article class="profile-roadmap"><span class="profile-roadmap-icon" aria-hidden="true"></span><div><h3>Notification Preferences</h3><p>Choose future reminder and update preferences.</p></div><strong>Future Update</strong></article></div>
   </section>
 
   <section class="band">
