@@ -3927,6 +3927,107 @@ body.student-app {
   .student-app .notifications-empty .button { width: 100%; }
 }
 
+/* Project Launch L4: supported Student Settings */
+.student-app #app-settings {
+  color: #eef4ff;
+  background: radial-gradient(circle at 8% 8%, rgba(109, 82, 218, .1), transparent 28rem), linear-gradient(180deg, #071632, #081a3c);
+}
+
+.student-app .settings-hero {
+  position: relative;
+  min-height: 240px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  overflow: hidden;
+  padding: 38px 42px;
+  border: 1px solid rgba(108, 96, 211, .32);
+  border-radius: 30px;
+  background: radial-gradient(circle at 82% 25%, rgba(112, 86, 226, .2), transparent 28%), linear-gradient(135deg, #12265a, #0a1941 56%, #281550);
+  box-shadow: 0 24px 52px rgba(1, 8, 29, .32), inset 0 1px rgba(255, 255, 255, .05);
+}
+.student-app .settings-hero > div { position: relative; z-index: 1; max-width: 680px; }
+.student-app .settings-hero h1, .student-app .settings-hero p { margin: 0; }
+.student-app .settings-hero h1 { margin: 6px 0 13px; color: #fff; font-size: clamp(34px, 5vw, 58px); line-height: 1.02; letter-spacing: -.045em; }
+.student-app .settings-hero > div > p:last-child { color: #c3cee3; font-size: 16px; }
+.student-app .settings-hero-mark { width: 112px; height: 112px; flex: 0 0 112px; display: grid; place-items: center; margin-right: 5%; border: 1px solid rgba(173, 148, 255, .34); border-radius: 34px; color: #c3b2ff; background: linear-gradient(145deg, rgba(122, 83, 225, .28), rgba(45, 79, 163, .28)); box-shadow: 0 18px 38px rgba(2, 10, 35, .34); }
+.student-app .settings-hero-mark svg { width: 56px; height: 56px; }
+
+.student-app .settings-primary-panel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  margin: 22px 0 18px;
+  padding: 22px 24px;
+  border: 1px solid rgba(46, 212, 178, .3);
+  border-radius: 22px;
+  background: linear-gradient(145deg, rgba(12, 84, 87, .58), rgba(12, 35, 79, .94));
+}
+.student-app .settings-primary-panel h2, .student-app .settings-primary-panel p { margin: 0; }
+.student-app .settings-primary-panel h2 { margin: 3px 0 6px; color: #fff; font-size: 25px; }
+.student-app .settings-primary-panel > div > p:last-child { color: #b5c6dc; }
+.student-app .settings-primary-action { min-width: 190px; justify-content: center; }
+.student-app .settings-content-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+.student-app .settings-card { min-width: 0; padding: 23px; border: 1px solid rgba(101, 130, 192, .25); border-radius: 24px; background: linear-gradient(145deg, rgba(16, 40, 87, .98), rgba(8, 27, 66, .98)); box-shadow: 0 17px 37px rgba(1, 8, 29, .24), inset 0 1px rgba(255, 255, 255, .035); }
+.student-app .settings-card-heading { display: flex; align-items: center; gap: 14px; margin-bottom: 17px; }
+.student-app .settings-card-heading h2, .student-app .settings-card-heading p { margin: 0; }
+.student-app .settings-card-heading h2 { color: #fff; font-size: 23px; }
+.student-app .settings-card-icon { width: 50px; height: 50px; flex: 0 0 50px; border-radius: 16px; background: linear-gradient(145deg, #795ce8, #4e35bd); box-shadow: 0 9px 19px rgba(76, 52, 184, .2); }
+.student-app .settings-session-icon { background: linear-gradient(145deg, #2a91ef, #1555c6); }
+.student-app .settings-notification-icon { background: linear-gradient(145deg, #ffae2a, #e77214); }
+.student-app .settings-accessibility-icon { background: linear-gradient(145deg, #2bcba3, #078e70); }
+.student-app .settings-legal-icon { background: linear-gradient(145deg, #9a5feb, #5d2bc6); }
+.student-app .settings-support-icon { background: linear-gradient(145deg, #ff765a, #d93a53); }
+
+.student-app .settings-detail-list { display: grid; gap: 2px; margin: 0; }
+.student-app .settings-detail-list > div { display: grid; grid-template-columns: minmax(110px, .38fr) minmax(0, 1fr); gap: 14px; padding: 11px 0; border-bottom: 1px solid rgba(111, 138, 188, .17); }
+.student-app .settings-detail-list > div:last-child { border-bottom: 0; }
+.student-app .settings-detail-list dt { color: #8fa4c7; font-size: 11px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
+.student-app .settings-detail-list dd { margin: 0; overflow-wrap: anywhere; color: #eef4ff; font-weight: 750; }
+.student-app .settings-status-list { display: grid; gap: 10px; margin: 0 0 18px; padding: 0; list-style: none; }
+.student-app .settings-status-list li { display: grid; gap: 4px; padding: 12px 13px; border-radius: 14px; background: rgba(83, 112, 172, .11); }
+.student-app .settings-status-list strong { color: #eef4ff; }
+.student-app .settings-status-list span { color: #aab9d4; font-size: 13px; }
+.student-app .settings-logout-action { width: 100%; justify-content: center; }
+
+.student-app .settings-availability { padding: 15px; border-radius: 16px; background: rgba(47, 205, 173, .1); }
+.student-app .settings-availability + .settings-availability { margin-top: 12px; }
+.student-app .settings-availability.is-unavailable { background: rgba(129, 144, 178, .1); }
+.student-app .settings-availability strong { display: block; color: #fff; }
+.student-app .settings-availability p { margin: 5px 0; color: #aebdda; }
+.student-app .settings-availability a, .student-app .settings-text-link { color: #6ee5cf; font-weight: 800; }
+.student-app .settings-link-list { display: grid; gap: 10px; }
+.student-app .settings-link-list a { display: grid; gap: 3px; padding: 13px; border: 1px solid rgba(108, 136, 190, .18); border-radius: 14px; text-decoration: none; background: rgba(75, 102, 158, .08); }
+.student-app .settings-link-list strong { color: #fff; }
+.student-app .settings-link-list span { color: #9fb0cf; font-size: 13px; }
+.student-app .settings-support-card > p { color: #aebdda; }
+.student-app .settings-support-actions { display: flex; flex-wrap: wrap; gap: 18px; }
+.student-app .settings-unavailable { margin-top: 32px; }
+.student-app .settings-section-heading h2 { color: #fff; }
+.student-app .settings-section-heading > p:last-child { color: #9eafcd; }
+.student-app .settings-unavailable-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.student-app .settings-unavailable-grid article { padding: 18px; border: 1px solid rgba(113, 137, 183, .2); border-radius: 19px; background: rgba(16, 37, 78, .7); }
+.student-app .settings-unavailable-grid strong { display: block; color: #fff; }
+.student-app .settings-unavailable-grid p { margin: 6px 0 0; color: #9fafcb; font-size: 13px; }
+
+@media (max-width: 960px) {
+  .student-app .settings-unavailable-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 760px) {
+  .student-app #app-settings { padding-top: 18px; }
+  .student-app .settings-hero { min-height: 250px; align-items: flex-end; padding: 24px 20px; border-radius: 22px; }
+  .student-app .settings-hero h1 { padding-right: 52px; font-size: 34px; }
+  .student-app .settings-hero-mark { position: absolute; top: 20px; right: 20px; width: 58px; height: 58px; margin: 0; border-radius: 18px; }
+  .student-app .settings-hero-mark svg { width: 29px; height: 29px; }
+  .student-app .settings-primary-panel { align-items: stretch; flex-direction: column; padding: 19px; }
+  .student-app .settings-primary-action { width: 100%; min-width: 0; }
+  .student-app .settings-content-grid, .student-app .settings-unavailable-grid { grid-template-columns: 1fr; }
+  .student-app .settings-card { padding: 18px; border-radius: 20px; }
+  .student-app .settings-detail-list > div { grid-template-columns: 1fr; gap: 4px; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .student-app *,
   .student-app *::before,

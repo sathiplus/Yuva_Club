@@ -852,10 +852,100 @@ portal_header('Student Dashboard', true);
           <li><strong>Password help</strong><span>Request a reset through the verified account-recovery flow.</span><a href="forgot-password.php?account=student">Open password help</a></li>
           <li><strong>Private profile</strong><span>Your profile is available only after student authentication.</span></li>
           <li><strong>Managed details</strong><span>Identity, program, progress, certificates, and badges cannot be edited here.</span></li>
+          <li><strong>Student settings</strong><span>Review supported account, privacy, accessibility, and help options.</span><a href="#app-settings">Open settings</a></li>
         </ul>
         <a class="button ghost profile-logout-button" href="portal-logout.php">Log Out</a>
       </article>
     </div>
+  </section>
+
+  <section class="band app-section" id="app-settings" data-app-section="profile" aria-labelledby="settings-title">
+    <?php
+      $settingsEmail = normalize_email((string) ($student['Student Email'] ?? ''));
+      $settingsHasUsableEmail = $settingsEmail !== '' && !str_ends_with($settingsEmail, '.invalid');
+    ?>
+    <header class="settings-hero ds-story-hero">
+      <div>
+        <p class="eyebrow">Student Settings</p>
+        <h1 id="settings-title">Your account, clearly explained.</h1>
+        <p>Review the account and support options that genuinely exist in YUVA Club Release 1.0.</p>
+      </div>
+      <span class="settings-hero-mark" aria-hidden="true"><?php echo student_app_icon('settings'); ?></span>
+    </header>
+
+    <div class="settings-primary-panel">
+      <div>
+        <p class="eyebrow">Account security</p>
+        <h2>Password help is available</h2>
+        <p>Use the existing verified recovery flow if you need to create or reset your student password.</p>
+      </div>
+      <a class="button primary settings-primary-action" href="forgot-password.php?account=student">Open password help</a>
+    </div>
+
+    <div class="settings-content-grid">
+      <article class="settings-card settings-account-card">
+        <div class="settings-card-heading"><span class="settings-card-icon settings-account-icon" aria-hidden="true"></span><div><p class="eyebrow">Account Summary</p><h2>Your student account</h2></div></div>
+        <dl class="settings-detail-list">
+          <div><dt>Student</dt><dd><?php echo e($name); ?></dd></div>
+          <div><dt>YUVA ID</dt><dd><?php echo e($studentId); ?></dd></div>
+          <div><dt>Account role</dt><dd>Student</dd></div>
+          <div><dt>Program</dt><dd><?php echo e($membershipGroupLabel); ?></dd></div>
+          <div><dt>Authentication</dt><dd>Authenticated student account</dd></div>
+          <div><dt>Recovery email</dt><dd><?php echo e($settingsHasUsableEmail ? $settingsEmail : 'No directly usable student recovery email is available.'); ?></dd></div>
+        </dl>
+      </article>
+
+      <article class="settings-card settings-session-card">
+        <div class="settings-card-heading"><span class="settings-card-icon settings-session-icon" aria-hidden="true"></span><div><p class="eyebrow">Session &amp; Security</p><h2>Protect this session</h2></div></div>
+        <ul class="settings-status-list">
+          <li><strong>Authenticated access</strong><span>This page is available only through your current student session.</span></li>
+          <li><strong>Shared device?</strong><span>Log out when you finish, especially on a school, library, or family device.</span></li>
+          <li><strong>Account details</strong><span>Never share your password, reset link, date of birth, or access code.</span></li>
+        </ul>
+        <a class="button ghost settings-logout-action" href="portal-logout.php">Log out of YUVA Club</a>
+      </article>
+
+      <article class="settings-card settings-notification-card">
+        <div class="settings-card-heading"><span class="settings-card-icon settings-notification-icon" aria-hidden="true"></span><div><p class="eyebrow">Notifications</p><h2>Current notification status</h2></div></div>
+        <div class="settings-availability is-available"><strong>In-app updates available</strong><p>Your current session, submission, approved-review, certificate, and club updates can appear in Student Notifications when real data exists.</p><a href="#app-notifications">Open notifications</a></div>
+        <div class="settings-availability is-unavailable"><strong>Notification preferences unavailable</strong><p>Release 1.0 does not provide email, push, frequency, or opt-out controls in Student Settings.</p></div>
+      </article>
+
+      <article class="settings-card settings-accessibility-card">
+        <div class="settings-card-heading"><span class="settings-card-icon settings-accessibility-icon" aria-hidden="true"></span><div><p class="eyebrow">Accessibility</p><h2>Designed for different ways of using the app</h2></div></div>
+        <ul class="settings-status-list">
+          <li><strong>Keyboard and focus</strong><span>Navigation and actions include visible focus support.</span></li>
+          <li><strong>Motion</strong><span>The app respects your device’s reduced-motion preference.</span></li>
+          <li><strong>Responsive layout</strong><span>Student experiences adapt across mobile, tablet, and desktop screens.</span></li>
+        </ul>
+        <a class="settings-text-link" href="safety.html">Read safety and accessibility information</a>
+      </article>
+
+      <article class="settings-card settings-legal-card">
+        <div class="settings-card-heading"><span class="settings-card-icon settings-legal-icon" aria-hidden="true"></span><div><p class="eyebrow">Privacy &amp; Policies</p><h2>Understand how YUVA Club works</h2></div></div>
+        <nav class="settings-link-list" aria-label="Student privacy and policy links">
+          <a href="privacy.html"><strong>Privacy Policy</strong><span>How account and student information is handled.</span></a>
+          <a href="terms.html"><strong>Terms of Service</strong><span>The rules for using YUVA Club.</span></a>
+          <a href="safety.html"><strong>Child Safety</strong><span>Safety principles and reporting guidance.</span></a>
+        </nav>
+      </article>
+
+      <article class="settings-card settings-support-card">
+        <div class="settings-card-heading"><span class="settings-card-icon settings-support-icon" aria-hidden="true"></span><div><p class="eyebrow">Help &amp; Support</p><h2>Use the right support path</h2></div></div>
+        <p>For general guidance, use the verified public contact page. For a safety or platform concern, use the authenticated report form.</p>
+        <div class="settings-support-actions"><a class="settings-text-link" href="contact.html">Open support information</a><a class="settings-text-link" href="#safety-report">Report an issue</a></div>
+      </article>
+    </div>
+
+    <section class="settings-unavailable" aria-labelledby="settings-unavailable-title">
+      <div class="settings-section-heading ds-section-heading"><p class="eyebrow">Not Available in Release 1.0</p><h2 id="settings-unavailable-title">Settings we do not pretend to support</h2><p>These controls require separately reviewed product and security work.</p></div>
+      <div class="settings-unavailable-grid">
+        <article><strong>Connected accounts</strong><p>Google and other identity-provider linking are not implemented.</p></article>
+        <article><strong>Theme and language</strong><p>Theme switching and language selection are not configurable.</p></article>
+        <article><strong>Email and push preferences</strong><p>Per-channel notification controls are not available.</p></article>
+        <article><strong>Data export or deletion</strong><p>There is no self-service workflow. Review the Privacy Policy and verified Contact page for guidance.</p></article>
+      </div>
+    </section>
   </section>
 
   <section class="band">
