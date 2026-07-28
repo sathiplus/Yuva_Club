@@ -2659,6 +2659,493 @@ body.student-app {
   }
 }
 
+/* Project Momentum: AI Mentor Home */
+.student-app #app-ai-coach {
+  --ai-mentor-panel: rgba(12, 29, 72, .9);
+  --ai-mentor-panel-strong: rgba(16, 38, 91, .96);
+  --ai-mentor-border: rgba(139, 92, 246, .25);
+  --ai-mentor-muted: #b9c7e4;
+  color: #f8faff;
+  background:
+    radial-gradient(circle at 88% 2%, rgba(139, 92, 246, .19), transparent 25rem),
+    radial-gradient(circle at 14% 48%, rgba(0, 196, 154, .08), transparent 32rem),
+    linear-gradient(180deg, #071536, #050f2d);
+}
+
+.student-app #app-ai-coach .eyebrow {
+  color: #bca5ff;
+}
+
+.student-app #app-ai-coach .ai-mentor-hero {
+  margin-bottom: var(--space-5);
+  background:
+    radial-gradient(circle at 77% 23%, rgba(0, 196, 154, .20), transparent 25%),
+    radial-gradient(circle at 91% 78%, rgba(139, 92, 246, .30), transparent 28%),
+    linear-gradient(135deg, #081942, #112967 58%, #3c1a7e);
+}
+
+.student-app #app-ai-coach .ai-mentor-home-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(280px, .82fr);
+  gap: var(--space-5);
+  margin-bottom: var(--space-6);
+}
+
+.student-app #app-ai-coach .ai-mentor-home-card,
+.student-app #app-ai-coach .ai-mentor-latest-review {
+  border: 1px solid var(--ai-mentor-border);
+  border-radius: var(--radius-card);
+  color: #f8faff;
+  background:
+    radial-gradient(circle at 94% 8%, rgba(139, 92, 246, .14), transparent 34%),
+    var(--ai-mentor-panel);
+  box-shadow: 0 18px 42px rgba(0, 7, 28, .28);
+}
+
+.student-app #app-ai-coach .ai-mentor-home-card {
+  min-height: 230px;
+  padding: clamp(22px, 3vw, 30px);
+}
+
+.student-app #app-ai-coach .ai-mentor-home-card h2,
+.student-app #app-ai-coach .ai-mentor-latest-review h2 {
+  margin: 7px 0 10px;
+  color: #fff;
+  font-size: clamp(22px, 2.4vw, 29px);
+}
+
+.student-app #app-ai-coach .ai-mentor-home-card > p:not(.eyebrow),
+.student-app #app-ai-coach .ai-mentor-latest-review p {
+  color: var(--ai-mentor-muted);
+  line-height: 1.65;
+}
+
+.student-app #app-ai-coach .ai-mentor-context-card {
+  border-top: 4px solid var(--yuva-blue);
+}
+
+.student-app #app-ai-coach .ai-mentor-focus-card {
+  border-top: 4px solid var(--yuva-green);
+}
+
+.student-app #app-ai-coach .ai-mentor-action-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  border-top: 4px solid var(--yuva-purple);
+}
+
+.student-app #app-ai-coach .ai-mentor-text-link {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  margin-top: 12px;
+  color: #80a8ff;
+  font-weight: 700;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 4px;
+}
+
+.student-app #app-ai-coach .ai-mentor-coach-button[disabled] {
+  min-height: 46px;
+  margin-top: 14px;
+  border-color: rgba(188, 165, 255, .34);
+  color: #d8cdf9;
+  background: rgba(139, 92, 246, .20);
+  box-shadow: none;
+  cursor: not-allowed;
+  opacity: 1;
+}
+
+.student-app #app-ai-coach .ai-mentor-capability-status {
+  margin: 8px 0 0;
+  color: var(--ai-mentor-muted);
+  font-size: 13px;
+}
+
+.student-app #app-ai-coach .ai-mentor-state {
+  border-color: var(--ai-mentor-border);
+  color: #f8faff;
+  background:
+    radial-gradient(circle at 92% 18%, rgba(109, 61, 214, .20), transparent 27%),
+    var(--ai-mentor-panel-strong);
+  box-shadow: 0 18px 42px rgba(0, 7, 28, .28);
+}
+
+.student-app #app-ai-coach .ai-mentor-state h2 {
+  color: #fff;
+}
+
+.student-app #app-ai-coach .ai-mentor-state p:last-of-type {
+  color: var(--ai-mentor-muted);
+}
+
+.student-app #app-ai-coach .ai-mentor-state::after {
+  color: rgba(216, 205, 249, .55);
+}
+
+.student-app #app-ai-coach .ai-mentor-latest-review {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(320px, .9fr);
+  gap: var(--space-6);
+  margin: var(--space-5) 0;
+  padding: clamp(24px, 4vw, 38px);
+  border-left: 5px solid var(--yuva-purple);
+}
+
+.student-app #app-ai-coach .ai-mentor-review-highlights {
+  display: grid;
+  gap: 12px;
+}
+
+.student-app #app-ai-coach .ai-mentor-review-highlights div {
+  padding: 16px 18px;
+  border: 1px solid rgba(139, 92, 246, .20);
+  border-radius: var(--radius-small);
+  background: rgba(255, 255, 255, .045);
+}
+
+.student-app #app-ai-coach .ai-mentor-review-highlights span,
+.student-app #app-ai-coach .ai-mentor-review-highlights strong {
+  display: block;
+}
+
+.student-app #app-ai-coach .ai-mentor-review-highlights span {
+  margin-bottom: 5px;
+  color: #aebddd;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.student-app #app-ai-coach .ai-mentor-review-highlights strong {
+  color: #fff;
+  line-height: 1.5;
+}
+
+@media (max-width: 1080px) {
+  .student-app #app-ai-coach .ai-mentor-home-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .student-app #app-ai-coach .ai-mentor-action-card {
+    grid-column: 1 / -1;
+    min-height: 190px;
+  }
+}
+
+@media (max-width: 760px) {
+  .student-app #app-ai-coach .ai-mentor-home-grid,
+  .student-app #app-ai-coach .ai-mentor-latest-review {
+    grid-template-columns: 1fr;
+  }
+
+  .student-app #app-ai-coach .ai-mentor-home-card,
+  .student-app #app-ai-coach .ai-mentor-action-card {
+    min-height: 0;
+  }
+
+  .student-app #app-ai-coach .ai-mentor-action-card {
+    grid-column: auto;
+  }
+}
+
+/* Project Momentum: approved AI review */
+.student-app #app-ai-coach .ai-approved-review-section {
+  margin-top: var(--space-10);
+}
+
+.student-app #app-ai-coach .ai-approved-review-section [id] {
+  scroll-margin-top: 100px;
+}
+
+.student-app #app-ai-coach .ai-approved-review-section + .ai-approved-review-section {
+  padding-top: var(--space-8);
+  border-top: 1px solid var(--ai-mentor-border);
+}
+
+.student-app #app-ai-coach .ai-approved-review-section .ai-studio-section-heading {
+  max-width: 820px;
+  margin-bottom: var(--space-5);
+}
+
+.student-app #app-ai-coach .ai-approved-review-section .ai-studio-section-heading h2 {
+  color: #fff;
+  font-size: clamp(28px, 3.4vw, 42px);
+}
+
+.student-app #app-ai-coach .ai-approved-review-section .ai-studio-section-heading p:last-child {
+  color: var(--ai-mentor-muted);
+}
+
+.student-app #app-ai-coach .ai-approved-review-overview {
+  align-items: stretch;
+}
+
+.student-app #app-ai-coach .ai-approved-review-section :where(
+  .ai-score-card,
+  .ai-topic-card,
+  .ai-research-review-card,
+  .ai-feedback-card,
+  .ai-presentation-rubric,
+  .ai-rubric-empty
+) {
+  border-color: var(--ai-mentor-border);
+  color: #f8faff;
+  background:
+    radial-gradient(circle at 94% 8%, rgba(139, 92, 246, .10), transparent 34%),
+    var(--ai-mentor-panel);
+  box-shadow: 0 18px 42px rgba(0, 7, 28, .24);
+}
+
+.student-app #app-ai-coach .ai-approved-review-section :where(h3, .ai-topic-card h3) {
+  margin: 6px 0 10px;
+  color: #fff;
+  font-size: clamp(21px, 2.5vw, 28px);
+}
+
+.student-app #app-ai-coach .ai-approved-review-section :where(
+  .ai-score-card p,
+  .ai-topic-card p,
+  .ai-topic-card small,
+  .ai-feedback-card p,
+  .ai-feedback-card li,
+  .ai-rubric-empty p
+) {
+  color: var(--ai-mentor-muted);
+}
+
+.student-app #app-ai-coach .ai-score-unavailable {
+  display: grid;
+  width: 118px;
+  min-height: 118px;
+  place-content: center;
+  gap: 5px;
+  padding: 14px;
+  border: 2px dashed rgba(188, 165, 255, .38);
+  border-radius: 50%;
+  text-align: center;
+}
+
+.student-app #app-ai-coach .ai-score-unavailable strong {
+  color: #fff;
+  font-size: 15px;
+}
+
+.student-app #app-ai-coach .ai-score-unavailable span {
+  color: var(--ai-mentor-muted);
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+.student-app #app-ai-coach .ai-research-review-card {
+  background: var(--ai-mentor-panel);
+}
+
+.student-app #app-ai-coach .ai-research-metric span,
+.student-app #app-ai-coach .ai-research-metric strong {
+  color: #f8faff;
+}
+
+.student-app #app-ai-coach .ai-metric-track {
+  background: rgba(255, 255, 255, .11);
+}
+
+.student-app #app-ai-coach .ai-priority-action-card {
+  grid-column: 1 / -1;
+  min-height: 0;
+  border-left: 5px solid var(--yuva-gold);
+  background:
+    radial-gradient(circle at 94% 10%, rgba(255, 196, 0, .10), transparent 28%),
+    var(--ai-mentor-panel-strong);
+}
+
+.student-app #app-ai-coach .ai-strengths-card {
+  background:
+    radial-gradient(circle at 93% 10%, rgba(0, 196, 154, .12), transparent 27%),
+    var(--ai-mentor-panel);
+}
+
+.student-app #app-ai-coach .ai-improvements-card {
+  background:
+    radial-gradient(circle at 93% 10%, rgba(255, 146, 0, .10), transparent 27%),
+    var(--ai-mentor-panel);
+}
+
+.student-app #app-ai-coach .ai-coaching-note {
+  background:
+    linear-gradient(135deg, rgba(109, 61, 214, .15), transparent 45%),
+    var(--ai-mentor-panel);
+}
+
+.student-app #app-ai-coach .ai-milestone-note {
+  background:
+    linear-gradient(135deg, rgba(0, 196, 154, .12), transparent 45%),
+    var(--ai-mentor-panel);
+}
+
+.student-app #app-ai-coach .ai-presentation-rubric {
+  overflow: hidden;
+  background: var(--ai-mentor-panel);
+}
+
+.student-app #app-ai-coach .ai-rubric-total {
+  background: linear-gradient(145deg, rgba(109, 61, 214, .28), rgba(30, 77, 190, .14));
+}
+
+.student-app #app-ai-coach .ai-rubric-total span,
+.student-app #app-ai-coach .ai-rubric-total p,
+.student-app #app-ai-coach .ai-rubric-list span {
+  color: var(--ai-mentor-muted);
+}
+
+.student-app #app-ai-coach .ai-rubric-total strong,
+.student-app #app-ai-coach .ai-rubric-list strong {
+  color: #fff;
+}
+
+.student-app #app-ai-coach .ai-rubric-list p {
+  border-color: rgba(188, 165, 255, .14);
+}
+
+.student-app #app-ai-coach .ai-rubric-empty {
+  padding: clamp(24px, 4vw, 36px);
+  border-radius: var(--radius-card);
+}
+
+.student-app #app-ai-coach .ai-rubric-empty strong {
+  display: block;
+  margin-bottom: 8px;
+  color: #fff;
+  font-size: 21px;
+}
+
+@media (max-width: 760px) {
+  .student-app #app-ai-coach .ai-approved-review-section {
+    margin-top: var(--space-8);
+  }
+
+  .student-app #app-ai-coach .ai-approved-review-section + .ai-approved-review-section {
+    padding-top: var(--space-6);
+  }
+
+  .student-app #app-ai-coach .ai-score-unavailable {
+    width: 96px;
+    min-height: 96px;
+  }
+}
+
+/* Project Momentum: research submission and review status */
+.student-app .ai-submission-status,
+.student-app .practice-submission-status {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 18px;
+  margin: var(--space-5) 0;
+  padding: clamp(20px, 3vw, 28px);
+  border: 1px solid rgba(139, 92, 246, .24);
+  border-radius: var(--radius-card);
+  background:
+    radial-gradient(circle at 96% 8%, rgba(139, 92, 246, .11), transparent 30%),
+    rgba(12, 29, 72, .94);
+  box-shadow: 0 16px 36px rgba(0, 7, 28, .22);
+}
+
+.student-app .ai-submission-status h2,
+.student-app .practice-submission-status h2 {
+  margin: 4px 0 6px;
+  color: #fff;
+  font-size: clamp(20px, 2.4vw, 27px);
+}
+
+.student-app .ai-submission-status p:last-child,
+.student-app .practice-submission-status p:last-child {
+  margin-bottom: 0;
+  color: #b9c7e4;
+}
+
+.student-app .ai-submission-status-mark,
+.student-app .practice-submission-status-mark {
+  width: 52px;
+  height: 52px;
+  border-radius: 17px;
+  background: linear-gradient(145deg, #9360ed, var(--yuva-purple));
+  box-shadow: 0 10px 24px rgba(109, 61, 214, .24);
+}
+
+.student-app :where(.ai-submission-status-success, .practice-submission-status-success) {
+  border-color: rgba(0, 196, 154, .28);
+}
+
+.student-app :where(.ai-submission-status-success, .practice-submission-status-success) :where(
+  .ai-submission-status-mark,
+  .practice-submission-status-mark
+) {
+  background: linear-gradient(145deg, #10c9a2, var(--yuva-green));
+}
+
+.student-app :where(.ai-submission-status-attention, .practice-submission-status-attention) {
+  border-color: rgba(255, 159, 28, .32);
+}
+
+.student-app :where(.ai-submission-status-attention, .practice-submission-status-attention) :where(
+  .ai-submission-status-mark,
+  .practice-submission-status-mark
+) {
+  background: linear-gradient(145deg, #ffb52f, var(--yuva-orange));
+}
+
+.student-app :where(.ai-submission-status-error, .practice-submission-status-error) {
+  border-color: rgba(244, 63, 94, .40);
+}
+
+.student-app :where(.ai-submission-status-error, .practice-submission-status-error) :where(
+  .ai-submission-status-mark,
+  .practice-submission-status-mark
+) {
+  background: linear-gradient(145deg, #fb7185, var(--yuva-red));
+}
+
+.student-app .practice-research-card .form-note {
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.student-app .practice-research-card .field-error {
+  margin: 7px 0 0;
+  color: #b91c1c;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.student-app .practice-research-card input[aria-invalid="true"] {
+  border-color: var(--yuva-red);
+  box-shadow: 0 0 0 3px rgba(244, 63, 94, .12);
+}
+
+@media (max-width: 760px) {
+  .student-app .ai-submission-status,
+  .student-app .practice-submission-status {
+    grid-template-columns: 46px minmax(0, 1fr);
+    gap: 14px;
+  }
+
+  .student-app .ai-submission-status .button,
+  .student-app .practice-submission-status .button {
+    grid-column: 1 / -1;
+    width: 100%;
+    min-height: 46px;
+  }
+
+  .student-app .ai-submission-status-mark,
+  .student-app .practice-submission-status-mark {
+    width: 46px;
+    height: 46px;
+  }
+}
+
 /* Student Experience V1: shared release-candidate primitives */
 .student-app {
   --font-student: "Poppins", "Aptos", "Segoe UI", Arial, sans-serif;
