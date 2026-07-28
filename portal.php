@@ -141,6 +141,72 @@ if ($selection && !$research) {
         'button' => 'Review Presentation',
     ];
 }
+$studentAnnouncements = text_lines($hub['announcements']);
+$studentNotifications = [];
+$notificationSessionTitle = $hasStudentZoom
+    ? ($studentSessionTitle ?: 'YUVA Club session')
+    : trim((string) ($session['title'] ?? ''));
+$notificationSessionDate = $hasStudentZoom
+    ? $studentSessionDate
+    : trim((string) ($session['date'] ?? ''));
+if ($notificationSessionDate !== '') {
+    $studentNotifications[] = [
+        'type' => 'session',
+        'eyebrow' => 'Upcoming session',
+        'title' => $notificationSessionTitle !== '' ? $notificationSessionTitle : 'Your next YUVA Club session',
+        'body' => 'Scheduled for ' . $notificationSessionDate . '. Open Presentation Studio for the current session details.',
+        'href' => '#app-present',
+        'action' => 'View session',
+    ];
+}
+if ($aiReviewState === 'approved') {
+    $studentNotifications[] = [
+        'type' => 'mentor',
+        'eyebrow' => 'AI Mentor',
+        'title' => 'Your approved guidance is ready',
+        'body' => $aiMentorSummary !== '' ? $aiMentorSummary : 'Your administrator-approved review is ready to read.',
+        'href' => '#app-ai-coach',
+        'action' => 'Read guidance',
+    ];
+} elseif ($aiReviewState === 'awaiting-approval') {
+    $studentNotifications[] = [
+        'type' => 'pending',
+        'eyebrow' => 'Review status',
+        'title' => 'Your guidance is awaiting approval',
+        'body' => 'Your latest review remains private while a YUVA Club administrator checks it.',
+        'href' => '#app-ai-coach',
+        'action' => 'View status',
+    ];
+} elseif ($research !== null) {
+    $studentNotifications[] = [
+        'type' => 'submission',
+        'eyebrow' => 'Preparation status',
+        'title' => (string) $submissionPresentation['title'],
+        'body' => (string) $submissionPresentation['body'],
+        'href' => '#research-submission',
+        'action' => 'View preparation',
+    ];
+}
+if ($certificateReady) {
+    $studentNotifications[] = [
+        'type' => 'recognition',
+        'eyebrow' => 'Achievement',
+        'title' => 'Your certificate is ' . strtolower($certificateStatus),
+        'body' => 'Your approved certificate is available from Achievements.',
+        'href' => '#app-achievements',
+        'action' => 'View certificate',
+    ];
+}
+foreach ($studentAnnouncements as $announcement) {
+    $studentNotifications[] = [
+        'type' => 'announcement',
+        'eyebrow' => 'Club announcement',
+        'title' => 'Update from YUVA Club',
+        'body' => $announcement,
+        'href' => '#announcements',
+        'action' => 'View announcement',
+    ];
+}
 
 portal_header('Student Dashboard', true);
 ?>
@@ -154,7 +220,7 @@ portal_header('Student Dashboard', true);
       $homeSessionStart = $hasStudentZoom ? $studentSessionStart : ($session['start'] ?? '');
       $homeSessionEnd = $hasStudentZoom ? $studentSessionEnd : ($session['end'] ?? '');
       $homeSessionStatus = $hasStudentZoom ? $studentSessionStatus : ($session['status'] ?? 'Not scheduled');
-      $homeAnnouncements = text_lines($hub['announcements']);
+      $homeAnnouncements = $studentAnnouncements;
       $homeRecentBadge = $badges ? (string) end($badges) : '';
       $homeMentorMessage = match ($aiReviewState) {
           'approved' => (string) ($approvedAiReview['summary'] ?? 'Your approved guidance is ready.'),
@@ -171,9 +237,9 @@ portal_header('Student Dashboard', true);
         <p>Lead with confidence. Grow with purpose. Make today count.</p>
       </div>
       <div class="home-welcome-actions">
-        <a class="home-notification" href="#announcements" aria-label="View announcements">
+        <a class="home-notification" href="#app-notifications" aria-label="Open student notifications">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          <?php if ($homeAnnouncements): ?><span class="home-notification-dot" aria-hidden="true"></span><?php endif; ?>
+          <?php if ($studentNotifications): ?><span class="home-notification-dot" aria-hidden="true"></span><?php endif; ?>
         </a>
         <a class="home-avatar" href="#app-profile" aria-label="Open student profile"><?php echo e($studentInitials); ?></a>
       </div>
@@ -280,9 +346,59 @@ portal_header('Student Dashboard', true);
         <?php else: ?>
           <p>You’re all caught up. Approved club announcements will appear here.</p>
         <?php endif; ?>
-        <a class="button ghost" href="#announcements">View announcements</a>
+        <a class="button ghost" href="#app-notifications">View notifications</a>
       </div>
     </div>
+  </section>
+
+  <section class="band app-section" id="app-notifications" data-app-section="home" aria-labelledby="notifications-title">
+    <header class="notifications-hero ds-story-hero">
+      <div>
+        <p class="eyebrow">Student Notifications</p>
+        <h1 id="notifications-title">Stay connected to your journey.</h1>
+        <p>Important updates from your real YUVA Club activity appear here—without noise or invented alerts.</p>
+      </div>
+      <span class="notifications-hero-mark" aria-hidden="true"><?php echo student_app_icon('bell'); ?></span>
+    </header>
+
+    <div class="notifications-summary" role="status" aria-live="polite">
+      <div>
+        <span>Current updates</span>
+        <strong><?php echo e((string) count($studentNotifications)); ?></strong>
+      </div>
+      <p>Release 1.0 does not track unread status. This count reflects the updates currently available from your account data.</p>
+    </div>
+
+    <?php if ($studentNotifications): ?>
+      <div class="notifications-list" aria-label="Current student notifications">
+        <?php foreach ($studentNotifications as $notification): ?>
+          <article class="notification-card notification-<?php echo e($notification['type']); ?>">
+            <span class="notification-card-mark" aria-hidden="true"></span>
+            <div class="notification-card-copy">
+              <p class="eyebrow"><?php echo e($notification['eyebrow']); ?></p>
+              <h2><?php echo e($notification['title']); ?></h2>
+              <p><?php echo e($notification['body']); ?></p>
+            </div>
+            <a class="button ghost" href="<?php echo e($notification['href']); ?>"><?php echo e($notification['action']); ?></a>
+          </article>
+        <?php endforeach; ?>
+      </div>
+    <?php else: ?>
+      <div class="notifications-empty" role="status">
+        <span class="notifications-empty-mark" aria-hidden="true"><?php echo student_app_icon('bell'); ?></span>
+        <div>
+          <p class="eyebrow">All caught up</p>
+          <h2>No current notifications</h2>
+          <p>Session, approved review, certificate, and club updates will appear here when real information is available.</p>
+        </div>
+        <a class="button primary" href="#app-home">Return home</a>
+      </div>
+    <?php endif; ?>
+
+    <aside class="notifications-privacy-note">
+      <strong>Private to your student account</strong>
+      <p>Notifications do not display parent contact details, private administrator notes, credentials, or internal organization data.</p>
+    </aside>
   </section>
 
   <section class="band app-section" id="app-progress" data-app-section="progress">

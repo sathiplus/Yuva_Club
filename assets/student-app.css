@@ -3804,6 +3804,129 @@ body.student-app {
   }
 }
 
+/* Project Launch L3: truthful, read-only Student Notifications */
+.student-app #app-notifications {
+  color: #eef4ff;
+  background: radial-gradient(circle at 90% 5%, rgba(52, 211, 179, .09), transparent 27rem), linear-gradient(180deg, #071632, #081a3c);
+}
+
+.student-app .notifications-hero {
+  position: relative;
+  min-height: 240px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  overflow: hidden;
+  padding: 38px 42px;
+  border: 1px solid rgba(100, 128, 196, .28);
+  border-radius: 30px;
+  background: radial-gradient(circle at 82% 25%, rgba(45, 212, 191, .16), transparent 27%), linear-gradient(135deg, #10275b, #091a42 58%, #1e154f);
+  box-shadow: 0 24px 52px rgba(1, 8, 29, .32), inset 0 1px rgba(255, 255, 255, .05);
+}
+
+.student-app .notifications-hero > div { position: relative; z-index: 1; max-width: 680px; }
+.student-app .notifications-hero h1, .student-app .notifications-hero p { margin: 0; }
+.student-app .notifications-hero h1 { margin: 6px 0 13px; color: #fff; font-size: clamp(34px, 5vw, 58px); line-height: 1.02; letter-spacing: -.045em; }
+.student-app .notifications-hero > div > p:last-child { max-width: 620px; color: #c3cee3; font-size: 16px; }
+.student-app .notifications-hero-mark {
+  position: relative;
+  z-index: 1;
+  width: 116px;
+  height: 116px;
+  flex: 0 0 116px;
+  display: grid;
+  place-items: center;
+  margin-right: 5%;
+  border: 1px solid rgba(94, 234, 212, .32);
+  border-radius: 34px;
+  color: #74f2da;
+  background: linear-gradient(145deg, rgba(31, 193, 164, .25), rgba(45, 78, 163, .28));
+  box-shadow: 0 18px 38px rgba(2, 10, 35, .34), inset 0 1px rgba(255, 255, 255, .08);
+}
+.student-app .notifications-hero-mark svg { width: 58px; height: 58px; }
+
+.student-app .notifications-summary {
+  display: grid;
+  grid-template-columns: minmax(150px, .32fr) minmax(0, 1fr);
+  align-items: center;
+  gap: 22px;
+  margin: 22px 0 18px;
+  padding: 18px 22px;
+  border: 1px solid rgba(104, 134, 195, .24);
+  border-radius: 20px;
+  background: rgba(15, 39, 84, .84);
+}
+.student-app .notifications-summary > div { display: flex; align-items: baseline; gap: 12px; }
+.student-app .notifications-summary span { color: #9db0d2; font-size: 12px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; }
+.student-app .notifications-summary strong { color: #fff; font-size: 32px; }
+.student-app .notifications-summary p { margin: 0; color: #aebddb; font-size: 13px; }
+.student-app .notifications-list { display: grid; gap: 14px; }
+
+.student-app .notification-card {
+  display: grid;
+  grid-template-columns: 54px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 18px;
+  min-height: 132px;
+  padding: 20px 22px;
+  border: 1px solid rgba(104, 133, 193, .25);
+  border-radius: 22px;
+  background: linear-gradient(145deg, rgba(17, 42, 89, .98), rgba(8, 27, 66, .98));
+  box-shadow: 0 16px 34px rgba(1, 8, 29, .23), inset 0 1px rgba(255, 255, 255, .035);
+}
+.student-app .notification-card-mark { width: 54px; height: 54px; border-radius: 17px; background: linear-gradient(145deg, #2c91f1, #1554c7); box-shadow: 0 10px 22px rgba(18, 81, 190, .28); }
+.student-app .notification-mentor .notification-card-mark, .student-app .notification-pending .notification-card-mark { background: linear-gradient(145deg, #9b60ef, #5c2bc8); }
+.student-app .notification-submission .notification-card-mark { background: linear-gradient(145deg, #29cda4, #078d70); }
+.student-app .notification-recognition .notification-card-mark { background: linear-gradient(145deg, #ffb42b, #e77513); }
+.student-app .notification-announcement .notification-card-mark { background: linear-gradient(145deg, #ff755b, #d93a54); }
+.student-app .notification-card-copy h2, .student-app .notification-card-copy p { margin: 0; }
+.student-app .notification-card-copy h2 { margin: 3px 0 6px; color: #fff; font-size: clamp(19px, 2.3vw, 24px); }
+.student-app .notification-card-copy > p:last-child { color: #aebddb; }
+.student-app .notification-card .button { min-width: 150px; justify-content: center; }
+
+.student-app .notifications-empty {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 22px;
+  padding: 28px;
+  border: 1px solid rgba(94, 221, 195, .25);
+  border-radius: 24px;
+  background: linear-gradient(145deg, rgba(14, 60, 88, .78), rgba(8, 29, 66, .96));
+}
+.student-app .notifications-empty-mark { width: 72px; height: 72px; display: grid; place-items: center; border-radius: 22px; color: #6de9d2; background: rgba(36, 205, 173, .14); }
+.student-app .notifications-empty-mark svg { width: 36px; height: 36px; }
+.student-app .notifications-empty h2, .student-app .notifications-empty p { margin: 0; }
+.student-app .notifications-empty h2 { margin: 3px 0 6px; color: #fff; }
+.student-app .notifications-empty div > p:last-child { color: #afbed9; }
+.student-app .notifications-privacy-note { margin-top: 18px; padding: 16px 18px; border-left: 4px solid #5f50d8; border-radius: 12px; color: #b7c4dd; background: rgba(80, 63, 170, .13); }
+.student-app .notifications-privacy-note strong { display: block; margin-bottom: 3px; color: #fff; }
+.student-app .notifications-privacy-note p { margin: 0; }
+
+@media (max-width: 820px) {
+  .student-app .notifications-hero { min-height: 220px; padding: 30px; }
+  .student-app .notifications-hero-mark { width: 90px; height: 90px; flex-basis: 90px; margin-right: 0; border-radius: 27px; }
+  .student-app .notifications-hero-mark svg { width: 44px; height: 44px; }
+  .student-app .notification-card { grid-template-columns: 48px minmax(0, 1fr); }
+  .student-app .notification-card-mark { width: 48px; height: 48px; }
+  .student-app .notification-card .button { grid-column: 2; justify-self: start; }
+}
+
+@media (max-width: 560px) {
+  .student-app #app-notifications { padding-top: 18px; }
+  .student-app .notifications-hero { min-height: 250px; align-items: flex-end; padding: 24px 20px; border-radius: 22px; }
+  .student-app .notifications-hero > div { padding-right: 0; }
+  .student-app .notifications-hero h1 { padding-right: 52px; font-size: 34px; }
+  .student-app .notifications-hero-mark { position: absolute; top: 20px; right: 20px; width: 58px; height: 58px; border-radius: 18px; }
+  .student-app .notifications-hero-mark svg { width: 29px; height: 29px; }
+  .student-app .notifications-summary { grid-template-columns: 1fr; gap: 8px; padding: 16px; }
+  .student-app .notification-card { grid-template-columns: 42px minmax(0, 1fr); gap: 13px; padding: 17px; border-radius: 19px; }
+  .student-app .notification-card-mark { width: 42px; height: 42px; border-radius: 14px; }
+  .student-app .notification-card .button { grid-column: 1 / -1; width: 100%; min-width: 0; }
+  .student-app .notifications-empty { grid-template-columns: 1fr; justify-items: start; padding: 22px; }
+  .student-app .notifications-empty .button { width: 100%; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .student-app *,
   .student-app *::before,
