@@ -694,6 +694,7 @@ portal_header('Master Admin', false, ['assets/master-admin.css?v=1']);
               </td>
               <td>
                 <form id="admin-form-<?php echo e($studentId); ?>" action="admin-actions.php" method="post">
+                  <?php echo csrf_field(); ?>
                   <input type="hidden" name="student_id" value="<?php echo e($studentId); ?>">
                   <div class="field">
                     <label>Topic Status</label>
