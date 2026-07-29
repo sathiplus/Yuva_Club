@@ -1,0 +1,19 @@
+# Mutable runtime data
+portal-data/
+portal-uploads/
+submissions/
+
+# Repository and environment metadata
+.git/
+.env
+.env.*
+
+# Private, temporary, review, and generated output
+artifacts/
+assets/review/
+.idea/
+.vscode/
+*.tmp
+*.temp
+*.bak
+*~
