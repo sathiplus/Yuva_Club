@@ -129,36 +129,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          git archive --format=zip --output="$PACKAGE_NAME" HEAD
-          python3 - "$PACKAGE_NAME" <<'PY'
-          import pathlib
-          import subprocess
-          import sys
-          import zipfile
-
-          archive = pathlib.Path(sys.argv[1])
-          expected = set(
-              subprocess.check_output(
-                  ["git", "ls-tree", "-r", "--name-only", "HEAD"],
-                  text=True,
-              ).splitlines()
-          )
-          with zipfile.ZipFile(archive) as package:
-              names = {info.filename for info in package.infolist() if not info.is_dir()}
-              assert all("\\" not in info.filename for info in package.infolist())
-          assert names == expected
-          forbidden = (
-              ".git/",
-              ".env",
-              "artifacts/",
-              "assets/review/",
-              "submissions/",
-              "portal-data/",
-              "portal-uploads/",
-          )
-          assert not any(name == ".env" or name.startswith(forbidden) for name in names)
-          print(f"Verified {len(names)} tracked files")
-          PY
+          python3 tools/build-release-artifact.py \
+            --commit HEAD \
+            --output "$PACKAGE_NAME" \
+            --exclusions tools/release-artifact-exclusions.txt \
+            --inventory "$PACKAGE_NAME.inventory.json"
+          python3 tests/release-artifact-tooling-test.py
           sha256sum "$PACKAGE_NAME" | tee "$PACKAGE_NAME.sha256"
 
       - name: Verify production safety controls are present
@@ -171,7 +147,7 @@ jobs:
           grep -q 'cancel-in-progress: false' "$WORKFLOW"
           grep -q 'environment: production' "$WORKFLOW"
           grep -q 'git merge-base --is-ancestor' "$WORKFLOW"
-          grep -q 'git archive --format=zip' "$WORKFLOW"
+          grep -q 'build-release-artifact.py' "$WORKFLOW"
           grep -q 'OVERALL_VERIFY=PASS' "$WORKFLOW"
           grep -q 'sha256sum -c.*submissions.sha256' "$WORKFLOW"
           grep -q 'retention-days: 90' "$WORKFLOW"
@@ -185,6 +161,7 @@ jobs:
           path: |
             ${{ env.PACKAGE_NAME }}
             ${{ env.PACKAGE_NAME }}.sha256
+            ${{ env.PACKAGE_NAME }}.inventory.json
           if-no-files-found: error
           retention-days: 90
 
@@ -242,6 +219,30 @@ jobs:
                 --name "$APP_NAME" | tee backup-verification.log
           grep -q 'RELEASE_BACKUP_VERIFIED' backup-verification.log
 
+      - name: Capture exact mutable production inventory
+        shell: bash
+        run: |
+          set -euo pipefail
+          REMOTE_COMMAND="cd /home/site/wwwroot \
+            && echo MUTABLE_INVENTORY_BEGIN \
+            && for directory in portal-data portal-uploads submissions; do \
+                 find \"\$directory\" -type f -print0 | sort -z | xargs -0 -r sha256sum; \
+               done \
+            && echo MUTABLE_INVENTORY_END"
+          {
+            sleep 12
+            printf '\n'
+            sleep 1
+            printf '%s\n' "$REMOTE_COMMAND"
+            sleep 2
+            printf 'exit\n'
+          } | timeout 90 az webapp ssh \
+                --resource-group "$RESOURCE_GROUP" \
+                --name "$APP_NAME" | tee mutable-before.log
+          sed -n '/^MUTABLE_INVENTORY_BEGIN$/,/^MUTABLE_INVENTORY_END$/p' \
+            mutable-before.log > mutable-before.sha256
+          test -s mutable-before.sha256
+
       - name: Deploy without cleaning persistent wwwroot content
         shell: bash
         run: |
@@ -280,6 +281,31 @@ jobs:
                 --resource-group "$RESOURCE_GROUP" \
                 --name "$APP_NAME" | tee mutable-verification.log
           grep -q 'MUTABLE_RECORDS_VERIFIED' mutable-verification.log
+
+      - name: Compare exact mutable production inventory
+        shell: bash
+        run: |
+          set -euo pipefail
+          REMOTE_COMMAND="cd /home/site/wwwroot \
+            && echo MUTABLE_INVENTORY_BEGIN \
+            && for directory in portal-data portal-uploads submissions; do \
+                 find \"\$directory\" -type f -print0 | sort -z | xargs -0 -r sha256sum; \
+               done \
+            && echo MUTABLE_INVENTORY_END"
+          {
+            sleep 12
+            printf '\n'
+            sleep 1
+            printf '%s\n' "$REMOTE_COMMAND"
+            sleep 2
+            printf 'exit\n'
+          } | timeout 90 az webapp ssh \
+                --resource-group "$RESOURCE_GROUP" \
+                --name "$APP_NAME" | tee mutable-after.log
+          sed -n '/^MUTABLE_INVENTORY_BEGIN$/,/^MUTABLE_INVENTORY_END$/p' \
+            mutable-after.log > mutable-after.sha256
+          cmp mutable-before.sha256 mutable-after.sha256
+          echo MUTABLE_INVENTORY_EXACT_MATCH
 
       - name: Public production smoke tests
         shell: bash
