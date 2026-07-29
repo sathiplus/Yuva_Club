@@ -6,7 +6,7 @@ submissions/
 # Repository and environment metadata
 .git/
 .env
-.env.
+.env.*
 
 # Private, temporary, review, and generated output
 artifacts/
