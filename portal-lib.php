@@ -1650,7 +1650,8 @@ function portal_authentication_service(): \YuvaClub\Authentication\Authenticatio
     $students = new \YuvaClub\Authentication\StudentAuthentication(
         $repository,
         $adapter,
-        static fn(string $yuvaId): ?array => find_student($yuvaId),
+        static fn(string $yuvaId): ?array =>
+            find_authenticatable_filesystem_student($yuvaId),
         static fn(array $record, string $credential): bool =>
             hash_equals((string) ($record['Date of Birth'] ?? ''), $credential)
     );
@@ -2410,6 +2411,17 @@ function find_student(string $studentId): ?array {
     return $students[$studentId] ?? null;
 }
 
+function find_authenticatable_filesystem_student(string $studentId): ?array {
+    $studentId = normalize_yuva_id($studentId);
+    $student = find_student($studentId);
+    if ($student === null) {
+        return null;
+    }
+
+    $record = student_record($studentId);
+    return ($record['approved'] ?? null) === 'Approved' ? $student : null;
+}
+
 function student_display_name(array $student): string {
     $preferred = $student['Preferred Name'] ?? '';
     if ($preferred !== '') {
@@ -2496,7 +2508,7 @@ function require_student(): array {
     $source = $_SESSION['student_auth_source'] ?? null;
     $authMode = portal_auth_mode();
     if ($source === null && in_array($authMode, ['filesystem', 'hybrid'], true)) {
-        $student = find_student($studentId);
+        $student = find_authenticatable_filesystem_student($studentId);
     } elseif (
         $source === 'sql'
         && in_array($authMode, ['sql', 'hybrid'], true)
