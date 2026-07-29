@@ -23,11 +23,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     redirect_to('portal-login.php?status=error');
 }
 
-portal_header('Student Portal Login', false, ['assets/public-site.css?v=1']);
+portal_header('Student Portal Login', false, ['assets/public-site.css?v=1'], true);
 ?>
 <a class="public-skip-link" href="#main-content">Skip to main content</a>
 <main id="main-content">
-  <section class="band">
+  <section class="band horizon-login-page">
     <div class="form-shell portal-narrow">
       <div class="section-head">
         <p class="eyebrow">Student Portal</p>
@@ -77,4 +77,4 @@ portal_header('Student Portal Login', false, ['assets/public-site.css?v=1']);
     </div>
   </section>
 </main>
-<?php portal_footer(); ?>
+<?php portal_footer(false, true); ?>

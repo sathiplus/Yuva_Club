@@ -12,18 +12,15 @@ if ($student === null || $selection === [] || $research === []) {
     redirect_to('admin.php?status=ai-missing');
 }
 
-$result = ai_review_research_submission($student, $selection, $research);
-$reviews = ai_reviews();
-$reviews[$studentId] = [
-    'ok' => $result['ok'],
-    'review' => $result['review'] ?? [],
-    'error' => $result['error'] ?? '',
-    'reviewed_at' => date('Y-m-d H:i:s'),
-    'topic_title' => $selection['topic_title'] ?? '',
-    'topic_category' => $selection['topic_category'] ?? '',
-    'status' => ($result['ok'] ?? false) ? 'Draft - Pending Admin Approval' : 'Needs Setup',
-];
-write_json_file(ai_reviews_file(), $reviews);
-audit_log_event($admin['id'], $admin['role'], $admin['organization_id'], 'admin.ai_review.create', 'student', $studentId, (bool) ($result['ok'] ?? false), ['status' => $reviews[$studentId]['status']]);
+$reviewRecord = ai_mentor_service()->createDraft(
+    $studentId,
+    $student,
+    $selection,
+    $research
+);
+audit_log_event($admin['id'], $admin['role'], $admin['organization_id'], 'admin.ai_review.create', 'student', $studentId, (bool) ($reviewRecord['ok'] ?? false), [
+    'status' => $reviewRecord['status'],
+    'prompt_version' => $reviewRecord['prompt_version'],
+]);
 
-redirect_to(($result['ok'] ?? false) ? 'admin.php?status=ai-reviewed' : 'admin.php?status=ai-error');
+redirect_to(($reviewRecord['ok'] ?? false) ? 'admin.php?status=ai-reviewed' : 'admin.php?status=ai-error');

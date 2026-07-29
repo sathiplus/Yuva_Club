@@ -27,33 +27,89 @@ if (in_array('', [$record['research_notes'], $record['sources_used'], $record['p
     redirect_to('portal.php?status=error');
 }
 
-if (!empty($_FILES['research_file']['name']) && is_uploaded_file($_FILES['research_file']['tmp_name'])) {
-    $original = basename((string) $_FILES['research_file']['name']);
-    $extension = strtolower(pathinfo($original, PATHINFO_EXTENSION));
-    $allowed = ['pdf', 'ppt', 'pptx', 'doc', 'docx', 'jpg', 'jpeg', 'png'];
+/**
+ * Preserve the written submission and the prior valid attachment when a new
+ * optional file is rejected. Technical upload details never reach the UI.
+ */
+$rejectUpload = static function (string $status) use (
+    &$record,
+    &$researchAll,
+    $existing,
+    $researchChanged,
+    $studentId
+): never {
+    $record['file_original'] = $existing['file_original'] ?? '';
+    $record['file_stored'] = $existing['file_stored'] ?? '';
+    if ($researchChanged) {
+        $record['status'] = 'Pending Admin Review';
+    }
+    $researchAll[$studentId] = array_merge($existing, $record);
+    write_json_file(research_file(), $researchAll);
+    if ($researchChanged) {
+        mark_ai_review_stale($studentId, 'Research Changed');
+    }
+    redirect_to('portal.php?status=' . $status);
+};
 
-    if (!in_array($extension, $allowed, true)) {
-        if ($researchChanged) {
-            $record['status'] = 'Pending Admin Review';
-        }
-        $researchAll[$studentId] = array_merge($existing, $record);
-        write_json_file(research_file(), $researchAll);
-        if ($researchChanged) {
-            mark_ai_review_stale($studentId, 'Research Changed');
-        }
-        redirect_to('portal.php?status=upload-error');
+$upload = $_FILES['research_file'] ?? null;
+$hasUploadAttempt = is_array($upload)
+    && (int) ($upload['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE;
+
+if ($hasUploadAttempt) {
+    $original = basename((string) ($upload['name'] ?? ''));
+    $temporaryPath = (string) ($upload['tmp_name'] ?? '');
+    $uploadError = (int) ($upload['error'] ?? UPLOAD_ERR_NO_FILE);
+    $uploadSize = (int) ($upload['size'] ?? 0);
+    $detectedMime = '';
+    $prefix = '';
+
+    if (
+        $uploadError === UPLOAD_ERR_OK
+        && $temporaryPath !== ''
+        && is_uploaded_file($temporaryPath)
+    ) {
+        $finfo = new finfo(FILEINFO_MIME_TYPE);
+        $detectedMime = (string) $finfo->file($temporaryPath);
+        $prefixValue = file_get_contents($temporaryPath, false, null, 0, 8);
+        $prefix = is_string($prefixValue) ? $prefixValue : '';
+    } elseif ($uploadError === UPLOAD_ERR_OK) {
+        $uploadError = UPLOAD_ERR_CANT_WRITE;
+    }
+
+    $validator = new \YuvaClub\Submission\ResearchUploadValidator();
+    $validation = $validator->validate(
+        $original,
+        $uploadSize,
+        $uploadError,
+        $detectedMime,
+        $prefix
+    );
+    if (!($validation['ok'] ?? false)) {
+        $status = match ($validation['code'] ?? 'upload-failed') {
+            'too-large' => 'upload-too-large',
+            'unsupported' => 'upload-unsupported',
+            'type-mismatch' => 'upload-mismatch',
+            default => 'upload-failed',
+        };
+        $rejectUpload($status);
+    }
+
+    if ($temporaryPath === '' || !is_uploaded_file($temporaryPath)) {
+        $rejectUpload('upload-failed');
     }
 
     $studentUploadDir = portal_path('portal-uploads') . DIRECTORY_SEPARATOR . preg_replace('/[^A-Za-z0-9_-]/', '_', $studentId);
-    if (!is_dir($studentUploadDir)) {
-        mkdir($studentUploadDir, 0755, true);
+    if (!is_dir($studentUploadDir) && !mkdir($studentUploadDir, 0755, true) && !is_dir($studentUploadDir)) {
+        $rejectUpload('upload-failed');
     }
     $storedName = date('YmdHis') . '-' . preg_replace('/[^A-Za-z0-9._-]/', '_', $original);
     $target = $studentUploadDir . DIRECTORY_SEPARATOR . $storedName;
-    if (move_uploaded_file($_FILES['research_file']['tmp_name'], $target)) {
+    if (move_uploaded_file($temporaryPath, $target)) {
         $record['file_original'] = $original;
         $record['file_stored'] = $storedName;
         $researchChanged = true;
+    } else {
+        $rejectUpload('upload-failed');
     }
 } else {
     $record['file_original'] = $existing['file_original'] ?? '';
