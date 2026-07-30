@@ -55,6 +55,7 @@ function mutable_path_remove_tree(string $path): void {
 $environmentNames = [
     'APP_ENV',
     'WEBSITE_SITE_NAME',
+    'WEBSITE_SLOT_NAME',
     'YUVA_PORTAL_DATA_PATH',
     'YUVA_PORTAL_UPLOADS_PATH',
     'YUVA_SUBMISSIONS_PATH',
@@ -85,6 +86,7 @@ try {
     mutable_path_set_environment([
         'APP_ENV' => 'test',
         'WEBSITE_SITE_NAME' => null,
+        'WEBSITE_SLOT_NAME' => null,
         'YUVA_PORTAL_DATA_PATH' => null,
         'YUVA_PORTAL_UPLOADS_PATH' => null,
         'YUVA_SUBMISSIONS_PATH' => null,
@@ -96,8 +98,27 @@ try {
     );
 
     mutable_path_set_environment([
+        'APP_ENV' => 'release',
+        'WEBSITE_SITE_NAME' => null,
+        'WEBSITE_SLOT_NAME' => null,
+        'YUVA_PORTAL_DATA_PATH' => null,
+        'YUVA_PORTAL_UPLOADS_PATH' => null,
+        'YUVA_SUBMISSIONS_PATH' => null,
+    ]);
+    mutable_path_assert(
+        !app_requires_external_mutable_storage(),
+        'Local APP_ENV=release must not become production-like without Azure identity.'
+    );
+    mutable_path_assert(
+        mutable_runtime_path('submissions')
+            === dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'submissions',
+        'Local APP_ENV=release must retain the approved local fallback.'
+    );
+
+    mutable_path_set_environment([
         'APP_ENV' => 'production',
         'WEBSITE_SITE_NAME' => 'yuva-mutable-path-test',
+        'WEBSITE_SLOT_NAME' => null,
         'YUVA_PORTAL_DATA_PATH' => $validPaths['portal-data'],
         'YUVA_PORTAL_UPLOADS_PATH' => $validPaths['portal-uploads'],
         'YUVA_SUBMISSIONS_PATH' => $validPaths['submissions'],
@@ -128,6 +149,72 @@ try {
     mutable_path_assert(
         !mutable_storage_is_healthy(),
         'Missing production configuration must make storage unhealthy.'
+    );
+
+    mutable_path_set_environment([
+        'APP_ENV' => 'release',
+        'WEBSITE_SITE_NAME' => 'yuvaclub',
+        'WEBSITE_SLOT_NAME' => 'release',
+        'YUVA_PORTAL_DATA_PATH' => $validPaths['portal-data'],
+        'YUVA_PORTAL_UPLOADS_PATH' => $validPaths['portal-uploads'],
+        'YUVA_SUBMISSIONS_PATH' => null,
+    ]);
+    mutable_path_assert(
+        app_requires_external_mutable_storage(),
+        'The named Azure release slot must require external mutable storage.'
+    );
+    mutable_path_expect_failure(
+        static fn (): string => mutable_runtime_path('submissions'),
+        'The Azure release slot must fail closed when a mutable setting is missing.'
+    );
+    foreach (array_keys(mutable_path_definitions()) as $name) {
+        mutable_path_set_environment([
+            mutable_path_definitions()[$name] => null,
+        ]);
+        mutable_path_expect_failure(
+            static fn (): string => mutable_runtime_path($name),
+            "The Azure release slot must not fall back for {$name}."
+        );
+        mutable_path_set_environment([
+            mutable_path_definitions()[$name] => $validPaths[$name],
+        ]);
+    }
+    foreach ($validPaths as $name => $path) {
+        mutable_path_assert(
+            mutable_runtime_path($name) === realpath($path),
+            "The Azure release slot must resolve configured {$name} storage."
+        );
+    }
+
+    mutable_path_set_environment([
+        'APP_ENV' => 'staging',
+        'WEBSITE_SITE_NAME' => 'yuvaclub',
+        'WEBSITE_SLOT_NAME' => 'preview',
+        'YUVA_PORTAL_DATA_PATH' => null,
+        'YUVA_PORTAL_UPLOADS_PATH' => null,
+        'YUVA_SUBMISSIONS_PATH' => null,
+    ]);
+    mutable_path_assert(
+        !app_requires_external_mutable_storage(),
+        'Other Azure slot names must not become production-like without APP_ENV=production.'
+    );
+    mutable_path_assert(
+        mutable_runtime_path('submissions')
+            === dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'submissions',
+        'An unrelated Azure slot must retain its existing non-production behavior.'
+    );
+
+    mutable_path_set_environment([
+        'APP_ENV' => 'production',
+        'WEBSITE_SITE_NAME' => 'yuvaclub',
+        'WEBSITE_SLOT_NAME' => 'preview',
+        'YUVA_PORTAL_DATA_PATH' => $validPaths['portal-data'],
+        'YUVA_PORTAL_UPLOADS_PATH' => $validPaths['portal-uploads'],
+        'YUVA_SUBMISSIONS_PATH' => $validPaths['submissions'],
+    ]);
+    mutable_path_assert(
+        app_requires_external_mutable_storage(),
+        'Azure APP_ENV=production must remain production-like for the primary slot.'
     );
 
     mutable_path_set_environment([

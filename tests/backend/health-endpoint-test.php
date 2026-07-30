@@ -141,6 +141,7 @@ try {
     $environment = [
         'APP_ENV' => 'production',
         'WEBSITE_SITE_NAME' => 'yuva-health-test',
+        'WEBSITE_SLOT_NAME' => '',
         'YUVA_PORTAL_DATA_PATH' => $paths['portal-data'],
         'YUVA_PORTAL_UPLOADS_PATH' => $paths['portal-uploads'],
         'YUVA_SUBMISSIONS_PATH' => $paths['submissions'],
@@ -189,6 +190,32 @@ try {
     health_assert(
         !str_contains($unsafeResponse['body'], $fixtureRoot),
         'Unhealthy response must not expose configured paths.'
+    );
+
+    $release = $environment;
+    $release['APP_ENV'] = 'release';
+    $release['WEBSITE_SITE_NAME'] = 'yuvaclub';
+    $release['WEBSITE_SLOT_NAME'] = 'release';
+    $releaseHealthy = health_request($root, $release);
+    health_assert(
+        str_contains($releaseHealthy['status'], ' 200 '),
+        'The Azure release slot must return HTTP 200 for valid external paths.'
+    );
+    health_assert(
+        $releaseHealthy['body'] === '{"status":"ok"}',
+        'The healthy release-slot response must remain minimal.'
+    );
+
+    $releaseMissing = $release;
+    $releaseMissing['YUVA_SUBMISSIONS_PATH'] = '';
+    $releaseUnhealthy = health_request($root, $releaseMissing);
+    health_assert(
+        str_contains($releaseUnhealthy['status'], ' 503 '),
+        'The Azure release slot must return HTTP 503 when a mutable setting is missing.'
+    );
+    health_assert(
+        $releaseUnhealthy['body'] === '{"status":"unavailable"}',
+        'The unhealthy release-slot response must remain generic.'
     );
 
     echo "Health endpoint tests passed.\n";

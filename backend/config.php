@@ -26,6 +26,17 @@ function mutable_path_definitions(): array {
     ];
 }
 
+function app_requires_external_mutable_storage(): bool {
+    if (!app_is_azure()) {
+        return false;
+    }
+
+    $appEnv = strtolower(env_value('APP_ENV', 'production'));
+    $slotName = strtolower(env_value('WEBSITE_SLOT_NAME'));
+
+    return $appEnv === 'production' || $slotName === 'release';
+}
+
 function path_uses_absolute_syntax(string $path): bool {
     return str_starts_with($path, '/')
         || preg_match('/^[A-Za-z]:[\\\\\/]/', $path) === 1
@@ -54,7 +65,7 @@ function path_is_within(string $candidate, string $root): bool {
 function validate_configured_mutable_path(
     string $name,
     string $configuredPath,
-    bool $production
+    bool $externalStorageRequired
 ): string {
     if (!array_key_exists($name, mutable_path_definitions())) {
         throw new InvalidArgumentException('Unsupported mutable path type.');
@@ -89,7 +100,7 @@ function validate_configured_mutable_path(
 
     $applicationRoot = realpath(dirname(__DIR__));
     if (
-        $production
+        $externalStorageRequired
         && is_string($applicationRoot)
         && path_is_within($resolved, $applicationRoot)
     ) {
@@ -109,19 +120,22 @@ function mutable_runtime_path(string $name): string {
         throw new InvalidArgumentException('Unsupported mutable path type.');
     }
 
-    $appEnv = strtolower(env_value('APP_ENV', 'production'));
-    $production = $appEnv === 'production' && app_is_azure();
+    $externalStorageRequired = app_requires_external_mutable_storage();
     $configuredPath = env_value($definitions[$name]);
 
     if ($configuredPath === '') {
-        if ($production) {
+        if ($externalStorageRequired) {
             throw new RuntimeException('Required mutable storage path is unavailable.');
         }
 
         return dirname(__DIR__) . DIRECTORY_SEPARATOR . $name;
     }
 
-    return validate_configured_mutable_path($name, $configuredPath, $production);
+    return validate_configured_mutable_path(
+        $name,
+        $configuredPath,
+        $externalStorageRequired
+    );
 }
 
 function mutable_storage_is_healthy(): bool {
