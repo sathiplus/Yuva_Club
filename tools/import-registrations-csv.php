@@ -14,7 +14,11 @@ if (!database_settings_present()) {
     exit(1);
 }
 
-$path = $argv[1] ?? (__DIR__ . '/../submissions/registrations-current.csv');
+$path = $argv[1] ?? (
+    mutable_runtime_path('submissions')
+    . DIRECTORY_SEPARATOR
+    . 'registrations-current.csv'
+);
 if (!is_file($path)) {
     fwrite(STDERR, "CSV file not found: {$path}\n");
     exit(1);

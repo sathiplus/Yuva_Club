@@ -18,12 +18,138 @@ function env_bool(string $name, bool $default = false): bool {
     return filter_var($value, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) ?? $default;
 }
 
+function mutable_path_definitions(): array {
+    return [
+        'portal-data' => 'YUVA_PORTAL_DATA_PATH',
+        'portal-uploads' => 'YUVA_PORTAL_UPLOADS_PATH',
+        'submissions' => 'YUVA_SUBMISSIONS_PATH',
+    ];
+}
+
+function path_uses_absolute_syntax(string $path): bool {
+    return str_starts_with($path, '/')
+        || preg_match('/^[A-Za-z]:[\\\\\/]/', $path) === 1
+        || str_starts_with($path, '\\\\');
+}
+
+function normalized_path_for_comparison(string $path): string {
+    $normalized = str_replace('\\', '/', rtrim($path, "\\/"));
+    if ($normalized === '') {
+        return '/';
+    }
+
+    if (preg_match('/^[A-Za-z]:/', $normalized) === 1) {
+        return strtolower($normalized);
+    }
+
+    return $normalized;
+}
+
+function path_is_within(string $candidate, string $root): bool {
+    $candidate = normalized_path_for_comparison($candidate);
+    $root = normalized_path_for_comparison($root);
+    return $candidate === $root || str_starts_with($candidate, $root . '/');
+}
+
+function validate_configured_mutable_path(
+    string $name,
+    string $configuredPath,
+    bool $production
+): string {
+    if (!array_key_exists($name, mutable_path_definitions())) {
+        throw new InvalidArgumentException('Unsupported mutable path type.');
+    }
+
+    if (
+        $configuredPath === ''
+        || str_contains($configuredPath, "\0")
+        || !path_uses_absolute_syntax($configuredPath)
+    ) {
+        throw new RuntimeException('Required mutable storage path is unavailable.');
+    }
+
+    $segments = preg_split('#[\\\\/]+#', $configuredPath) ?: [];
+    if (in_array('..', $segments, true)) {
+        throw new RuntimeException('Required mutable storage path is unavailable.');
+    }
+
+    $resolved = realpath($configuredPath);
+    if ($resolved === false || !is_dir($resolved)) {
+        throw new RuntimeException('Required mutable storage path is unavailable.');
+    }
+
+    $normalized = normalized_path_for_comparison($resolved);
+    if (
+        $normalized === '/'
+        || $normalized === '/home'
+        || path_is_within($normalized, '/home/site/wwwroot')
+    ) {
+        throw new RuntimeException('Required mutable storage path is unavailable.');
+    }
+
+    $applicationRoot = realpath(dirname(__DIR__));
+    if (
+        $production
+        && is_string($applicationRoot)
+        && path_is_within($resolved, $applicationRoot)
+    ) {
+        throw new RuntimeException('Required mutable storage path is unavailable.');
+    }
+
+    if (!is_readable($resolved) || !is_writable($resolved)) {
+        throw new RuntimeException('Required mutable storage path is unavailable.');
+    }
+
+    return $resolved;
+}
+
+function mutable_runtime_path(string $name): string {
+    $definitions = mutable_path_definitions();
+    if (!isset($definitions[$name])) {
+        throw new InvalidArgumentException('Unsupported mutable path type.');
+    }
+
+    $appEnv = strtolower(env_value('APP_ENV', 'production'));
+    $production = $appEnv === 'production' && app_is_azure();
+    $configuredPath = env_value($definitions[$name]);
+
+    if ($configuredPath === '') {
+        if ($production) {
+            throw new RuntimeException('Required mutable storage path is unavailable.');
+        }
+
+        return dirname(__DIR__) . DIRECTORY_SEPARATOR . $name;
+    }
+
+    return validate_configured_mutable_path($name, $configuredPath, $production);
+}
+
+function mutable_storage_is_healthy(): bool {
+    try {
+        foreach (array_keys(mutable_path_definitions()) as $name) {
+            $path = mutable_runtime_path($name);
+            if (!is_dir($path) || !is_readable($path) || !is_writable($path)) {
+                return false;
+            }
+        }
+    } catch (Throwable) {
+        return false;
+    }
+
+    return true;
+}
+
 function app_config(): array {
     $appEnv = strtolower(env_value('APP_ENV', 'production'));
 
     return [
         'app_env' => $appEnv,
         'app_url' => rtrim(env_value('APP_URL', 'https://www.yuvaclub.app'), '/'),
+        'mutable_paths' => [
+            'portal_data' => env_value('YUVA_PORTAL_DATA_PATH'),
+            'portal_uploads' => env_value('YUVA_PORTAL_UPLOADS_PATH'),
+            'submissions' => env_value('YUVA_SUBMISSIONS_PATH'),
+        ],
         'database' => [
             'driver' => env_value('DB_DRIVER', 'mysql'),
             'host' => env_value('DB_HOST'),
