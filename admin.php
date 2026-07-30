@@ -683,6 +683,7 @@ portal_header('Master Admin', false, ['assets/master-admin.css?v=1']);
               $research = $researchAll[$studentId] ?? [];
               $aiReview = $aiReviews[$studentId] ?? [];
               $aiDraft = $aiReview['review'] ?? [];
+              $studentUpdateFormId = 'admin-form-' . $studentId;
             ?>
             <tr>
               <td>
@@ -693,12 +694,9 @@ portal_header('Master Admin', false, ['assets/master-admin.css?v=1']);
                 <p><a class="button ghost" href="admin-student-edit.php?id=<?php echo e($studentId); ?>">Edit Signup</a></p>
               </td>
               <td>
-                <form id="admin-form-<?php echo e($studentId); ?>" action="admin-actions.php" method="post">
-                  <?php echo csrf_field(); ?>
-                  <input type="hidden" name="student_id" value="<?php echo e($studentId); ?>">
                   <div class="field">
                     <label>Topic Status</label>
-                    <select name="topic_status">
+                    <select name="topic_status" form="<?php echo e($studentUpdateFormId); ?>">
                       <?php foreach (['Pending Admin Review', 'Approved', 'Needs Changes'] as $option): ?>
                         <option <?php echo (($selection['status'] ?? 'Pending Admin Review') === $option) ? 'selected' : ''; ?>><?php echo e($option); ?></option>
                       <?php endforeach; ?>
@@ -711,7 +709,7 @@ portal_header('Master Admin', false, ['assets/master-admin.css?v=1']);
               <td>
                   <div class="field">
                     <label>Research Status</label>
-                    <select name="research_status">
+                    <select name="research_status" form="<?php echo e($studentUpdateFormId); ?>">
                       <?php foreach (['Pending Admin Review', 'Approved', 'Needs Changes'] as $option): ?>
                         <option <?php echo (($research['status'] ?? 'Pending Admin Review') === $option) ? 'selected' : ''; ?>><?php echo e($option); ?></option>
                       <?php endforeach; ?>
@@ -729,11 +727,6 @@ portal_header('Master Admin', false, ['assets/master-admin.css?v=1']);
                     <?php if (!empty($research['file_original'])): ?>
                       <p><a href="portal-download.php?id=<?php echo e($studentId); ?>"><?php echo e($research['file_original']); ?></a></p>
                     <?php endif; ?>
-                    <form action="admin-ai-review.php" method="post">
-                      <?php echo csrf_field(); ?>
-                      <input type="hidden" name="student_id" value="<?php echo e($studentId); ?>">
-                      <button class="button ghost" type="submit">Run AI Coach Review</button>
-                    </form>
                     <?php if ($aiReview): ?>
                       <div class="ai-review-box">
                         <p><strong>AI Status:</strong> <?php echo e($aiReview['status'] ?? 'Draft'); ?></p>
@@ -751,11 +744,6 @@ portal_header('Master Admin', false, ['assets/master-admin.css?v=1']);
                           <?php if (!empty($aiDraft['improvements']) && is_array($aiDraft['improvements'])): ?>
                             <p><strong>Improvements:</strong> <?php echo e(implode(', ', $aiDraft['improvements'])); ?></p>
                           <?php endif; ?>
-                          <form action="admin-ai-apply.php" method="post">
-                            <?php echo csrf_field(); ?>
-                            <input type="hidden" name="student_id" value="<?php echo e($studentId); ?>">
-                            <button class="button primary" type="submit">Apply AI Draft</button>
-                          </form>
                         <?php endif; ?>
                       </div>
                     <?php endif; ?>
@@ -766,7 +754,7 @@ portal_header('Master Admin', false, ['assets/master-admin.css?v=1']);
               <td>
                   <div class="field">
                     <label>Approval</label>
-                    <select name="approved">
+                    <select name="approved" form="<?php echo e($studentUpdateFormId); ?>">
                       <?php foreach (['Pending', 'Approved', 'Waitlist', 'Inactive'] as $option): ?>
                         <option <?php echo (($record['approved'] ?? 'Pending') === $option) ? 'selected' : ''; ?>><?php echo e($option); ?></option>
                       <?php endforeach; ?>
@@ -775,7 +763,7 @@ portal_header('Master Admin', false, ['assets/master-admin.css?v=1']);
                   <div class="field-grid">
                     <div class="field">
                       <label>Approved Leadership Rank</label>
-                      <select name="current_rank">
+                      <select name="current_rank" form="<?php echo e($studentUpdateFormId); ?>">
                         <?php foreach (array_keys(rank_definitions()) as $option): ?>
                           <option <?php echo (approved_rank($record) === $option) ? 'selected' : ''; ?>><?php echo e($option); ?></option>
                         <?php endforeach; ?>
@@ -783,7 +771,7 @@ portal_header('Master Admin', false, ['assets/master-admin.css?v=1']);
                     </div>
                     <div class="field">
                       <label>Rank Status</label>
-                      <select name="rank_status">
+                      <select name="rank_status" form="<?php echo e($studentUpdateFormId); ?>">
                         <?php foreach (['Approved', 'Eligible for Review', 'Needs More Evidence', 'Pending Mentor Review'] as $option): ?>
                           <option <?php echo (($record['rank_status'] ?? 'Approved') === $option) ? 'selected' : ''; ?>><?php echo e($option); ?></option>
                         <?php endforeach; ?>
@@ -796,33 +784,33 @@ portal_header('Master Admin', false, ['assets/master-admin.css?v=1']);
                   </div>
                   <div class="field">
                     <label>Rank Recommendation</label>
-                    <input name="rank_recommendation" type="text" value="<?php echo e($record['rank_recommendation'] ?? ''); ?>" placeholder="AI or mentor recommendation">
+                    <input name="rank_recommendation" type="text" value="<?php echo e($record['rank_recommendation'] ?? ''); ?>" placeholder="AI or mentor recommendation" form="<?php echo e($studentUpdateFormId); ?>">
                   </div>
                   <div class="field">
                     <label>Attendance</label>
-                    <input name="attendance" type="number" min="0" value="<?php echo e($record['attendance'] ?? '0'); ?>">
+                    <input name="attendance" type="number" min="0" value="<?php echo e($record['attendance'] ?? '0'); ?>" form="<?php echo e($studentUpdateFormId); ?>">
                   </div>
                   <div class="field">
                     <label>Presentations</label>
-                    <input name="presentations" type="number" min="0" value="<?php echo e($record['presentations'] ?? '0'); ?>">
+                    <input name="presentations" type="number" min="0" value="<?php echo e($record['presentations'] ?? '0'); ?>" form="<?php echo e($studentUpdateFormId); ?>">
                   </div>
                   <div class="field">
                     <label>Service Hours</label>
-                    <input name="service_hours" type="number" min="0" step="0.25" value="<?php echo e($record['service_hours'] ?? '0'); ?>">
+                    <input name="service_hours" type="number" min="0" step="0.25" value="<?php echo e($record['service_hours'] ?? '0'); ?>" form="<?php echo e($studentUpdateFormId); ?>">
                   </div>
                   <div class="field-grid">
                     <div class="field">
                       <label>Points</label>
-                      <input name="points" type="number" min="0" value="<?php echo e((string) student_points($record)); ?>">
+                      <input name="points" type="number" min="0" value="<?php echo e((string) student_points($record)); ?>" form="<?php echo e($studentUpdateFormId); ?>">
                     </div>
                     <div class="field">
                       <label>Tokens</label>
-                      <input name="tokens" type="number" min="0" value="<?php echo e((string) student_tokens($record)); ?>">
+                      <input name="tokens" type="number" min="0" value="<?php echo e((string) student_tokens($record)); ?>" form="<?php echo e($studentUpdateFormId); ?>">
                     </div>
                   </div>
                   <div class="field">
                     <label>Reward Status</label>
-                    <select name="reward_status">
+                    <select name="reward_status" form="<?php echo e($studentUpdateFormId); ?>">
                       <?php foreach (['Not Yet', 'Bronze Reward', 'Silver Reward', 'Gold Reward', 'Gift Eligible', 'Gift Sent'] as $option): ?>
                         <option <?php echo (($record['reward_status'] ?? 'Not Yet') === $option) ? 'selected' : ''; ?>><?php echo e($option); ?></option>
                       <?php endforeach; ?>
@@ -830,19 +818,19 @@ portal_header('Master Admin', false, ['assets/master-admin.css?v=1']);
                   </div>
                   <div class="field">
                     <label>Last Presentation Duration</label>
-                    <input name="last_duration" type="text" value="<?php echo e($record['last_duration'] ?? ''); ?>" placeholder="5 minutes">
+                    <input name="last_duration" type="text" value="<?php echo e($record['last_duration'] ?? ''); ?>" placeholder="5 minutes" form="<?php echo e($studentUpdateFormId); ?>">
                   </div>
                   <div class="field">
                     <label>Score</label>
-                    <input name="score" type="text" value="<?php echo e($record['score'] ?? ''); ?>" placeholder="Optional">
+                    <input name="score" type="text" value="<?php echo e($record['score'] ?? ''); ?>" placeholder="Optional" form="<?php echo e($studentUpdateFormId); ?>">
                   </div>
                   <div class="field">
                     <label>Teacher Feedback</label>
-                    <textarea name="teacher_feedback"><?php echo e($record['teacher_feedback'] ?? ''); ?></textarea>
+                    <textarea name="teacher_feedback" form="<?php echo e($studentUpdateFormId); ?>"><?php echo e($record['teacher_feedback'] ?? ''); ?></textarea>
                   </div>
                   <div class="field">
                     <label>Challenge Stage</label>
-                    <select name="challenge_stage">
+                    <select name="challenge_stage" form="<?php echo e($studentUpdateFormId); ?>">
                       <?php foreach (challenge_stages() as $option): ?>
                         <option <?php echo (challenge_stage($record) === $option) ? 'selected' : ''; ?>><?php echo e($option); ?></option>
                       <?php endforeach; ?>
@@ -851,17 +839,17 @@ portal_header('Master Admin', false, ['assets/master-admin.css?v=1']);
                   <div class="field-grid">
                     <div class="field">
                       <label>Challenge Month</label>
-                      <input name="challenge_month" type="month" value="<?php echo e($record['challenge_month'] ?? date('Y-m')); ?>">
+                      <input name="challenge_month" type="month" value="<?php echo e($record['challenge_month'] ?? date('Y-m')); ?>" form="<?php echo e($studentUpdateFormId); ?>">
                     </div>
                     <div class="field">
                       <label>Region</label>
-                      <input name="challenge_region" type="text" value="<?php echo e($record['challenge_region'] ?? ''); ?>" placeholder="Local, Southeast, Online, etc.">
+                      <input name="challenge_region" type="text" value="<?php echo e($record['challenge_region'] ?? ''); ?>" placeholder="Local, Southeast, Online, etc." form="<?php echo e($studentUpdateFormId); ?>">
                     </div>
                   </div>
                   <div class="field-grid">
                     <div class="field">
                       <label>Finalist Status</label>
-                      <select name="finalist_status">
+                      <select name="finalist_status" form="<?php echo e($studentUpdateFormId); ?>">
                         <?php foreach (['Not Qualified', 'Eligible', 'Finalist', 'Champion'] as $option): ?>
                           <option <?php echo (($record['finalist_status'] ?? 'Not Qualified') === $option) ? 'selected' : ''; ?>><?php echo e($option); ?></option>
                         <?php endforeach; ?>
@@ -869,7 +857,7 @@ portal_header('Master Admin', false, ['assets/master-admin.css?v=1']);
                     </div>
                     <div class="field">
                       <label>Award Status</label>
-                      <select name="award_status">
+                      <select name="award_status" form="<?php echo e($studentUpdateFormId); ?>">
                         <?php foreach (['None', 'Badge Earned', 'Certificate Ready', 'Trophy Eligible', 'Award Issued'] as $option): ?>
                           <option <?php echo (($record['award_status'] ?? 'None') === $option) ? 'selected' : ''; ?>><?php echo e($option); ?></option>
                         <?php endforeach; ?>
@@ -884,51 +872,51 @@ portal_header('Master Admin', false, ['assets/master-admin.css?v=1']);
                     <?php foreach (rubric_categories() as $rubricKey => $rubricLabel): ?>
                       <div class="field">
                         <label><?php echo e($rubricLabel); ?></label>
-                        <input name="rubric_<?php echo e($rubricKey); ?>" type="number" min="1" max="10" value="<?php echo e($record['rubric_' . $rubricKey] ?? ''); ?>">
+                        <input name="rubric_<?php echo e($rubricKey); ?>" type="number" min="1" max="10" value="<?php echo e($record['rubric_' . $rubricKey] ?? ''); ?>" form="<?php echo e($studentUpdateFormId); ?>">
                       </div>
                     <?php endforeach; ?>
                   </div>
                   <div class="field">
                     <label>Judge Feedback</label>
-                    <textarea name="judge_feedback" placeholder="Challenge notes, judging comments, next steps"><?php echo e($record['judge_feedback'] ?? ''); ?></textarea>
+                    <textarea name="judge_feedback" placeholder="Challenge notes, judging comments, next steps" form="<?php echo e($studentUpdateFormId); ?>"><?php echo e($record['judge_feedback'] ?? ''); ?></textarea>
                   </div>
                   <div class="field">
                     <label>Mentor Feedback</label>
-                    <textarea name="mentor_feedback" placeholder="Mentor notes, rank readiness, coaching suggestions"><?php echo e($record['mentor_feedback'] ?? ''); ?></textarea>
+                    <textarea name="mentor_feedback" placeholder="Mentor notes, rank readiness, coaching suggestions" form="<?php echo e($studentUpdateFormId); ?>"><?php echo e($record['mentor_feedback'] ?? ''); ?></textarea>
                   </div>
                   <div class="field">
                     <label>AI Feedback Summary</label>
-                    <textarea name="ai_feedback_summary" placeholder="Encouraging summary after presentation review"><?php echo e($record['ai_feedback_summary'] ?? ''); ?></textarea>
+                    <textarea name="ai_feedback_summary" placeholder="Encouraging summary after presentation review" form="<?php echo e($studentUpdateFormId); ?>"><?php echo e($record['ai_feedback_summary'] ?? ''); ?></textarea>
                   </div>
                   <div class="field">
                     <label>Communication Skills</label>
-                    <textarea name="communication_skills" placeholder="Pace, clarity, confidence, organization"><?php echo e($record['communication_skills'] ?? ''); ?></textarea>
+                    <textarea name="communication_skills" placeholder="Pace, clarity, confidence, organization" form="<?php echo e($studentUpdateFormId); ?>"><?php echo e($record['communication_skills'] ?? ''); ?></textarea>
                   </div>
                   <div class="field">
                     <label>Leadership Milestones</label>
-                    <textarea name="leadership_milestones" placeholder="First presentation, mentor role, service project, etc."><?php echo e($record['leadership_milestones'] ?? ''); ?></textarea>
+                    <textarea name="leadership_milestones" placeholder="First presentation, mentor role, service project, etc." form="<?php echo e($studentUpdateFormId); ?>"><?php echo e($record['leadership_milestones'] ?? ''); ?></textarea>
                   </div>
                   <div class="field">
                     <label>Student Zoom Session Title</label>
-                    <input name="student_session_title" type="text" value="<?php echo e($record['student_session_title'] ?? ''); ?>" placeholder="Presentation Session">
+                    <input name="student_session_title" type="text" value="<?php echo e($record['student_session_title'] ?? ''); ?>" placeholder="Presentation Session" form="<?php echo e($studentUpdateFormId); ?>">
                   </div>
                   <div class="field-grid">
                     <div class="field">
                       <label>Student Session Date</label>
-                      <input name="student_session_date" type="date" value="<?php echo e($record['student_session_date'] ?? ''); ?>">
+                      <input name="student_session_date" type="date" value="<?php echo e($record['student_session_date'] ?? ''); ?>" form="<?php echo e($studentUpdateFormId); ?>">
                     </div>
                     <div class="field">
                       <label>Start Time</label>
-                      <input name="student_session_start" type="time" value="<?php echo e($record['student_session_start'] ?? ''); ?>">
+                      <input name="student_session_start" type="time" value="<?php echo e($record['student_session_start'] ?? ''); ?>" form="<?php echo e($studentUpdateFormId); ?>">
                     </div>
                     <div class="field">
                       <label>End Time</label>
-                      <input name="student_session_end" type="time" value="<?php echo e($record['student_session_end'] ?? ''); ?>">
+                      <input name="student_session_end" type="time" value="<?php echo e($record['student_session_end'] ?? ''); ?>" form="<?php echo e($studentUpdateFormId); ?>">
                     </div>
                   </div>
                   <div class="field">
                     <label>Student Zoom Status</label>
-                    <select name="student_session_status">
+                    <select name="student_session_status" form="<?php echo e($studentUpdateFormId); ?>">
                       <?php foreach (['Closed', 'Open', 'Starting Soon', 'Completed'] as $option): ?>
                         <option <?php echo (($record['student_session_status'] ?? 'Closed') === $option) ? 'selected' : ''; ?>><?php echo e($option); ?></option>
                       <?php endforeach; ?>
@@ -936,19 +924,19 @@ portal_header('Master Admin', false, ['assets/master-admin.css?v=1']);
                   </div>
                   <div class="field">
                     <label>Student Zoom Link</label>
-                    <input name="student_zoom_url" type="url" value="<?php echo e($record['student_zoom_url'] ?? ''); ?>" placeholder="https://zoom.us/j/...">
+                    <input name="student_zoom_url" type="url" value="<?php echo e($record['student_zoom_url'] ?? ''); ?>" placeholder="https://zoom.us/j/..." form="<?php echo e($studentUpdateFormId); ?>">
                   </div>
                   <div class="field">
                     <label>Student Zoom Meeting ID</label>
-                    <input name="student_zoom_meeting_id" type="text" value="<?php echo e($record['student_zoom_meeting_id'] ?? ''); ?>" placeholder="Zoom meeting ID">
+                    <input name="student_zoom_meeting_id" type="text" value="<?php echo e($record['student_zoom_meeting_id'] ?? ''); ?>" placeholder="Zoom meeting ID" form="<?php echo e($studentUpdateFormId); ?>">
                   </div>
                   <div class="field">
                     <label>Student Zoom Password</label>
-                    <input name="student_zoom_password" type="text" value="<?php echo e($record['student_zoom_password'] ?? ''); ?>" placeholder="Meeting passcode">
+                    <input name="student_zoom_password" type="text" value="<?php echo e($record['student_zoom_password'] ?? ''); ?>" placeholder="Meeting passcode" form="<?php echo e($studentUpdateFormId); ?>">
                   </div>
                   <div class="field">
                     <label>Certificate Status</label>
-                    <select name="certificate_status">
+                    <select name="certificate_status" form="<?php echo e($studentUpdateFormId); ?>">
                       <?php foreach (['Not Ready', 'Ready', 'Issued'] as $option): ?>
                         <option <?php echo (($record['certificate_status'] ?? 'Not Ready') === $option) ? 'selected' : ''; ?>><?php echo e($option); ?></option>
                       <?php endforeach; ?>
@@ -956,10 +944,13 @@ portal_header('Master Admin', false, ['assets/master-admin.css?v=1']);
                   </div>
                   <div class="field">
                     <label>Admin Notes</label>
-                    <textarea name="admin_notes"><?php echo e($record['admin_notes'] ?? ''); ?></textarea>
+                    <textarea name="admin_notes" form="<?php echo e($studentUpdateFormId); ?>"><?php echo e($record['admin_notes'] ?? ''); ?></textarea>
                   </div>
               </td>
               <td>
+                <form id="<?php echo e($studentUpdateFormId); ?>" action="admin-actions.php" method="post">
+                  <?php echo csrf_field(); ?>
+                  <input type="hidden" name="student_id" value="<?php echo e($studentId); ?>">
                   <button class="button primary" type="submit">Save</button>
                   <p><a class="button ghost" href="certificate.php?id=<?php echo e($studentId); ?>" target="_blank">Certificate</a></p>
                 </form>
