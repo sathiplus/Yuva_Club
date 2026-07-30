@@ -236,7 +236,7 @@ if (
 
 $submittedAt = date('Y-m-d H:i:s');
 $ipAddress = $_SERVER['REMOTE_ADDR'] ?? '';
-$dataDir = __DIR__ . DIRECTORY_SEPARATOR . 'submissions';
+$dataDir = portal_path('submissions');
 
 if (!is_dir($dataDir)) {
     mkdir($dataDir, 0755, true);

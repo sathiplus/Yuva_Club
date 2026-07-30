@@ -54,6 +54,10 @@ function e(string $value): string {
 }
 
 function portal_path(string $name): string {
+    if (array_key_exists($name, mutable_path_definitions())) {
+        return mutable_runtime_path($name);
+    }
+
     return __DIR__ . DIRECTORY_SEPARATOR . $name;
 }
 
