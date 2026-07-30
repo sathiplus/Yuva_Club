@@ -49,6 +49,13 @@ copy_snapshot_once() {
   local destination="$2"
   local mode="$3"
   local -a excludes=()
+  local diagnostics="${destination}.copy-diagnostics"
+  local source_stderr="$diagnostics/source-tar.stderr"
+  local extraction_stderr="$diagnostics/extraction-tar.stderr"
+  local status_file="$diagnostics/pipeline-status.txt"
+  local -a pipeline_status=()
+  local source_status
+  local extraction_status
 
   if [[ "$mode" == "application" ]]; then
     excludes=(
@@ -68,14 +75,45 @@ copy_snapshot_once() {
     )
   fi
 
-  mkdir -p "$destination"
+  mkdir -p "$destination" "$diagnostics"
+  : > "$source_stderr"
+  : > "$extraction_stderr"
+
+  set +e
   (
     cd "$source"
-    "$TAR_BIN" "${excludes[@]}" -cf - .
+    "$TAR_BIN" "${excludes[@]}" -cf - . 2> "$source_stderr"
   ) | (
     cd "$destination"
-    "$TAR_BIN" -xf -
+    "$TAR_BIN" -xf - 2> "$extraction_stderr"
   )
+  pipeline_status=("${PIPESTATUS[@]}")
+  set -e
+
+  source_status="${pipeline_status[0]:-125}"
+  extraction_status="${pipeline_status[1]:-125}"
+  printf 'SOURCE_TAR_EXIT=%s\nEXTRACTION_TAR_EXIT=%s\n' \
+    "$source_status" "$extraction_status" > "$status_file"
+
+  if ((source_status != 0)); then
+    fail "snapshot source tar failed with exit $source_status; diagnostics: $diagnostics"
+    return 1
+  fi
+  if ((extraction_status != 0)); then
+    fail "snapshot extraction tar failed with exit $extraction_status; diagnostics: $diagnostics"
+    return 1
+  fi
+
+  if grep -Eiq \
+    'file changed as we read it|file removed before we read it|unexpected EOF|read error|write error' \
+    "$source_stderr" "$extraction_stderr"; then
+    fail "snapshot copy emitted a fatal tar warning; diagnostics: $diagnostics"
+    return 1
+  fi
+  if [[ -s "$source_stderr" || -s "$extraction_stderr" ]]; then
+    fail "snapshot copy emitted tar diagnostics; diagnostics: $diagnostics"
+    return 1
+  fi
 }
 
 stabilize_snapshot() {
@@ -90,7 +128,10 @@ stabilize_snapshot() {
   for ((attempt = 1; attempt <= MAX_SNAPSHOT_ATTEMPTS; attempt++)); do
     local snapshot="$workspace/${label}-pass-${attempt}"
     local manifest="$workspace/${label}-pass-${attempt}.manifest"
-    copy_snapshot_once "$source" "$snapshot" "$mode"
+    if ! copy_snapshot_once "$source" "$snapshot" "$mode"; then
+      fail "snapshot copy failed: $source"
+      return 1
+    fi
     manifest_tree "$snapshot" "$manifest"
 
     if [[ -n "$previous_manifest" ]] && cmp -s "$previous_manifest" "$manifest"; then
