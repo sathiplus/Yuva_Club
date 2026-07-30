@@ -66,7 +66,7 @@ jobs:
           set -euo pipefail
           [[ "$CONFIRMATION" == "DEPLOY_YUVACLUB_PRODUCTION" ]]
           [[ "$EXPECTED_COMMIT" =~ ^[0-9a-f]{40}$ ]]
-          [[ "$BACKUP_ROOT" =~ ^/home/data/yuva-rc1-release-gate-[0-9]{8}T[0-9]{6}Z$ ]]
+          [[ "$BACKUP_ROOT" =~ ^/home/data/yuva-release-1\.0\.1-[0-9]{8}T[0-9]{6}Z$ ]]
 
       - name: Check out expected commit
         uses: actions/checkout@v4
