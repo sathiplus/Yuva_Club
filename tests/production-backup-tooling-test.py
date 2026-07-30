@@ -41,6 +41,14 @@ for required_control in (
     "INCOMPLETE - NOT FOR ROLLBACK",
     "MAX_SNAPSHOT_ATTEMPTS",
     "cmp -s",
+    "PIPESTATUS",
+    "SOURCE_TAR_EXIT",
+    "EXTRACTION_TAR_EXIT",
+    "file changed as we read it",
+    "file removed before we read it",
+    "unexpected EOF",
+    "read error",
+    "write error",
     "portal-data",
     "portal-uploads",
     "submissions",
@@ -100,6 +108,23 @@ with tempfile.TemporaryDirectory(prefix=".backup-tooling-test-", dir=ROOT) as te
                 name.removeprefix("./") for name in archive.getnames()
             }
 
+    clean_copy = temp / "clean-copy"
+    clean_pipeline = run_bash(
+        f"""
+        source {script_bash}
+        copy_snapshot_once \
+          {bash_path(source)} \
+          {bash_path(clean_copy)} \
+          application
+        """
+    )
+    assert clean_pipeline.returncode == 0, clean_pipeline.stderr
+    clean_status = pathlib.Path(f"{clean_copy}.copy-diagnostics/pipeline-status.txt")
+    assert clean_status.read_text(encoding="utf-8").splitlines() == [
+        "SOURCE_TAR_EXIT=0",
+        "EXTRACTION_TAR_EXIT=0",
+    ]
+
     inside_source = source / "backup"
     rejected = run_bash(
         f"source {script_bash}; validate_roots "
@@ -123,6 +148,138 @@ with tempfile.TemporaryDirectory(prefix=".backup-tooling-test-", dir=ROOT) as te
     )
     assert unstable.returncode != 0
     assert "source remained unstable" in unstable.stderr
+
+    real_tar = shutil.which("tar")
+    assert real_tar is not None
+    real_tar_bash = bash_path(pathlib.Path(real_tar))
+
+    source_warning_tar = temp / "source-warning-tar"
+    source_warning_tar.write_text(
+        "#!/usr/bin/env bash\n"
+        "if [[ \" $* \" == *\" -cf - \"* ]]; then\n"
+        "  \"$REAL_TAR\" \"$@\"\n"
+        "  echo 'tar: ./assets: file changed as we read it' >&2\n"
+        "  exit 1\n"
+        "fi\n"
+        "exec \"$REAL_TAR\" \"$@\"\n",
+        encoding="utf-8",
+    )
+    source_warning_tar.chmod(0o755)
+    source_failure_backup = temp / "source-failure-backup"
+    source_pipeline_failure = run_bash(
+        f"""
+        source {script_bash}
+        validate_roots() {{ [[ ! -e "$2" ]]; }}
+        TAR_BIN={bash_path(source_warning_tar)}
+        main {bash_path(source)} {bash_path(source_failure_backup)}
+        """,
+        env={"REAL_TAR": real_tar_bash},
+    )
+    assert source_pipeline_failure.returncode != 0
+    assert "CONSISTENT_BACKUP=PASS" not in source_pipeline_failure.stdout
+    assert (
+        source_failure_backup / "INCOMPLETE-NOT-FOR-ROLLBACK.txt"
+    ).read_text(encoding="utf-8").strip() == "INCOMPLETE - NOT FOR ROLLBACK"
+    assert not (source_failure_backup / "verification-report.txt").exists()
+    assert not (
+        source_failure_backup
+        / "archives"
+        / "current-production-application.tar.gz"
+    ).exists()
+    source_diagnostics = (
+        source_failure_backup
+        / ".snapshot-work"
+        / "application-pass-1.copy-diagnostics"
+    )
+    assert (source_diagnostics / "pipeline-status.txt").read_text(
+        encoding="utf-8"
+    ).splitlines() == [
+        "SOURCE_TAR_EXIT=1",
+        "EXTRACTION_TAR_EXIT=0",
+    ]
+    assert "file changed as we read it" in (
+        source_diagnostics / "source-tar.stderr"
+    ).read_text(encoding="utf-8")
+    assert (source_diagnostics / "extraction-tar.stderr").exists()
+
+    warning_only_tar = temp / "warning-only-tar"
+    warning_only_tar.write_text(
+        "#!/usr/bin/env bash\n"
+        "if [[ \" $* \" == *\" -cf - \"* ]]; then\n"
+        "  \"$REAL_TAR\" \"$@\"\n"
+        "  status=$?\n"
+        "  echo 'tar: ./assets: file changed as we read it' >&2\n"
+        "  exit \"$status\"\n"
+        "fi\n"
+        "exec \"$REAL_TAR\" \"$@\"\n",
+        encoding="utf-8",
+    )
+    warning_only_tar.chmod(0o755)
+    warning_only_copy = temp / "warning-only-copy"
+    warning_only_failure = run_bash(
+        f"""
+        source {script_bash}
+        TAR_BIN={bash_path(warning_only_tar)}
+        copy_snapshot_once \
+          {bash_path(source)} \
+          {bash_path(warning_only_copy)} \
+          application
+        """,
+        env={"REAL_TAR": real_tar_bash},
+    )
+    assert warning_only_failure.returncode != 0
+    warning_only_diagnostics = pathlib.Path(
+        f"{warning_only_copy}.copy-diagnostics"
+    )
+    assert (warning_only_diagnostics / "pipeline-status.txt").read_text(
+        encoding="utf-8"
+    ).splitlines() == [
+        "SOURCE_TAR_EXIT=0",
+        "EXTRACTION_TAR_EXIT=0",
+    ]
+    assert "file changed as we read it" in (
+        warning_only_diagnostics / "source-tar.stderr"
+    ).read_text(encoding="utf-8")
+    assert "fatal tar warning" in warning_only_failure.stderr
+
+    extraction_failure_tar = temp / "extraction-failure-tar"
+    extraction_failure_tar.write_text(
+        "#!/usr/bin/env bash\n"
+        "if [[ \" $* \" == *\" -xf - \"* ]]; then\n"
+        "  cat >/dev/null\n"
+        "  echo 'tar: write error' >&2\n"
+        "  exit 2\n"
+        "fi\n"
+        "exec \"$REAL_TAR\" \"$@\"\n",
+        encoding="utf-8",
+    )
+    extraction_failure_tar.chmod(0o755)
+    extraction_copy = temp / "extraction-failure-copy"
+    extraction_pipeline_failure = run_bash(
+        f"""
+        source {script_bash}
+        TAR_BIN={bash_path(extraction_failure_tar)}
+        copy_snapshot_once \
+          {bash_path(source)} \
+          {bash_path(extraction_copy)} \
+          application
+        """,
+        env={"REAL_TAR": real_tar_bash},
+    )
+    assert extraction_pipeline_failure.returncode != 0
+    extraction_diagnostics = pathlib.Path(
+        f"{extraction_copy}.copy-diagnostics"
+    )
+    assert (extraction_diagnostics / "pipeline-status.txt").read_text(
+        encoding="utf-8"
+    ).splitlines() == [
+        "SOURCE_TAR_EXIT=0",
+        "EXTRACTION_TAR_EXIT=2",
+    ]
+    assert (extraction_diagnostics / "source-tar.stderr").exists()
+    assert "write error" in (
+        extraction_diagnostics / "extraction-tar.stderr"
+    ).read_text(encoding="utf-8")
 
     fake_tar = temp / "warning-tar"
     fake_tar.write_text(
