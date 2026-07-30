@@ -7,6 +7,7 @@ import hashlib
 import importlib.util
 import json
 import pathlib
+import re
 import subprocess
 import sys
 import tempfile
@@ -16,7 +17,11 @@ import zipfile
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 BUILDER = ROOT / "tools" / "build-release-artifact.py"
 EXCLUSIONS = ROOT / "tools" / "release-artifact-exclusions.txt"
+WORKFLOW = ROOT / ".github" / "workflows" / "main_yuvaclub.yml"
 MUTABLE_PREFIXES = ("portal-data/", "portal-uploads/", "submissions/")
+BACKUP_PATH_PATTERN = re.compile(
+    r"^/home/data/yuva-release-1\.0\.1-[0-9]{8}T[0-9]{6}Z$"
+)
 
 
 def load_builder():
@@ -36,6 +41,38 @@ def digest(path: pathlib.Path) -> str:
 
 builder = load_builder()
 exclusion_rules = builder.read_exclusions(EXCLUSIONS)
+workflow = WORKFLOW.read_text(encoding="utf-8")
+assert (
+    '[[ "$BACKUP_ROOT" =~ '
+    r"^/home/data/yuva-release-1\.0\.1-[0-9]{8}T[0-9]{6}Z$ ]]"
+) in workflow
+assert BACKUP_PATH_PATTERN.fullmatch(
+    "/home/data/yuva-release-1.0.1-20260730T021500Z"
+)
+for rejected_backup_path in (
+    "/tmp/yuva-release-1.0.1-20260730T021500Z",
+    "/home/data/yuva-release-1.0.1",
+    "/home/data/yuva-release-1.0.1-2026-07-30T02:15:00Z",
+    "/home/data/yuva-release-1.0.1-20260730T021500Z/extra",
+    "/home/data/../yuva-release-1.0.1-20260730T021500Z",
+    "/home/data/yuva-release-1.0.1-20260730T021500Z;rm",
+    "/home/data/yuva-rc1-release-gate-20260730T021500Z",
+):
+    assert BACKUP_PATH_PATTERN.fullmatch(rejected_backup_path) is None
+
+for production_control in (
+    "group: yuvaclub-production",
+    "cancel-in-progress: false",
+    "environment: production",
+    "git merge-base --is-ancestor",
+    "OVERALL_VERIFY=PASS",
+    "sha256sum -c",
+    "--clean false",
+    "retention-days: 90",
+    "Public production smoke tests",
+):
+    assert production_control in workflow
+
 for private_name in (
     ".env",
     ".env.local",
