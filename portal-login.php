@@ -2,58 +2,47 @@
 require __DIR__ . '/portal-lib.php';
 
 $status = $_GET['status'] ?? '';
+$authMode = portal_auth_mode();
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (!verify_csrf_token($_POST['csrf_token'] ?? null)) {
-        redirect_to('portal-login.php?status=security-error');
-    }
+    $studentId = normalize_yuva_id($_POST['student_id'] ?? '');
+    $credential = $authMode === 'filesystem'
+        ? clean_text($_POST['date_of_birth'] ?? '')
+        : (string) ($_POST['credential'] ?? '');
+    $result = portal_student_login_workflow()->attempt(
+        $_SESSION,
+        $studentId,
+        $credential,
+        isset($_POST['csrf_token']) ? (string) $_POST['csrf_token'] : null,
+        portal_network_category($_SERVER['REMOTE_ADDR'] ?? null)
+    );
 
-    $identifier = normalize_login_identifier($_POST['login_identifier'] ?? '');
-    $password = (string) ($_POST['password'] ?? '');
-
-    if (login_rate_limited($identifier)) {
-        redirect_to('portal-login.php?status=locked');
-    }
-
-    $account = find_student_account_by_identifier($identifier);
-    $hash = (string) ($account['password_hash'] ?? '');
-
-    if ($account !== null && $hash !== '' && password_verify($password, $hash)) {
-        $studentId = normalize_yuva_id((string) ($account['yuva_id'] ?? ''));
-        $student = find_student($studentId);
-        if ($student === null) {
-            record_login_attempt($identifier, false);
-            redirect_to('portal-login.php?status=missing');
-        }
-
-        record_login_attempt($identifier, true);
-        session_regenerate_id(true);
-        $_SESSION['student_id'] = $studentId;
+    if ($result['authenticated'] === true) {
         redirect_to('portal.php');
     }
 
-    record_login_attempt($identifier, false);
     redirect_to('portal-login.php?status=error');
 }
 
-portal_header('Student Portal Login');
+portal_header('Student Portal Login', false, ['assets/public-site.css?v=1'], true);
 ?>
-<main>
-  <section class="band">
+<a class="public-skip-link" href="#main-content">Skip to main content</a>
+<main id="main-content">
+  <section class="band horizon-login-page">
     <div class="form-shell portal-narrow">
       <div class="section-head">
         <p class="eyebrow">Student Portal</p>
         <h1>Student Login</h1>
-        <p>Students log in with their Yuva Club ID or email and the password created during registration.</p>
+        <?php if ($authMode === 'filesystem'): ?>
+          <p>Students can log in with their Yuva Club ID and date of birth after registration.</p>
+        <?php elseif ($authMode === 'sql'): ?>
+          <p>Students can log in with their Yuva Club ID and password.</p>
+        <?php else: ?>
+          <p>Students can log in with their Yuva Club ID and current credential.</p>
+        <?php endif; ?>
       </div>
 
       <?php if ($status === 'error'): ?>
-        <div class="form-status error">Login failed. Check the Yuva Club ID/email and password.</div>
-      <?php elseif ($status === 'missing'): ?>
-        <div class="form-status error">Your registration record was not found. Please contact the Yuva Club admin.</div>
-      <?php elseif ($status === 'locked'): ?>
-        <div class="form-status error">Too many login attempts. Please wait 15 minutes and try again.</div>
-      <?php elseif ($status === 'security-error'): ?>
-        <div class="form-status error">This login form expired. Please try again.</div>
+        <div class="form-status error">Login failed. Check your credentials and try again.</div>
       <?php elseif ($status === 'password-reset'): ?>
         <div class="form-status success">Your password was updated. Please log in.</div>
       <?php endif; ?>
@@ -61,17 +50,31 @@ portal_header('Student Portal Login');
       <form class="form-card" method="post">
         <?php echo csrf_field(); ?>
         <div class="field">
-          <label for="login_identifier">Yuva Club ID or Email *</label>
-          <input id="login_identifier" name="login_identifier" type="text" required autocomplete="username" placeholder="YC2026001 or student@example.com">
+          <label for="student_id">Yuva Club ID *</label>
+          <input id="student_id" name="student_id" type="text" required placeholder="YC2026001">
         </div>
-        <div class="field">
-          <label for="password">Password *</label>
-          <input id="password" name="password" type="password" required autocomplete="current-password">
-        </div>
+        <?php if ($authMode === 'filesystem'): ?>
+          <div class="field">
+            <label for="date_of_birth">Date of Birth *</label>
+            <input id="date_of_birth" name="date_of_birth" type="date" required>
+          </div>
+        <?php elseif ($authMode === 'sql'): ?>
+          <div class="field">
+            <label for="credential">Password *</label>
+            <input id="credential" name="credential" type="password" required autocomplete="current-password">
+          </div>
+        <?php else: ?>
+          <div class="field">
+            <label for="credential">Credential *</label>
+            <input id="credential" name="credential" type="password" required autocomplete="current-password" placeholder="Password or YYYY-MM-DD">
+          </div>
+        <?php endif; ?>
         <button class="button primary" type="submit">Log In</button>
-        <p><a href="forgot-password.php?account=student">Forgot password?</a></p>
+        <?php if ($authMode !== 'filesystem'): ?>
+          <p><a href="forgot-password.php?account=student">Forgot password?</a></p>
+        <?php endif; ?>
       </form>
     </div>
   </section>
 </main>
-<?php portal_footer(); ?>
+<?php portal_footer(false, true); ?>

@@ -16,6 +16,11 @@ if ($student === null) {
 
 $selection = read_json_file(topic_selections_file())[$studentId] ?? [];
 $record = student_record($studentId);
+$certificateStatus = $record['certificate_status'] ?? 'Not Ready';
+$certificateReady = in_array($certificateStatus, ['Ready', 'Issued'], true);
+if (!$isAdmin && !$certificateReady) {
+    redirect_to('portal.php?status=certificate-not-ready#app-achievements');
+}
 $rank = approved_rank($record);
 $certificateName = rank_definitions()[$rank]['certificate'] ?? 'Certificate of Participation';
 ?>
@@ -26,7 +31,7 @@ $certificateName = rank_definitions()[$rank]['certificate'] ?? 'Certificate of P
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Certificate | Yuva Club</title>
   <link rel="icon" href="assets/logo.png" type="image/png">
-  <link rel="stylesheet" href="assets/site.css?v=20260714-public-mobile-nav">
+  <link rel="stylesheet" href="assets/site.css?v=20260614-large-photos">
 </head>
 <body class="certificate-page">
   <main class="certificate-shell">
@@ -43,7 +48,7 @@ $certificateName = rank_definitions()[$rank]['certificate'] ?? 'Certificate of P
         <p><strong>Total Sessions Attended:</strong> <?php echo e($record['attendance'] ?? '0'); ?></p>
         <p><strong>Total Volunteer/Leadership Hours:</strong> <?php echo e($record['service_hours'] ?? '0'); ?></p>
       </div>
-      <p class="certificate-footer">Yuva Club | YUVA Club | <?php echo date('Y'); ?></p>
+      <p class="certificate-footer">Yuva Club | KarmaBro | <?php echo date('Y'); ?></p>
       <button class="button primary" onclick="window.print()">Print Certificate</button>
     </section>
   </main>

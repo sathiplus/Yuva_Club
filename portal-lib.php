@@ -1,8 +1,30 @@
 <?php
 declare(strict_types=1);
 
+require_once __DIR__ . '/backend/config.php';
+require_once __DIR__ . '/backend/database.php';
+require_once __DIR__ . '/backend/authentication/PortalRepository.php';
+require_once __DIR__ . '/backend/authentication/PortalCompatibilityAdapter.php';
+require_once __DIR__ . '/backend/authentication/StudentAuthentication.php';
+require_once __DIR__ . '/backend/authentication/ParentAuthentication.php';
+require_once __DIR__ . '/backend/authentication/AuthenticationService.php';
+require_once __DIR__ . '/backend/authentication/LoginThrottle.php';
+require_once __DIR__ . '/backend/authentication/StudentLoginWorkflow.php';
+require_once __DIR__ . '/backend/authentication/ParentLoginWorkflow.php';
+require_once __DIR__ . '/backend/ai/AiProvider.php';
+require_once __DIR__ . '/backend/ai/AiPromptCatalog.php';
+require_once __DIR__ . '/backend/ai/AiReviewValidator.php';
+require_once __DIR__ . '/backend/ai/AiReviewState.php';
+require_once __DIR__ . '/backend/ai/AiReviewRepository.php';
+require_once __DIR__ . '/backend/ai/OpenAiResponsesProvider.php';
+require_once __DIR__ . '/backend/ai/AiMentorService.php';
+require_once __DIR__ . '/backend/submission/ResearchUploadValidator.php';
+require_once __DIR__ . '/backend/submission/ResearchSubmissionState.php';
+
+$configuredAppUrl = app_url();
 $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
-    || (($_SERVER['SERVER_PORT'] ?? '') === '443');
+    || (($_SERVER['SERVER_PORT'] ?? '') === '443')
+    || parse_url($configuredAppUrl, PHP_URL_SCHEME) === 'https';
 session_set_cookie_params([
     'lifetime' => 0,
     'path' => '/',
@@ -32,6 +54,10 @@ function e(string $value): string {
 }
 
 function portal_path(string $name): string {
+    if (array_key_exists($name, mutable_path_definitions())) {
+        return mutable_runtime_path($name);
+    }
+
     return __DIR__ . DIRECTORY_SEPARATOR . $name;
 }
 
@@ -182,6 +208,14 @@ function security_audit_file(): string {
 }
 
 function admin_credentials(): array {
+    $stagingCredentials = staging_test_admin_credentials();
+    if ($stagingCredentials !== null) {
+        return array_merge([
+            'role' => YUVA_ROLE_MASTER_ADMIN,
+            'organization_id' => YUVA_PLATFORM_ORGANIZATION_ID,
+        ], $stagingCredentials);
+    }
+
     return array_merge([
         'email' => YUVA_ADMIN_EMAIL,
         'password_hash' => YUVA_ADMIN_PASSWORD_HASH,
@@ -202,6 +236,18 @@ function write_admin_credentials(array $credentials): void {
 
 function password_hash_for_admin(string $password): string {
     return hash('sha256', YUVA_ADMIN_SALT . $password);
+}
+
+function staging_test_admin_credentials(): ?array {
+    $fixture = staging_test_fixture_config();
+    if ($fixture === null) {
+        return null;
+    }
+
+    return [
+        'email' => $fixture['admin_email'],
+        'password_hash' => $fixture['admin_password_hash'],
+    ];
 }
 
 function request_ip(): string {
@@ -789,12 +835,12 @@ function complete_password_reset(string $token, string $password): bool {
     }
 
     $accountType = (string) ($record['account_type'] ?? '');
-    $accountKey = (string) ($record['account_key'] ?? '');
+    $accountIdentifier = (string) ($record['account_key'] ?? '');
     $email = normalize_email((string) ($record['email'] ?? ''));
     $ok = false;
 
     if ($accountType === 'student') {
-        $studentId = normalize_yuva_id($accountKey);
+        $studentId = normalize_yuva_id($accountIdentifier);
         $accounts = student_accounts();
         if (is_array($accounts[$studentId] ?? null)) {
             $accounts[$studentId]['password_hash'] = password_hash($password, PASSWORD_DEFAULT);
@@ -827,7 +873,7 @@ function complete_password_reset(string $token, string $password): bool {
     }
 
     if (!$ok) {
-        audit_log_event(null, (string) ($record['role'] ?? YUVA_ROLE_STUDENT), $record['organization_id'] ?? null, 'password_reset.complete', 'account', $email !== '' ? $email : $accountKey, false, ['account_type' => $accountType]);
+        audit_log_event(null, (string) ($record['role'] ?? YUVA_ROLE_STUDENT), $record['organization_id'] ?? null, 'password_reset.complete', 'account', $email !== '' ? $email : $accountIdentifier, false, ['account_type' => $accountType]);
         return false;
     }
 
@@ -839,12 +885,12 @@ function complete_password_reset(string $token, string $password): bool {
     }
 
     audit_log_event(
-        $accountType === 'parent' ? parent_actor_id($email) : ($accountType === 'student' ? normalize_yuva_id($accountKey) : admin_actor_id($email)),
+        $accountType === 'parent' ? parent_actor_id($email) : ($accountType === 'student' ? normalize_yuva_id($accountIdentifier) : admin_actor_id($email)),
         (string) ($record['role'] ?? YUVA_ROLE_STUDENT),
         $record['organization_id'] ?? null,
         'password_reset.complete',
         'account',
-        $accountType === 'student' ? normalize_yuva_id($accountKey) : $email,
+        $accountType === 'student' ? normalize_yuva_id($accountIdentifier) : $email,
         true,
         ['account_type' => $accountType]
     );
@@ -1566,6 +1612,116 @@ function verify_csrf_token(?string $token): bool {
         && hash_equals($_SESSION['csrf_token'], $token);
 }
 
+function portal_network_category(?string $remoteAddress): string {
+    $address = trim((string) $remoteAddress);
+    if (filter_var($address, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4) !== false) {
+        $parts = explode('.', $address);
+        return implode('.', array_slice($parts, 0, 3)) . '.0/24';
+    }
+
+    if (filter_var($address, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6) !== false) {
+        $packed = inet_pton($address);
+        if (is_string($packed)) {
+            return bin2hex(substr($packed, 0, 8)) . '/64';
+        }
+    }
+
+    return 'unknown';
+}
+
+function portal_authentication_service(): \YuvaClub\Authentication\AuthenticationService {
+    static $service = null;
+    if ($service instanceof \YuvaClub\Authentication\AuthenticationService) {
+        return $service;
+    }
+
+    $mode = portal_auth_mode();
+    if ($mode === \YuvaClub\Authentication\AuthenticationService::MODE_FILESYSTEM) {
+        $repository = new \YuvaClub\Authentication\PortalRepository(
+            static fn(string $sql, array $parameters): ?array => null,
+            static fn(string $sql, array $parameters): array => []
+        );
+    } else {
+        if (db_driver() !== 'sqlsrv') {
+            throw new RuntimeException('SQL portal authentication requires DB_DRIVER=sqlsrv.');
+        }
+        $repository = \YuvaClub\Authentication\PortalRepository::fromPdo(
+            Database::connection()
+        );
+    }
+
+    $adapter = new \YuvaClub\Authentication\PortalCompatibilityAdapter();
+    $students = new \YuvaClub\Authentication\StudentAuthentication(
+        $repository,
+        $adapter,
+        static fn(string $yuvaId): ?array =>
+            find_authenticatable_filesystem_student($yuvaId),
+        static fn(array $record, string $credential): bool =>
+            hash_equals((string) ($record['Date of Birth'] ?? ''), $credential)
+    );
+    $parents = new \YuvaClub\Authentication\ParentAuthentication(
+        $repository,
+        static fn(string $yuvaId): ?array => find_student($yuvaId),
+        static fn(string $email): array => filesystem_parent_identities($email),
+        static fn(array $record, string $credential): bool =>
+            hash_equals(
+                strtolower(trim((string) ($record['Parent Email'] ?? ''))),
+                strtolower(trim($credential))
+            )
+    );
+
+    $service = new \YuvaClub\Authentication\AuthenticationService(
+        $mode,
+        $students,
+        $parents
+    );
+    return $service;
+}
+
+function portal_student_login_workflow(): \YuvaClub\Authentication\StudentLoginWorkflow {
+    static $workflow = null;
+    if ($workflow instanceof \YuvaClub\Authentication\StudentLoginWorkflow) {
+        return $workflow;
+    }
+
+    $workflow = new \YuvaClub\Authentication\StudentLoginWorkflow(
+        portal_authentication_service(),
+        new \YuvaClub\Authentication\LoginThrottle(
+            portal_path('portal-data') . DIRECTORY_SEPARATOR . 'student-login-throttle.json'
+        ),
+        static fn(?string $token): bool => verify_csrf_token($token),
+        static function (): void {
+            session_regenerate_id(true);
+        },
+        static function (string $category): void {
+            error_log('[portal-auth] ' . $category);
+        }
+    );
+    return $workflow;
+}
+
+function portal_parent_login_workflow(): \YuvaClub\Authentication\ParentLoginWorkflow {
+    static $workflow = null;
+    if ($workflow instanceof \YuvaClub\Authentication\ParentLoginWorkflow) {
+        return $workflow;
+    }
+
+    $workflow = new \YuvaClub\Authentication\ParentLoginWorkflow(
+        portal_authentication_service(),
+        new \YuvaClub\Authentication\LoginThrottle(
+            portal_path('portal-data') . DIRECTORY_SEPARATOR . 'parent-login-throttle.json'
+        ),
+        static fn(?string $token): bool => verify_csrf_token($token),
+        static function (): void {
+            session_regenerate_id(true);
+        },
+        static function (string $category): void {
+            error_log('[portal-auth] ' . $category);
+        }
+    );
+    return $workflow;
+}
+
 function password_policy_error(string $password): string {
     if (strlen($password) < 12) {
         return 'Password must be at least 12 characters.';
@@ -2221,6 +2377,35 @@ function portal_students(): array {
             $students[$student['Yuva Club ID']] = $student;
         }
     }
+    return merge_staging_test_student($students);
+}
+
+function staging_test_student_fixture(): ?array {
+    $fixture = staging_test_fixture_config();
+    if ($fixture === null) {
+        return null;
+    }
+
+    $student = array_fill_keys(registration_headers(), '');
+    $student['Yuva Club ID'] = $fixture['student_id'];
+    $student['Student First Name'] = 'Staging';
+    $student['Student Last Name'] = 'Test Student';
+    $student['Preferred Name'] = 'Staging';
+    $student['Date of Birth'] = $fixture['student_dob'];
+    $student['Age'] = (string) $fixture['student_age'];
+    $student['Program Group'] = $fixture['student_program_group'];
+    return $student;
+}
+
+function merge_staging_test_student(array $students): array {
+    $fixture = staging_test_student_fixture();
+    if ($fixture === null) {
+        return $students;
+    }
+    $studentId = (string) $fixture['Yuva Club ID'];
+    if (!array_key_exists($studentId, $students)) {
+        $students[$studentId] = $fixture;
+    }
     return $students;
 }
 
@@ -2228,6 +2413,17 @@ function find_student(string $studentId): ?array {
     $studentId = normalize_yuva_id($studentId);
     $students = portal_students();
     return $students[$studentId] ?? null;
+}
+
+function find_authenticatable_filesystem_student(string $studentId): ?array {
+    $studentId = normalize_yuva_id($studentId);
+    $student = find_student($studentId);
+    if ($student === null) {
+        return null;
+    }
+
+    $record = student_record($studentId);
+    return ($record['approved'] ?? null) === 'Approved' ? $student : null;
 }
 
 function student_display_name(array $student): string {
@@ -2246,16 +2442,91 @@ function logged_in_student_id(): ?string {
     return $_SESSION['student_id'] ?? null;
 }
 
+function clear_student_authentication_session(): void {
+    unset(
+        $_SESSION['student_id'],
+        $_SESSION['student_auth_source'],
+        $_SESSION['student_user_id'],
+        $_SESSION['portal_role']
+    );
+}
+
+function filesystem_parent_identities(string $email): array {
+    $normalizedEmail = strtolower(trim($email));
+    if ($normalizedEmail === '') {
+        return [];
+    }
+
+    $matches = [];
+    foreach (portal_students() as $student) {
+        $parentEmail = strtolower(trim((string) ($student['Parent Email'] ?? '')));
+        if ($parentEmail !== '' && hash_equals($normalizedEmail, $parentEmail)) {
+            $matches[] = $student;
+        }
+    }
+    return $matches;
+}
+
+function clear_parent_authentication_session(): void {
+    unset(
+        $_SESSION['parent_student_id'],
+        $_SESSION['parent_auth_source'],
+        $_SESSION['parent_user_id'],
+        $_SESSION['parent_id'],
+        $_SESSION['portal_role']
+    );
+}
+
+function require_parent_student(): array {
+    $studentId = normalize_yuva_id((string) ($_SESSION['parent_student_id'] ?? ''));
+    if ($studentId === '') {
+        redirect_to('parent-login.php');
+    }
+
+    $source = $_SESSION['parent_auth_source'] ?? null;
+    $authMode = portal_auth_mode();
+    if ($source === null && in_array($authMode, ['filesystem', 'hybrid'], true)) {
+        $student = require_parent_for_student($studentId);
+    } elseif (
+        $source === 'sql'
+        && in_array($authMode, ['sql', 'hybrid'], true)
+    ) {
+        $student = portal_parent_login_workflow()->revalidateSqlChildAccess($_SESSION);
+    } else {
+        $student = null;
+    }
+
+    if (!is_array($student)) {
+        clear_parent_authentication_session();
+        redirect_to('parent-login.php?status=error');
+    }
+    return $student;
+}
+
 function require_student(): array {
     $studentId = logged_in_student_id();
     if ($studentId === null) {
         redirect_to('portal-login.php');
     }
 
-    $student = find_student($studentId);
+    $source = $_SESSION['student_auth_source'] ?? null;
+    $authMode = portal_auth_mode();
+    if ($source === null && in_array($authMode, ['filesystem', 'hybrid'], true)) {
+        $student = find_authenticatable_filesystem_student($studentId);
+    } elseif (
+        $source === 'sql'
+        && in_array($authMode, ['sql', 'hybrid'], true)
+        && ($_SESSION['portal_role'] ?? null) === 'student'
+        && is_int($_SESSION['student_user_id'] ?? null)
+    ) {
+        $student = portal_student_login_workflow()->revalidateSqlSession($_SESSION);
+    } else {
+        $student = null;
+    }
+
     if ($student === null) {
-        unset($_SESSION['student_id']);
-        redirect_to('portal-login.php?status=missing');
+        clear_student_authentication_session();
+        redirect_to('portal-login.php?status=error');
     }
 
     return $student;
@@ -2264,8 +2535,7 @@ function require_student(): array {
 function admin_password_matches(string $email, string $password): bool {
     $credentials = admin_credentials();
     $email = normalize_email($email);
-    return $email === YUVA_PLATFORM_ADMIN_EMAIL
-        && $email === normalize_email((string) ($credentials['email'] ?? ''))
+    return $email === normalize_email((string) ($credentials['email'] ?? ''))
         && hash_equals((string) ($credentials['password_hash'] ?? ''), password_hash_for_admin($password));
 }
 
@@ -2476,6 +2746,52 @@ function ai_reviews(): array {
     return read_json_file(ai_reviews_file(), []);
 }
 
+function ai_review_identifier(string $studentId, array $reviewRecord): string {
+    $reviewId = trim((string) ($reviewRecord['review_id'] ?? ''));
+    if ($reviewId !== '') {
+        return $reviewId;
+    }
+    return hash('sha256', json_encode([
+        'student_id' => normalize_yuva_id($studentId),
+        'reviewed_at' => $reviewRecord['reviewed_at'] ?? '',
+        'review' => $reviewRecord['review'] ?? [],
+    ], JSON_UNESCAPED_SLASHES) ?: '');
+}
+
+function mark_ai_review_stale(string $studentId, string $reason): void {
+    $reviews = ai_reviews();
+    if (!isset($reviews[$studentId]) || !is_array($reviews[$studentId])) {
+        return;
+    }
+    $currentStatus = (string) ($reviews[$studentId]['status'] ?? '');
+    if (str_starts_with($currentStatus, 'Stale - ')) {
+        return;
+    }
+    $reviews[$studentId]['previous_status'] = $currentStatus;
+    $reviews[$studentId]['status'] = 'Stale - ' . $reason;
+    $reviews[$studentId]['stale_at'] = date('Y-m-d H:i:s');
+    $reviews[$studentId]['stale_reason'] = $reason;
+    write_json_file(ai_reviews_file(), $reviews);
+}
+
+function with_ai_apply_lock(callable $callback): mixed {
+    ensure_portal_dirs();
+    $lockPath = portal_path('portal-data') . DIRECTORY_SEPARATOR . 'ai-apply.lock';
+    $handle = fopen($lockPath, 'c+');
+    if ($handle === false || !flock($handle, LOCK_EX)) {
+        if (is_resource($handle)) {
+            fclose($handle);
+        }
+        throw new RuntimeException('Could not secure the AI review operation.');
+    }
+    try {
+        return $callback();
+    } finally {
+        flock($handle, LOCK_UN);
+        fclose($handle);
+    }
+}
+
 function openai_api_key(): string {
     $key = trim((string) (getenv('OPENAI_API_KEY') ?: ($_SERVER['OPENAI_API_KEY'] ?? '')));
     if ($key !== '') {
@@ -2510,54 +2826,43 @@ function openai_model_name(): string {
     return 'gpt-4.1-mini';
 }
 
-function ai_review_prompt(array $student, array $selection, array $research): string {
-    $studentName = student_display_name($student);
-    $category = $selection['topic_category'] ?? 'Not selected';
-    $title = $selection['topic_title'] ?? 'Not selected';
-    $notes = $research['research_notes'] ?? '';
-    $sources = $research['sources_used'] ?? '';
-    $outline = $research['presentation_outline'] ?? '';
-    $questions = $research['prepared_questions'] ?? '';
-
-    return <<<PROMPT
-You are the Yuva Club AI Coach. Review this student's research submission for a youth presentation program.
-
-Audience: students ages 8-18. Be encouraging, specific, and safe. Do not compare the student to other students. Do not shame the student. Do not infer sensitive traits.
-
-Student: {$studentName}
-Topic category: {$category}
-Topic title: {$title}
-
-Research notes:
-{$notes}
-
-Sources used:
-{$sources}
-
-Presentation outline:
-{$outline}
-
-Questions prepared:
-{$questions}
-
-Return only valid JSON with these keys:
-{
-  "research_quality": 0-20,
-  "presentation_structure": 0-20,
-  "topic_understanding": 0-20,
-  "discussion_questions": 0-15,
-  "leadership_lesson": 0-15,
-  "effort_and_readiness": 0-10,
-  "total_points": 0-100,
-  "summary": "2-3 sentence encouraging summary",
-  "strengths": ["strength 1", "strength 2", "strength 3"],
-  "improvements": ["improvement 1", "improvement 2", "improvement 3"],
-  "communication_skills": "short note about clarity, organization, and speaking preparation",
-  "leadership_milestones": "short milestone-style note",
-  "suggested_tokens": 0-4,
-  "admin_notes": "short note for adult reviewer"
+function ai_review_repository(): \YuvaClub\AI\AiReviewRepository {
+    return new \YuvaClub\AI\AiReviewRepository(
+        static fn(): array => ai_reviews(),
+        static function (array $records): void {
+            write_json_file(ai_reviews_file(), $records);
+        }
+    );
 }
-PROMPT;
+
+function ai_mentor_service(
+    ?\YuvaClub\AI\AiProvider $provider = null
+): \YuvaClub\AI\AiMentorService {
+    $provider ??= new \YuvaClub\AI\OpenAiResponsesProvider(
+        openai_api_key(),
+        openai_model_name()
+    );
+    return new \YuvaClub\AI\AiMentorService(
+        $provider,
+        new \YuvaClub\AI\AiPromptCatalog(),
+        new \YuvaClub\AI\AiReviewValidator(),
+        ai_review_repository()
+    );
+}
+
+function ai_review_state(bool $hasResearch, array $reviewRecord): string {
+    return \YuvaClub\AI\AiReviewState::fromRuntime(
+        $hasResearch,
+        $reviewRecord
+    );
+}
+
+function ai_review_prompt(array $student, array $selection, array $research): string {
+    return (new \YuvaClub\AI\AiPromptCatalog())->researchReview(
+        $student,
+        $selection,
+        $research
+    );
 }
 
 function extract_response_text(array $response): string {
@@ -2578,81 +2883,7 @@ function extract_response_text(array $response): string {
 }
 
 function ai_review_research_submission(array $student, array $selection, array $research): array {
-    $apiKey = openai_api_key();
-    if ($apiKey === '') {
-        return [
-            'ok' => false,
-            'error' => 'OPENAI_API_KEY is not configured on the server.',
-        ];
-    }
-
-    $payload = [
-        'model' => openai_model_name(),
-        'input' => [
-            [
-                'role' => 'system',
-                'content' => 'You are a child-safe educational coach. Return only valid JSON.',
-            ],
-            [
-                'role' => 'user',
-                'content' => ai_review_prompt($student, $selection, $research),
-            ],
-        ],
-        'text' => [
-            'format' => [
-                'type' => 'json_object',
-            ],
-        ],
-    ];
-
-    $ch = curl_init('https://api.openai.com/v1/responses');
-    if ($ch === false) {
-        return ['ok' => false, 'error' => 'Could not initialize cURL.'];
-    }
-
-    curl_setopt_array($ch, [
-        CURLOPT_POST => true,
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_TIMEOUT => 45,
-        CURLOPT_HTTPHEADER => [
-            'Content-Type: application/json',
-            'Authorization: Bearer ' . $apiKey,
-        ],
-        CURLOPT_POSTFIELDS => json_encode($payload),
-    ]);
-
-    $raw = curl_exec($ch);
-    $status = (int) curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
-    $curlError = curl_error($ch);
-    curl_close($ch);
-
-    if ($raw === false || $curlError !== '') {
-        return ['ok' => false, 'error' => 'OpenAI request failed: ' . $curlError];
-    }
-
-    $response = json_decode((string) $raw, true);
-    if (!is_array($response)) {
-        return ['ok' => false, 'error' => 'OpenAI returned an unreadable response.'];
-    }
-
-    if ($status < 200 || $status >= 300) {
-        $message = $response['error']['message'] ?? ('OpenAI returned HTTP ' . $status);
-        return ['ok' => false, 'error' => (string) $message];
-    }
-
-    $text = extract_response_text($response);
-    $review = json_decode($text, true);
-    if (!is_array($review)) {
-        return ['ok' => false, 'error' => 'AI response was not valid JSON.'];
-    }
-
-    $review['total_points'] = max(0, min(100, (int) ($review['total_points'] ?? 0)));
-    $review['suggested_tokens'] = max(0, min(4, (int) ($review['suggested_tokens'] ?? intdiv($review['total_points'], 25))));
-
-    return [
-        'ok' => true,
-        'review' => $review,
-    ];
+    return ai_mentor_service()->reviewResearch($student, $selection, $research);
 }
 
 function leadership_level(array $record): string {
@@ -2704,7 +2935,38 @@ function parse_link_lines(string $value): array {
     return $links;
 }
 
-function portal_header(string $title, string $bodyClass = ''): void {
+function student_app_icon(string $name): string {
+    $icons = [
+        'home' => '<path d="M3 11.5 12 4l9 7.5"></path><path d="M5 10.5V20h5v-6h4v6h5v-9.5"></path>',
+        'practice' => '<circle cx="12" cy="12" r="8"></circle><circle cx="12" cy="12" r="4"></circle><path d="m15 9 6-6"></path><path d="M18 3h3v3"></path>',
+        'present' => '<path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><path d="M12 19v3"></path>',
+        'progress' => '<path d="M4 19V9"></path><path d="M10 19V5"></path><path d="M16 19v-7"></path><path d="M22 19V2"></path>',
+        'profile' => '<circle cx="12" cy="8" r="4"></circle><path d="M4 22a8 8 0 0 1 16 0"></path>',
+        'award' => '<circle cx="12" cy="8" r="6"></circle><path d="M15.5 13 17 22l-5-3-5 3 1.5-9"></path>',
+        'sparkles' => '<path d="m12 3-1.7 4.3L6 9l4.3 1.7L12 15l1.7-4.3L18 9l-4.3-1.7Z"></path>',
+        'bell' => '<path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"></path><path d="M10 21h4"></path>',
+        'settings' => '<circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.8 2.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6v.2h-4V21a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1L4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9A1.7 1.7 0 0 0 3 14H2.8v-4H3a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9L4.2 7 7 4.2l.1.1A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-1.6v-.2h4V3a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1L19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.2v4H21a1.7 1.7 0 0 0-1.6 1Z"></path>',
+    ];
+    $paths = $icons[$name] ?? $icons['home'];
+    return '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">' . $paths . '</svg>';
+}
+
+function student_app_navigation(string $className, string $label): string {
+    $items = [
+        ['home', 'Home', 'portal.php#app-home'],
+        ['practice', 'Practice', 'portal.php#app-practice'],
+        ['present', 'Present', 'portal.php#app-present'],
+        ['progress', 'Journey', 'portal.php#app-progress'],
+        ['profile', 'Profile', 'portal.php#app-profile'],
+    ];
+    $html = '<nav class="' . e($className) . '" aria-label="' . e($label) . '">';
+    foreach ($items as [$key, $text, $href]) {
+        $html .= '<a href="' . e($href) . '" data-app-nav="' . e($key) . '">' . student_app_icon($key) . '<span>' . e($text) . '</span></a>';
+    }
+    return $html . '</nav>';
+}
+
+function portal_header(string $title, bool $studentApp = false, array $localStylesheets = [], bool $horizonPublic = false): void {
     echo '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">';
     echo '<title>' . e($title) . ' | Yuva Club</title>';
     echo '<meta name="description" content="Yuva Club student leadership portal.">';
@@ -2726,13 +2988,48 @@ function portal_header(string $title, string $bodyClass = ''): void {
     echo '<meta name="apple-mobile-web-app-title" content="YUVA Club">';
     echo '<meta name="apple-mobile-web-app-status-bar-style" content="default">';
     echo '<link rel="stylesheet" href="assets/site.css?v=20260714-public-mobile-nav">';
+    if ($studentApp) {
+        echo '<link rel="stylesheet" href="assets/student-app.css?v=1">';
+    }
+    foreach ($localStylesheets as $localStylesheet) {
+        $localStylesheet = trim((string) $localStylesheet);
+        if ($localStylesheet !== '') {
+            echo '<link rel="stylesheet" href="' . e($localStylesheet) . '">';
+        }
+    }
     echo '<script src="assets/app.js?v=20260714-public-mobile-nav" defer></script>';
+    if ($studentApp) {
+        echo '<script src="assets/student-app.js?v=1" defer></script>';
+    }
+    $bodyClass = $studentApp ? 'student-app is-loading' : ($horizonPublic ? 'horizon-home horizon-public-login' : '');
     echo '</head><body' . ($bodyClass !== '' ? ' class="' . e($bodyClass) . '"' : '') . '>';
+    if ($studentApp) {
+        echo '<a class="app-skip-link" href="#app-main">Skip to content</a>';
+        echo '<div class="app-loading" role="status" aria-live="polite"><img src="assets/yuva-symbol.png" alt=""><span>Loading your YUVA Club app&hellip;</span></div>';
+        echo '<header class="student-app-header"><a class="student-app-brand" href="portal.php#app-home"><img src="assets/yuva-symbol.png" alt=""><span><strong>YUVA</strong> Club</span></a><div class="student-app-header-actions"><span class="student-app-page-title">Leadership Journey</span><a class="student-app-profile-link" href="portal.php#app-profile" aria-label="Open My Journey">' . student_app_icon('profile') . '</a></div></header>';
+        echo '<aside class="student-app-rail"><a class="student-app-rail-brand" href="portal.php#app-home"><img src="assets/logo.png" alt=""><span>YUVA <strong>Club</strong></span></a>' . student_app_navigation('student-app-rail-nav', 'Student app navigation') . '<a class="student-app-logout" href="portal-logout.php">Log out</a></aside>';
+        echo '<div class="student-app-frame">';
+        return;
+    }
+    if ($horizonPublic) {
+        echo '<header class="site-header horizon-header" data-public-header><a class="brand horizon-brand" href="index.html" aria-label="YUVA Club home"><img src="assets/logo-public.webp" alt="" width="58" height="58"><span><strong>YUVA</strong> Club</span></a>';
+        echo '<button class="public-menu-button" type="button" aria-expanded="false" aria-controls="public-navigation"><span class="sr-only">Open navigation</span><span aria-hidden="true"></span><span aria-hidden="true"></span><span aria-hidden="true"></span></button>';
+        echo '<nav class="nav horizon-nav" id="public-navigation" aria-label="Main navigation"><a href="index.html">Home</a><a href="programs.html">Programs</a><a href="programs.html#how-it-works">How It Works</a><a href="resources.html">Resources</a><a href="about.html">About</a><details class="public-login-menu"><summary>Login <span aria-hidden="true">▾</span></summary><div class="public-login-panel"><a href="portal-login.php"><strong>Student Portal</strong><span>Continue your leadership journey</span></a><a href="parent-login.php"><strong>Parent Portal</strong><span>See how your child is growing</span></a><a href="admin-login.php"><strong>Organization Admin</strong><span>Manage your organization</span></a><a href="admin-login.php"><strong>Master Admin</strong><span>Manage the YUVA platform</span></a></div></details><a class="nav-register" href="registration.php">Register</a></nav></header>';
+        return;
+    }
     echo '<header class="site-header"><a class="brand" href="index.html" aria-label="Yuva Club home"><img src="assets/logo.png" alt="Yuva Club logo" width="78" height="78"><span>Yuva Club</span></a>';
     echo '<nav class="nav" aria-label="Main navigation"><a href="index.html">Home</a><a href="programs.html">Programs</a><a href="curriculum.html">Topics</a><a href="challenges.html">Challenge</a><a href="app.html">App</a><a class="nav-register" href="registration.php">Register</a><details class="signin-menu"><summary>Sign In</summary><div><a href="portal-login.php">Student</a><a href="parent-login.php">Parent</a><a href="admin-login.php">Admin</a></div></details></nav></header>';
 }
 
-function portal_footer(): void {
+function portal_footer(bool $studentApp = false, bool $horizonPublic = false): void {
+    if ($studentApp) {
+        echo '</div>' . student_app_navigation('student-app-bottom-nav', 'Student app navigation') . '</body></html>';
+        return;
+    }
+    if ($horizonPublic) {
+        echo '<footer class="site-footer horizon-footer"><div class="horizon-container footer-grid"><div class="footer-brand"><a class="brand horizon-brand" href="index.html" aria-label="YUVA Club home"><img src="assets/logo-public.webp" alt="" width="54" height="54"><span><strong>YUVA</strong> Club</span></a><p>Building Tomorrow&rsquo;s Leaders, One Voice at a Time.</p><strong class="footer-motto">Discover. Communicate. Lead. Inspire.</strong></div><div><h2>Explore</h2><a href="programs.html">Programs</a><a href="programs.html#how-it-works">How It Works</a><a href="resources.html">Resources</a><a href="about.html">About</a><a href="faq.html">FAQ</a></div><div><h2>Join</h2><a href="registration.php">Register</a><a href="partners.html">Partner With YUVA</a><a href="portal-login.php">Student Portal</a><a href="parent-login.php">Parent Portal</a></div><div><h2>Trust</h2><a href="privacy.html">Privacy Policy</a><a href="terms.html">Terms of Service</a><a href="safety.html">Child Safety</a><a href="safety.html">Accessibility</a><a href="contact.html">Contact</a></div></div><div class="horizon-container footer-bottom"><p>&copy; 2026 KarmaBro. All rights reserved.</p><p>YUVA Club &middot; Lead. Communicate. Think. Impact.</p></div></footer></body></html>';
+        return;
+    }
     echo '
   <footer class="site-footer">
     <div>

@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Phase 1 Student Home Preview</title>
+  <link rel="stylesheet" href="../../../assets/site.css">
+  <link rel="stylesheet" href="../../../assets/student-app.css">
+</head>
+<body class="student-app is-ready">
+  <a class="app-skip-link" href="#app-main">Skip to content</a>
+  <header class="student-app-header">
+    <a class="student-app-brand" href="#app-home"><img src="../../../assets/yuva-symbol.png" alt=""><span><strong>YUVA</strong> Club</span></a>
+    <div class="student-app-header-actions"><span class="student-app-page-title">Leadership Journey</span><a class="student-app-profile-link" href="#app-profile" aria-label="Open My Journey"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="12" cy="8" r="4"/><path d="M4 22a8 8 0 0 1 16 0"/></svg></a></div>
+  </header>
+  <aside class="student-app-rail">
+    <a class="student-app-rail-brand" href="#app-home"><img src="../../../assets/logo.png" alt=""><span>YUVA <strong>Club</strong></span></a>
+    <nav class="student-app-rail-nav" aria-label="Student app navigation">
+      <a class="is-active" href="#app-home" aria-current="page"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M3 11.5 12 4l9 7.5"/><path d="M5 10.5V20h5v-6h4v6h5v-9.5"/></svg><span>Home</span></a>
+      <a href="#app-practice"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4"/><path d="m15 9 6-6"/></svg><span>Practice</span></a>
+      <a href="#app-present"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/></svg><span>Present</span></a>
+      <a href="#app-progress"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 19V9M10 19V5M16 19v-7M22 19V2"/></svg><span>Journey</span></a>
+      <a href="#app-profile"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="12" cy="8" r="4"/><path d="M4 22a8 8 0 0 1 16 0"/></svg><span>Profile</span></a>
+    </nav>
+    <a class="student-app-logout" href="#">Log out</a>
+  </aside>
+  <div class="student-app-frame">
+    <main id="app-main" tabindex="-1">
+      <section class="band app-section" id="app-home" data-app-section="home">
+        <div class="home-welcome">
+          <div class="home-welcome-copy"><p class="home-greeting">Welcome back</p><h1>Student!</h1><p>Lead with confidence. Grow with purpose. Make today count.</p></div>
+          <div class="home-welcome-actions"><a class="home-notification" href="#announcements" aria-label="View announcements"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" fill="none" stroke="currentColor" stroke-width="1.8"/></svg></a><a class="home-avatar" href="#app-profile" aria-label="Open student profile">ST</a></div>
+          <img class="home-welcome-art" src="../../../assets/student-hero-illustration.svg" alt="" aria-hidden="true">
+        </div>
+        <div class="home-metrics" aria-label="Student achievements"><div class="home-metric"><span>Points</span><strong>0</strong></div><div class="home-metric"><span>Tokens</span><strong>0</strong></div><div class="home-metric"><span>Leadership level</span><strong>Explorer</strong></div><div class="home-metric"><span>Streak</span><strong>Not tracked yet</strong></div></div>
+        <div class="home-dashboard-grid">
+          <div class="form-card next-action-card home-card-wide"><p class="eyebrow">Today’s Mission</p><h2>Choose your first presentation topic</h2><p>Start by selecting a category, topic, date, and time so a mentor can review your plan.</p><a class="button primary" href="#">Choose Topic</a></div>
+          <div class="form-card home-quick-access"><p class="eyebrow">Continue Practice</p><h2>Practice Studio</h2><div class="home-quick-links"><a href="#"><span>Practice</span><small>Choose a topic or submit research</small></a><a href="#"><span>Present</span><small>View sessions and presentations</small></a><a href="#"><span>Journey</span><small>See your leadership growth</small></a><a href="#"><span>Certificate</span><small>Not ready — view status</small></a></div></div>
+          <div class="form-card home-session-card"><p class="eyebrow">Upcoming session</p><h2>No session scheduled</h2><p>Your next approved YUVA Club session will appear here when it is scheduled.</p><p class="home-status"><span>Status</span>Not scheduled</p><a class="button ghost" href="#">Presentation Studio</a></div>
+          <div class="form-card home-progress-card"><p class="eyebrow">Leadership Journey</p><h2>Registered</h2><div class="home-progress-list"><p><span>Presentations</span><strong>0</strong></p><p><span>Attendance</span><strong>0 sessions</strong></p><p><span>Service hours</span><strong>0 hours</strong></p><p><span>Rubric score</span><strong>0 / 100</strong></p></div><a class="button ghost" href="#">View your journey</a></div>
+          <div class="form-card home-mentor-card"><span class="home-mentor-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="m12 3-1.7 4.3L6 9l4.3 1.7L12 15l1.7-4.3L18 9l-4.3-1.7Z"/></svg></span><div><p class="eyebrow">AI Mentor</p><h2>A thoughtful next step</h2><p>Build your preparation one thoughtful step at a time.</p><a class="button ghost" href="#">View mentor status</a></div></div>
+          <div class="form-card home-achievement-card"><span class="home-achievement-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="8" r="6"/><path d="M15.5 13 17 22l-5-3-5 3 1.5-9"/></svg></span><div><p class="eyebrow">Recent Achievement</p><h2>Your first milestone is ahead</h2><p>Real achievements will appear here as you complete approved activities.</p><a class="button ghost" href="#">View achievements</a></div></div>
+          <div class="form-card home-announcements home-card-wide" id="announcements"><p class="eyebrow">Announcements</p><h2>Club updates</h2><p>You’re all caught up. Approved club announcements will appear here.</p><a class="button ghost" href="#">View announcements</a></div>
+        </div>
+      </section>
+    </main>
+  </div>
+  <nav class="student-app-bottom-nav" aria-label="Student app navigation">
+    <a class="is-active" href="#app-home" aria-current="page"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 11.5 12 4l9 7.5"/><path d="M5 10.5V20h5v-6h4v6h5v-9.5"/></svg><span>Home</span></a>
+    <a href="#app-practice"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4"/></svg><span>Practice</span></a>
+    <a href="#app-present"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/></svg><span>Present</span></a>
+    <a href="#app-progress"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 19V9M10 19V5M16 19v-7M22 19V2"/></svg><span>Journey</span></a>
+    <a href="#app-profile"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="8" r="4"/><path d="M4 22a8 8 0 0 1 16 0"/></svg><span>Profile</span></a>
+  </nav>
+</body>
+</html>

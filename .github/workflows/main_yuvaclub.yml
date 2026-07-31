@@ -1,70 +1,329 @@
-# Docs for the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
-# More GitHub Actions for Azure: https://github.com/Azure/actions
-
-name: Build and deploy PHP app to Azure Web App - yuvaclub
+name: Production release - YUVA Club
 
 on:
   push:
     branches:
       - main
+    paths:
+      - ".github/workflows/main_yuvaclub.yml"
+      - "docs/PRODUCTION_DEPLOYMENT_PLAYBOOK.md"
+  pull_request:
+    paths:
+      - ".github/workflows/main_yuvaclub.yml"
+      - "docs/PRODUCTION_DEPLOYMENT_PLAYBOOK.md"
   workflow_dispatch:
+    inputs:
+      operation:
+        description: Deploy the expected commit or roll back to a reviewed earlier commit
+        required: true
+        type: choice
+        options:
+          - validate
+          - deploy
+          - rollback
+      expected_commit:
+        description: Full 40-character commit SHA already present on main
+        required: true
+        type: string
+      backup_root:
+        description: Verified production backup directory under /home/data
+        required: true
+        type: string
+      confirmation:
+        description: Type DEPLOY_YUVACLUB_PRODUCTION
+        required: true
+        type: string
+
+concurrency:
+  group: yuvaclub-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  APP_NAME: yuvaclub
+  RESOURCE_GROUP: yuva-club-rg
+  PACKAGE_NAME: yuvaclub-production.zip
 
 jobs:
-  build:
+  validate:
+    name: Validate exact tracked release
     runs-on: ubuntu-latest
-    permissions:
-      contents: read #This is required for actions/checkout
+    outputs:
+      commit: ${{ steps.release.outputs.commit }}
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Validate release authorization inputs
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        shell: bash
+        env:
+          EXPECTED_COMMIT: ${{ inputs.expected_commit }}
+          BACKUP_ROOT: ${{ inputs.backup_root }}
+          CONFIRMATION: ${{ inputs.confirmation }}
+        run: |
+          set -euo pipefail
+          [[ "$CONFIRMATION" == "DEPLOY_YUVACLUB_PRODUCTION" ]]
+          [[ "$EXPECTED_COMMIT" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$BACKUP_ROOT" =~ ^/home/data/yuva-release-1\.0\.1-[0-9]{8}T[0-9]{6}Z$ ]]
 
-      - name: Setup PHP
+      - name: Check out expected commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.expected_commit || github.sha }}
+          fetch-depth: 0
+
+      - name: Verify commit is reviewed on main
+        id: release
+        shell: bash
+        env:
+          EXPECTED_COMMIT: ${{ inputs.expected_commit }}
+        run: |
+          set -euo pipefail
+          ACTUAL_COMMIT="$(git rev-parse HEAD)"
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            [[ "$ACTUAL_COMMIT" == "$EXPECTED_COMMIT" ]]
+          else
+            EXPECTED_COMMIT="$ACTUAL_COMMIT"
+          fi
+          git fetch --no-tags origin main
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" \
+                && "${{ inputs.operation }}" != "validate" ]]; then
+            git merge-base --is-ancestor "$EXPECTED_COMMIT" origin/main
+          fi
+          [[ -z "$(git status --porcelain)" ]]
+          echo "commit=$ACTUAL_COMMIT" >> "$GITHUB_OUTPUT"
+
+      - name: Set up PHP 8.3
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.3'
+          php-version: "8.3"
+          coverage: none
 
-      - name: Check if composer.json exists
-        id: check_files
-        uses: andstor/file-existence-action@v1
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
-          files: 'composer.json'
+          node-version: "20"
 
-      - name: Run composer install if composer.json exists
-        if: steps.check_files.outputs.files_exists == 'true'
-        run: composer validate --no-check-publish && composer install --prefer-dist --no-progress
+      - name: Run release validation
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --check
+          php -l portal.php
+          php -l portal-lib.php
+          php -l parent.php
+          php -l admin.php
+          php -l registration.php
+          php tests/backend/authentication-service-test.php
+          php tests/backend/student-login-workflow-test.php
+          php tests/backend/parent-login-workflow-test.php
+          php tests/backend/staging-readiness-test.php
+          node tests/frontend/public-site-contract-test.mjs
+          node tests/frontend/student-experience-contract-test.mjs
+          node tests/frontend/parent-experience-contract-test.mjs
+          node tests/frontend/master-admin-contract-test.mjs
 
+      - name: Build tracked-files-only ZIP
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/build-release-artifact.py \
+            --commit HEAD \
+            --output "$PACKAGE_NAME" \
+            --exclusions tools/release-artifact-exclusions.txt \
+            --inventory "$PACKAGE_NAME.inventory.json"
+          python3 tests/release-artifact-tooling-test.py
+          sha256sum "$PACKAGE_NAME" | tee "$PACKAGE_NAME.sha256"
 
-      - name: Upload artifact for deployment job
+      - name: Verify production safety controls are present
+        shell: bash
+        run: |
+          set -euo pipefail
+          WORKFLOW=.github/workflows/main_yuvaclub.yml
+          grep -q 'workflow_dispatch:' "$WORKFLOW"
+          grep -q 'group: yuvaclub-production' "$WORKFLOW"
+          grep -q 'cancel-in-progress: false' "$WORKFLOW"
+          grep -q 'environment: production' "$WORKFLOW"
+          grep -q 'git merge-base --is-ancestor' "$WORKFLOW"
+          grep -q 'build-release-artifact.py' "$WORKFLOW"
+          grep -q 'OVERALL_VERIFY=PASS' "$WORKFLOW"
+          grep -q 'sha256sum -c.*submissions.sha256' "$WORKFLOW"
+          grep -q 'retention-days: 90' "$WORKFLOW"
+          grep -q 'Public production smoke tests' "$WORKFLOW"
+          grep -q -- '--clean false' "$WORKFLOW"
+
+      - name: Retain exact release package for rollback
         uses: actions/upload-artifact@v4
         with:
-          name: php-app
-          path: .
+          name: yuvaclub-production-${{ steps.release.outputs.commit }}
+          path: |
+            ${{ env.PACKAGE_NAME }}
+            ${{ env.PACKAGE_NAME }}.sha256
+            ${{ env.PACKAGE_NAME }}.inventory.json
+          if-no-files-found: error
+          retention-days: 90
 
   deploy:
+    name: Approved production deployment
+    needs: validate
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.operation != 'validate' }}
     runs-on: ubuntu-latest
-    needs: build
-    permissions:
-      id-token: write #This is required for requesting the JWT
-      contents: read #This is required for actions/checkout
+    environment: production
 
     steps:
-      - name: Download artifact from build job
+      - name: Download exact validated package
         uses: actions/download-artifact@v4
         with:
-          name: php-app
-      
-      - name: Login to Azure
+          name: yuvaclub-production-${{ needs.validate.outputs.commit }}
+
+      - name: Verify package checksum
+        shell: bash
+        run: sha256sum -c "$PACKAGE_NAME.sha256"
+
+      - name: Log in to Azure
         uses: azure/login@v2
         with:
           client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_2B6D29C3A654441C8FB44AF53746AE54 }}
           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_BDFA041E98CB4199B60D5D7655791CD6 }}
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_BD3F45D129824F03AABB4458EF0C5F5C }}
 
-      - name: 'Deploy to Azure Web App'
-        uses: azure/webapps-deploy@v3
-        id: deploy-to-webapp
+      - name: Verify production backup and mutable manifests
+        shell: bash
+        env:
+          BACKUP_ROOT: ${{ inputs.backup_root }}
+        run: |
+          set -euo pipefail
+          REMOTE_COMMAND="test -f '$BACKUP_ROOT/verification-report.txt' \
+            && grep -qx 'OVERALL_VERIFY=PASS' '$BACKUP_ROOT/verification-report.txt' \
+            && test -f '$BACKUP_ROOT/manifests/submissions.sha256' \
+            && test -f '$BACKUP_ROOT/manifests/portal-data.sha256' \
+            && test -f '$BACKUP_ROOT/manifests/portal-uploads.sha256' \
+            && cd /home/site/wwwroot/submissions \
+            && sha256sum -c '$BACKUP_ROOT/manifests/submissions.sha256' \
+            && cd /home/site/wwwroot/portal-data \
+            && sha256sum -c '$BACKUP_ROOT/manifests/portal-data.sha256' \
+            && cd /home/site/wwwroot/portal-uploads \
+            && sha256sum -c '$BACKUP_ROOT/manifests/portal-uploads.sha256' \
+            && echo RELEASE_BACKUP_VERIFIED"
+          {
+            sleep 12
+            printf '\n'
+            sleep 1
+            printf '%s\n' "$REMOTE_COMMAND"
+            sleep 2
+            printf 'exit\n'
+          } | timeout 90 az webapp ssh \
+                --resource-group "$RESOURCE_GROUP" \
+                --name "$APP_NAME" | tee backup-verification.log
+          grep -q 'RELEASE_BACKUP_VERIFIED' backup-verification.log
+
+      - name: Capture exact mutable production inventory
+        shell: bash
+        run: |
+          set -euo pipefail
+          REMOTE_COMMAND="cd /home/site/wwwroot \
+            && echo MUTABLE_INVENTORY_BEGIN \
+            && for directory in portal-data portal-uploads submissions; do \
+                 find \"\$directory\" -type f -print0 | sort -z | xargs -0 -r sha256sum; \
+               done \
+            && echo MUTABLE_INVENTORY_END"
+          {
+            sleep 12
+            printf '\n'
+            sleep 1
+            printf '%s\n' "$REMOTE_COMMAND"
+            sleep 2
+            printf 'exit\n'
+          } | timeout 90 az webapp ssh \
+                --resource-group "$RESOURCE_GROUP" \
+                --name "$APP_NAME" | tee mutable-before.log
+          sed -n '/^MUTABLE_INVENTORY_BEGIN$/,/^MUTABLE_INVENTORY_END$/p' \
+            mutable-before.log > mutable-before.sha256
+          test -s mutable-before.sha256
+
+      - name: Deploy without cleaning persistent wwwroot content
+        shell: bash
+        run: |
+          set -euo pipefail
+          az webapp deploy \
+            --resource-group "$RESOURCE_GROUP" \
+            --name "$APP_NAME" \
+            --src-path "$PACKAGE_NAME" \
+            --type zip \
+            --clean false \
+            --restart true \
+            --track-status true \
+            --timeout 600000
+
+      - name: Verify mutable production records
+        shell: bash
+        env:
+          BACKUP_ROOT: ${{ inputs.backup_root }}
+        run: |
+          set -euo pipefail
+          REMOTE_COMMAND="cd /home/site/wwwroot/submissions \
+            && sha256sum -c '$BACKUP_ROOT/manifests/submissions.sha256' \
+            && cd /home/site/wwwroot/portal-data \
+            && sha256sum -c '$BACKUP_ROOT/manifests/portal-data.sha256' \
+            && cd /home/site/wwwroot/portal-uploads \
+            && sha256sum -c '$BACKUP_ROOT/manifests/portal-uploads.sha256' \
+            && echo MUTABLE_RECORDS_VERIFIED"
+          {
+            sleep 12
+            printf '\n'
+            sleep 1
+            printf '%s\n' "$REMOTE_COMMAND"
+            sleep 3
+            printf 'exit\n'
+          } | timeout 120 az webapp ssh \
+                --resource-group "$RESOURCE_GROUP" \
+                --name "$APP_NAME" | tee mutable-verification.log
+          grep -q 'MUTABLE_RECORDS_VERIFIED' mutable-verification.log
+
+      - name: Compare exact mutable production inventory
+        shell: bash
+        run: |
+          set -euo pipefail
+          REMOTE_COMMAND="cd /home/site/wwwroot \
+            && echo MUTABLE_INVENTORY_BEGIN \
+            && for directory in portal-data portal-uploads submissions; do \
+                 find \"\$directory\" -type f -print0 | sort -z | xargs -0 -r sha256sum; \
+               done \
+            && echo MUTABLE_INVENTORY_END"
+          {
+            sleep 12
+            printf '\n'
+            sleep 1
+            printf '%s\n' "$REMOTE_COMMAND"
+            sleep 2
+            printf 'exit\n'
+          } | timeout 90 az webapp ssh \
+                --resource-group "$RESOURCE_GROUP" \
+                --name "$APP_NAME" | tee mutable-after.log
+          sed -n '/^MUTABLE_INVENTORY_BEGIN$/,/^MUTABLE_INVENTORY_END$/p' \
+            mutable-after.log > mutable-after.sha256
+          cmp mutable-before.sha256 mutable-after.sha256
+          echo MUTABLE_INVENTORY_EXACT_MATCH
+
+      - name: Public production smoke tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          for path in / /registration.php /portal-login.php /parent-login.php /admin-login.php /privacy.html /terms.html /contact.html; do
+            curl --fail --silent --show-error \
+              --retry 3 --retry-delay 3 \
+              "https://www.yuvaclub.app${path}" >/dev/null
+          done
+
+      - name: Record deployment evidence
+        if: always()
+        uses: actions/upload-artifact@v4
         with:
-          app-name: 'yuvaclub'
-          slot-name: 'Production'
-          package: .
-          
+          name: production-evidence-${{ needs.validate.outputs.commit }}
+          path: |
+            backup-verification.log
+            mutable-verification.log
+          if-no-files-found: warn
+          retention-days: 90
