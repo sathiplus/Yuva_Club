@@ -32,7 +32,7 @@ RedirectMatch 404 ^/(backend|database|docs|tools)(/|$)
   Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self'; frame-src https://scheduler.zoom.us https://*.zoom.us https://zoom.us; frame-ancestors 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests"
 
   <FilesMatch "^(service-worker\.js|manifest\.webmanifest)$">
-    Header set Cache-Control "no-cache"
+    Header set Cache-Control "no-cache, no-store, must-revalidate"
   </FilesMatch>
 </IfModule>
 
