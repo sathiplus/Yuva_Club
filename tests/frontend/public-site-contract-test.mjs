@@ -35,7 +35,12 @@ assert.ok(topicNames.length > 100, 'Topic page inventory is unexpectedly incompl
 for (const name of publicPages) {
   const source = await readFile(new URL(name, root), 'utf8');
   auditedSources.push([name, source]);
-  assert.ok(source.includes('assets/public-site.css?v=1'), `${name} lacks public design system`);
+  const expectedPublicStylesheet =
+    name === 'index.html'
+      ? 'assets/public-site.css?v=release-1.0.1-20260731'
+      : 'assets/public-site.css?v=1';
+
+  assert.ok(source.includes(expectedPublicStylesheet), `${name} lacks public design system`);
   assert.ok(source.includes('class="public-skip-link"'), `${name} lacks skip navigation`);
   assert.ok(source.includes('id="main-content"'), `${name} lacks main skip target`);
   assert.match(source, /<html lang="en">/);
