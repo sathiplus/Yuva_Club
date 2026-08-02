@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readdir, readFile, stat } from 'node:fs/promises';
 
 const root = new URL('../../', import.meta.url);
+const releaseVersion = 'release-1.0.2-20260802';
 const publicPages = [
   'index.html',
   'programs.html',
@@ -35,14 +36,14 @@ assert.ok(topicNames.length > 100, 'Topic page inventory is unexpectedly incompl
 for (const name of publicPages) {
   const source = await readFile(new URL(name, root), 'utf8');
   auditedSources.push([name, source]);
-  const expectedPublicStylesheet =
-    name === 'index.html'
-      ? 'assets/public-site.css?v=release-1.0.1-20260731'
-      : 'assets/public-site.css?v=1';
-
-  assert.ok(source.includes(expectedPublicStylesheet), `${name} lacks public design system`);
+  assert.ok(source.includes(`assets/site.css?v=${releaseVersion}`), `${name} lacks current base CSS`);
+  assert.ok(source.includes(`assets/public-site.css?v=${releaseVersion}`), `${name} lacks current public design system`);
+  assert.ok(source.includes(`assets/app.js?v=${releaseVersion}`), `${name} lacks current public behavior`);
   assert.ok(source.includes('class="public-skip-link"'), `${name} lacks skip navigation`);
   assert.ok(source.includes('id="main-content"'), `${name} lacks main skip target`);
+  assert.ok(source.includes('class="site-header horizon-header"'), `${name} lacks shared public header`);
+  assert.ok(source.includes('class="site-footer horizon-footer"'), `${name} lacks shared public footer`);
+  assert.ok(source.includes('id="public-navigation"'), `${name} lacks shared navigation`);
   assert.match(source, /<html lang="en">/);
   assert.match(source, /<title>[^<]+<\/title>/);
 }
@@ -50,47 +51,38 @@ for (const name of publicPages) {
 for (const name of topicNames) {
   const source = await readFile(new URL(`pages/${name}`, root), 'utf8');
   auditedSources.push([`pages/${name}`, source]);
-  assert.ok(source.includes('../assets/public-site.css?v=1'), `${name} lacks public design system`);
+  assert.ok(source.includes(`../assets/site.css?v=${releaseVersion}`), `${name} lacks current base CSS`);
+  assert.ok(source.includes(`../assets/public-site.css?v=${releaseVersion}`), `${name} lacks current public design system`);
+  assert.ok(source.includes(`../assets/app.js?v=${releaseVersion}`), `${name} lacks current public behavior`);
   assert.ok(source.includes('class="public-skip-link"'), `${name} lacks skip navigation`);
   assert.ok(source.includes('id="main-content"'), `${name} lacks main skip target`);
+  assert.ok(source.includes('class="site-header horizon-header"'), `${name} lacks shared public header`);
+  assert.ok(source.includes('class="site-footer horizon-footer"'), `${name} lacks shared public footer`);
 }
 
 for (const name of phpPages) {
   const source = await readFile(new URL(name, root), 'utf8');
   auditedSources.push([name, source]);
-  assert.ok(source.includes('public-site.css?v=1'), `${name} lacks public design system`);
+  assert.ok(source.includes(`public-site.css?v=${releaseVersion}`), `${name} lacks current public design system`);
   assert.ok(source.includes('class="public-skip-link"'), `${name} lacks skip navigation`);
   assert.ok(source.includes('id="main-content"'), `${name} lacks main skip target`);
 }
 
-const legacyHeaderPages = [
-  'challenges.html',
-  'curriculum.html',
-  'stories.html',
-  'app.html',
-  'safety.html',
-];
-const headerSources = await Promise.all(
-  legacyHeaderPages.map((name) => readFile(new URL(name, root), 'utf8'))
-);
 const expectedNavigation = [
   'index.html',
   'programs.html',
-  'challenges.html',
-  'curriculum.html',
+  'programs.html#how-it-works',
   'resources.html',
-  'stories.html',
-  'leaderboard.php',
-  'app.html',
-  'safety.html',
+  'about.html',
   'registration.php',
   'portal-login.php',
   'parent-login.php',
   'admin-login.php',
 ];
-for (const [index, source] of headerSources.entries()) {
+for (const [name, source] of auditedSources.filter(([name]) => name.endsWith('.html'))) {
+  const prefix = name.startsWith('pages/') ? '../' : '';
   for (const href of expectedNavigation) {
-    assert.ok(source.includes(`href="${href}"`), `${legacyHeaderPages[index]} navigation misses ${href}`);
+    assert.ok(source.includes(`href="${prefix}${href}"`), `${name} navigation misses ${href}`);
   }
 }
 
@@ -256,6 +248,26 @@ assert.ok(css.includes('@media (prefers-reduced-motion: reduce)'));
 assert.ok(css.includes('.public-skip-link:focus'));
 assert.ok(css.includes('.horizon-motion-ready [data-horizon-reveal]'));
 assert.ok(!/https?:\/\//.test(css), 'Public CSS must not use external runtime dependencies');
+for (const selector of [
+  '.horizon-header',
+  '.horizon-nav',
+  '.public-menu-button',
+  '.public-login-menu',
+  '.horizon-hero',
+  '.horizon-section-heading',
+  '.button.primary',
+  '.programs-hero',
+  '.journey-choice-card',
+  '.resource-hub-card',
+  '.story-card',
+  '.faq-groups',
+  '.public-content-page',
+  '.public-topic-page',
+  '.horizon-public-login',
+  '.horizon-footer',
+]) {
+  assert.ok(css.includes(selector), `Public design system misses required selector: ${selector}`);
+}
 
 for (const asset of [
   'assets/logo.png',
@@ -273,6 +285,9 @@ assert.ok(appScript.includes("prefers-reduced-motion: reduce"));
 assert.ok(appScript.includes('IntersectionObserver'));
 
 for (const [name, source] of auditedSources) {
+  assert.ok(!source.includes('public-site.css?v=1'), `${name} references obsolete public stylesheet`);
+  assert.ok(!source.includes('KarmaBro'), `${name} contains obsolete public branding`);
+  assert.ok(!/karmabro\.com/i.test(source), `${name} contains an obsolete public domain`);
   const references = [...source.matchAll(/(?:href|src)="([^"]+)"/g)]
     .map((match) => match[1])
     .filter((value) =>

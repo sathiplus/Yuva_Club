@@ -1,19 +1,20 @@
-const CACHE_NAME = 'yuva-club-release-1-0-1-v1';
-const VERSIONED_CSS_JS = 'release-1.0.1-20260731';
+const CACHE_NAME = 'yuva-club-release-1-0-2-v1';
 const STATIC_ASSETS = [
   '/index.html',
-  '/app.html',
   '/programs.html',
-  '/challenges.html',
-  '/safety.html',
-  '/curriculum.html',
-  '/stories.html',
   '/resources.html',
+  '/about.html',
+  '/faq.html',
+  '/partners.html',
+  '/safety.html',
+  '/privacy.html',
+  '/terms.html',
+  '/contact.html',
   '/offline.html',
   '/manifest.webmanifest',
-  '/assets/site.css?v=' + VERSIONED_CSS_JS,
-  '/assets/public-site.css?v=' + VERSIONED_CSS_JS,
-  '/assets/app.js?v=' + VERSIONED_CSS_JS,
+  '/assets/site.css?v=release-1.0.2-20260802',
+  '/assets/public-site.css?v=release-1.0.2-20260802',
+  '/assets/app.js?v=release-1.0.2-20260802',
   '/assets/website-v3-hero.webp',
   '/assets/logo.png',
   '/assets/app-icon-180.png',
@@ -28,7 +29,10 @@ const STATIC_ASSETS = [
   '/icons/favicon-32x32.png',
   '/assets/logo-public.webp',
   '/assets/student-hero-illustration.svg',
-  '/assets/student-ai-coach-illustration.svg'
+  '/assets/student-ai-coach-illustration.svg',
+  '/assets/student-action-clipboard.svg',
+  '/assets/student-leadership-journey-illustration.svg',
+  '/assets/student-presentation-illustration.svg'
 ];
 
 self.addEventListener('install', (event) => {
@@ -67,6 +71,11 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  if (isPhpRequest) {
+    event.respondWith(fetch(request));
+    return;
+  }
+
   if (isNavigationRequest) {
     event.respondWith(
       fetch(request)
@@ -78,13 +87,6 @@ self.addEventListener('fetch', (event) => {
           return response;
         })
         .catch(() => caches.match(request).then((cached) => cached || caches.match('/index.html') || caches.match('/offline.html')))
-    );
-    return;
-  }
-
-  if (isPhpRequest) {
-    event.respondWith(
-      fetch(request)
     );
     return;
   }

@@ -7,8 +7,8 @@
   <meta name="description" content="Ocean literacy, climate, life, trade, food, and responsible choices.">
   <meta property="og:title" content="Oceans | Yuva Club">
   <meta property="og:description" content="Ocean literacy, climate, life, trade, food, and responsible choices.">
-  <meta property="og:image" content="https://yuvaclub.karmabro.com/assets/logo.png">
-  <meta property="og:url" content="https://yuvaclub.karmabro.com/">
+  <meta property="og:image" content="https://www.yuvaclub.app/assets/logo.png">
+  <meta property="og:url" content="https://www.yuvaclub.app/">
   <meta property="og:type" content="website">
   <link rel="icon" href="../assets/logo.png" type="image/png">
   <link rel="apple-touch-icon" href="../assets/app-icon-180.png">
@@ -17,31 +17,36 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="YUVA Club">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <link rel="stylesheet" href="../assets/site.css?v=20260614-large-photos">
-  <link rel="stylesheet" href="../assets/public-site.css?v=1">
-  <script src="../assets/app.js" defer></script>
+  <link rel="stylesheet" href="../assets/site.css?v=release-1.0.2-20260802">
+  <link rel="stylesheet" href="../assets/public-site.css?v=release-1.0.2-20260802">
+  <script src="../assets/app.js?v=release-1.0.2-20260802" defer></script>
 </head>
-<body>
+<body class="horizon-home public-topic-page">
   <a class="public-skip-link" href="#main-content">Skip to main content</a>
-  <header class="site-header">
-    <a class="brand" href="../index.html" aria-label="Yuva Club home">
-      <img src="../assets/logo.png" alt="Yuva Club logo" width="78" height="78">
-      <span>Yuva Club</span>
+  <header class="site-header horizon-header" data-public-header>
+    <a class="brand horizon-brand" href="../index.html" aria-label="YUVA Club home">
+      <img src="../assets/logo-public.webp" alt="" width="58" height="58">
+      <span><strong>YUVA</strong> Club</span>
     </a>
-    <nav class="nav" aria-label="Main navigation">
+    <button class="public-menu-button" type="button" aria-expanded="false" aria-controls="public-navigation">
+      <span class="sr-only">Open navigation</span><span aria-hidden="true"></span><span aria-hidden="true"></span><span aria-hidden="true"></span>
+    </button>
+    <nav class="nav horizon-nav" id="public-navigation" aria-label="Main navigation">
       <a href="../index.html">Home</a>
       <a href="../programs.html">Programs</a>
-      <a href="../challenges.html">Challenges</a>
-      <a href="../curriculum.html">Topics</a>
-      <a href="../resources.html">Resources</a>
-      <a href="../stories.html">Stories</a>
-      <a href="../leaderboard.php">Leaderboard</a>
-      <a href="../app.html">App</a>
-      <a href="../safety.html">Safety</a>
-      <a href="../registration.php">Register</a>
-      <a href="../portal-login.php">Student Portal</a>
-      <a href="../parent-login.php">Parent</a>
-      <a href="../admin-login.php">Admin</a>
+      <a href="../programs.html#how-it-works">How It Works</a>
+      <a class="is-current" aria-current="page" href="../resources.html">Resources</a>
+      <a href="../about.html">About</a>
+      <details class="public-login-menu">
+        <summary>Login <span aria-hidden="true">&#9662;</span></summary>
+        <div class="public-login-panel">
+          <a href="../portal-login.php"><strong>Student Portal</strong><span>Continue your leadership journey</span></a>
+          <a href="../parent-login.php"><strong>Parent Portal</strong><span>See how your child is growing</span></a>
+          <a href="../admin-login.php"><strong>Organization Admin</strong><span>Manage your organization</span></a>
+          <a href="../admin-login.php"><strong>Master Admin</strong><span>Manage the YUVA platform</span></a>
+        </div>
+      </details>
+      <a class="nav-register" href="../registration.php">Register</a>
     </nav>
   </header>
   <main id="main-content">
@@ -112,13 +117,14 @@
       </article>
     </section>
   </main>
-  <footer class="site-footer">
-    <div>
-      <strong>Yuva Club</strong>
-      <p>A youth leadership development platform that empowers students through research, presentations, discussion, critical thinking, and peer learning.</p>
-      <p><a href="https://www.karmabro.com/">www.karmabro.com</a></p>
-      <p>&copy; 2026 KarmaBro. All rights reserved.</p>
+  <footer class="site-footer horizon-footer">
+    <div class="horizon-container footer-grid">
+      <div class="footer-brand"><a class="brand horizon-brand" href="../index.html" aria-label="YUVA Club home"><img src="../assets/logo-public.webp" alt="" width="54" height="54"><span><strong>YUVA</strong> Club</span></a><p>Building Tomorrow&rsquo;s Leaders, One Voice at a Time.</p><strong class="footer-motto">Discover. Communicate. Lead. Inspire.</strong></div>
+      <div><h2>Explore</h2><a href="../programs.html">Programs</a><a href="../programs.html#how-it-works">How It Works</a><a href="../resources.html">Resources</a><a href="../about.html">About</a><a href="../faq.html">FAQ</a></div>
+      <div><h2>Join</h2><a href="../registration.php">Register</a><a href="../partners.html">Partner With YUVA</a><a href="../portal-login.php">Student Portal</a><a href="../parent-login.php">Parent Portal</a></div>
+      <div><h2>Trust</h2><a href="../privacy.html">Privacy Policy</a><a href="../terms.html">Terms of Service</a><a href="../safety.html">Child Safety</a><a href="../safety.html">Accessibility</a><a href="../contact.html">Contact</a></div>
     </div>
+    <div class="horizon-container footer-bottom"><p>&copy; 2026 YUVA Club. All rights reserved.</p><p>YUVA Club &middot; Lead. Communicate. Think. Impact.</p></div>
   </footer>
 </body>
 </html>

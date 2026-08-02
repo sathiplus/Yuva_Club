@@ -26,19 +26,36 @@ $registrationId = $_GET['registration'] ?? '';
   <meta name="twitter:image" content="https://www.yuvaclub.app/assets/logo.png">
   <script type="application/ld+json">{"@context":"https://schema.org","@type":"EducationalOrganization","name":"YUVA Club","url":"https://www.yuvaclub.app","description":"Empowering Young Minds to Learn, Lead and Inspire."}</script>
   <link rel="icon" href="assets/logo.png" type="image/png">
-  <link rel="stylesheet" href="assets/site.css?v=20260714-public-mobile-nav">
-  <link rel="stylesheet" href="assets/public-site.css?v=1">
-  <script src="assets/app.js" defer></script>
+  <link rel="stylesheet" href="assets/site.css?v=release-1.0.2-20260802">
+  <link rel="stylesheet" href="assets/public-site.css?v=release-1.0.2-20260802">
+  <script src="assets/app.js?v=release-1.0.2-20260802" defer></script>
 </head>
 <body class="horizon-home horizon-registration">
   <a class="public-skip-link" href="#main-content">Skip to main content</a>
   <header class="site-header horizon-header" data-public-header>
-    <a class="brand horizon-brand" href="index.html" aria-label="YUVA Club home"><img src="assets/logo-public.webp" alt="" width="58" height="58"><span><strong>YUVA</strong> Club</span></a>
-    <button class="public-menu-button" type="button" aria-expanded="false" aria-controls="public-navigation"><span class="sr-only">Open navigation</span><span aria-hidden="true"></span><span aria-hidden="true"></span><span aria-hidden="true"></span></button>
+    <a class="brand horizon-brand" href="index.html" aria-label="YUVA Club home">
+      <img src="assets/logo-public.webp" alt="" width="58" height="58">
+      <span><strong>YUVA</strong> Club</span>
+    </a>
+    <button class="public-menu-button" type="button" aria-expanded="false" aria-controls="public-navigation">
+      <span class="sr-only">Open navigation</span><span aria-hidden="true"></span><span aria-hidden="true"></span><span aria-hidden="true"></span>
+    </button>
     <nav class="nav horizon-nav" id="public-navigation" aria-label="Main navigation">
-      <a href="index.html">Home</a><a href="programs.html">Programs</a><a href="programs.html#how-it-works">How It Works</a><a href="resources.html">Resources</a><a href="about.html">About</a>
-      <details class="public-login-menu"><summary>Login <span aria-hidden="true">▾</span></summary><div class="public-login-panel"><a href="portal-login.php"><strong>Student Portal</strong><span>Continue your leadership journey</span></a><a href="parent-login.php"><strong>Parent Portal</strong><span>See how your child is growing</span></a><a href="admin-login.php"><strong>Organization Admin</strong><span>Manage your organization</span></a><a href="admin-login.php"><strong>Master Admin</strong><span>Manage the YUVA platform</span></a></div></details>
-      <a class="nav-register is-current" href="registration.php" aria-current="page">Register</a>
+      <a href="index.html">Home</a>
+      <a href="programs.html">Programs</a>
+      <a href="programs.html#how-it-works">How It Works</a>
+      <a href="resources.html">Resources</a>
+      <a href="about.html">About</a>
+      <details class="public-login-menu">
+        <summary>Login <span aria-hidden="true">&#9662;</span></summary>
+        <div class="public-login-panel">
+          <a href="portal-login.php"><strong>Student Portal</strong><span>Continue your leadership journey</span></a>
+          <a href="parent-login.php"><strong>Parent Portal</strong><span>See how your child is growing</span></a>
+          <a href="admin-login.php"><strong>Organization Admin</strong><span>Manage your organization</span></a>
+          <a href="admin-login.php"><strong>Master Admin</strong><span>Manage the YUVA platform</span></a>
+        </div>
+      </details>
+      <a class="nav-register" href="registration.php">Register</a>
     </nav>
   </header>
 
@@ -323,7 +340,15 @@ $registrationId = $_GET['registration'] ?? '';
     </section>
     <section class="registration-premium" aria-labelledby="premium-title"><div class="horizon-container public-story-split"><div><p class="horizon-kicker">Continue growing when ready</p><h2 id="premium-title">Premium extends the leadership journey.</h2></div><div class="story-copy"><p>Premium can include AI Mentor, unlimited presentations, advanced coaching, certificates, a leadership portfolio, parent insights, and additional premium features.</p><p>The free experience remains a meaningful place to begin.</p></div></div></section>
   </main>
-  <footer class="site-footer horizon-footer"><div class="horizon-container footer-grid"><div class="footer-brand"><a class="brand horizon-brand" href="index.html" aria-label="YUVA Club home"><img src="assets/logo-public.webp" alt="" width="54" height="54"><span><strong>YUVA</strong> Club</span></a><p>Building tomorrow's leaders, one voice at a time.</p><strong class="footer-motto">Discover. Communicate. Lead. Inspire.</strong></div><div><h2>Explore</h2><a href="programs.html">Programs</a><a href="programs.html#how-it-works">How It Works</a><a href="resources.html">Resources</a><a href="about.html">About</a><a href="faq.html">FAQ</a></div><div><h2>Join</h2><a href="registration.php">Register</a><a href="partners.html">Partner With YUVA</a><a href="portal-login.php">Student Portal</a><a href="parent-login.php">Parent Portal</a></div><div><h2>Trust</h2><a href="privacy.html">Privacy Policy</a><a href="terms.html">Terms of Service</a><a href="safety.html">Child Safety</a><a href="safety.html">Accessibility</a><a href="contact.html">Contact</a></div></div><div class="horizon-container footer-bottom"><p>&copy; 2026 KarmaBro. All rights reserved.</p><p>YUVA Club · Lead. Communicate. Think. Impact.</p></div></footer>
+  <footer class="site-footer horizon-footer">
+    <div class="horizon-container footer-grid">
+      <div class="footer-brand"><a class="brand horizon-brand" href="index.html" aria-label="YUVA Club home"><img src="assets/logo-public.webp" alt="" width="54" height="54"><span><strong>YUVA</strong> Club</span></a><p>Building Tomorrow&rsquo;s Leaders, One Voice at a Time.</p><strong class="footer-motto">Discover. Communicate. Lead. Inspire.</strong></div>
+      <div><h2>Explore</h2><a href="programs.html">Programs</a><a href="programs.html#how-it-works">How It Works</a><a href="resources.html">Resources</a><a href="about.html">About</a><a href="faq.html">FAQ</a></div>
+      <div><h2>Join</h2><a href="registration.php">Register</a><a href="partners.html">Partner With YUVA</a><a href="portal-login.php">Student Portal</a><a href="parent-login.php">Parent Portal</a></div>
+      <div><h2>Trust</h2><a href="privacy.html">Privacy Policy</a><a href="terms.html">Terms of Service</a><a href="safety.html">Child Safety</a><a href="safety.html">Accessibility</a><a href="contact.html">Contact</a></div>
+    </div>
+    <div class="horizon-container footer-bottom"><p>&copy; 2026 YUVA Club. All rights reserved.</p><p>YUVA Club &middot; Lead. Communicate. Think. Impact.</p></div>
+  </footer>
   <script>
     const dobInput = document.getElementById('date_of_birth');
     const ageInput = document.getElementById('age');
