@@ -13,6 +13,7 @@ const [portal, portalLib, reviewState, config, css, studentJs] = await Promise.a
   read('assets/student-app.css'),
   read('assets/student-app.js'),
 ]);
+const normalizedConfig = config.replace(/\r\n/g, '\n');
 
 const pass = (message) => process.stdout.write(`PASS ${message}\n`);
 const includes = (source, text, message) =>
@@ -74,12 +75,12 @@ assert.equal(
   'AI Mentor Home exposes one Coach Me CTA'
 );
 includes(
-  config,
+  normalizedConfig,
   "'coach_me_enabled' => env_bool(",
   'Coach Me capability remains feature-flagged'
 );
 includes(
-  config,
+  normalizedConfig,
   "'AI_MENTOR_COACH_ME_ENABLED',\n                    false",
   'Coach Me defaults disabled'
 );

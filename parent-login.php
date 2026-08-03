@@ -51,7 +51,7 @@ if ($step === 'children') {
     }
 }
 
-portal_header('Parent Dashboard Login', false, ['assets/public-site.css?v=1'], true);
+portal_header('Parent Dashboard Login', false, ['assets/public-site.css?v=release-1.0.2-20260802'], true);
 ?>
 <a class="public-skip-link" href="#main-content">Skip to main content</a>
 <main id="main-content">

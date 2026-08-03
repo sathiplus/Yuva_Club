@@ -2987,7 +2987,7 @@ function portal_header(string $title, bool $studentApp = false, array $localStyl
     echo '<meta name="apple-mobile-web-app-capable" content="yes">';
     echo '<meta name="apple-mobile-web-app-title" content="YUVA Club">';
     echo '<meta name="apple-mobile-web-app-status-bar-style" content="default">';
-    echo '<link rel="stylesheet" href="assets/site.css?v=20260714-public-mobile-nav">';
+    echo '<link rel="stylesheet" href="assets/site.css?v=release-1.0.2-20260802">';
     if ($studentApp) {
         echo '<link rel="stylesheet" href="assets/student-app.css?v=1">';
     }
@@ -2997,7 +2997,7 @@ function portal_header(string $title, bool $studentApp = false, array $localStyl
             echo '<link rel="stylesheet" href="' . e($localStylesheet) . '">';
         }
     }
-    echo '<script src="assets/app.js?v=20260714-public-mobile-nav" defer></script>';
+    echo '<script src="assets/app.js?v=release-1.0.2-20260802" defer></script>';
     if ($studentApp) {
         echo '<script src="assets/student-app.js?v=1" defer></script>';
     }
@@ -3027,7 +3027,7 @@ function portal_footer(bool $studentApp = false, bool $horizonPublic = false): v
         return;
     }
     if ($horizonPublic) {
-        echo '<footer class="site-footer horizon-footer"><div class="horizon-container footer-grid"><div class="footer-brand"><a class="brand horizon-brand" href="index.html" aria-label="YUVA Club home"><img src="assets/logo-public.webp" alt="" width="54" height="54"><span><strong>YUVA</strong> Club</span></a><p>Building Tomorrow&rsquo;s Leaders, One Voice at a Time.</p><strong class="footer-motto">Discover. Communicate. Lead. Inspire.</strong></div><div><h2>Explore</h2><a href="programs.html">Programs</a><a href="programs.html#how-it-works">How It Works</a><a href="resources.html">Resources</a><a href="about.html">About</a><a href="faq.html">FAQ</a></div><div><h2>Join</h2><a href="registration.php">Register</a><a href="partners.html">Partner With YUVA</a><a href="portal-login.php">Student Portal</a><a href="parent-login.php">Parent Portal</a></div><div><h2>Trust</h2><a href="privacy.html">Privacy Policy</a><a href="terms.html">Terms of Service</a><a href="safety.html">Child Safety</a><a href="safety.html">Accessibility</a><a href="contact.html">Contact</a></div></div><div class="horizon-container footer-bottom"><p>&copy; 2026 KarmaBro. All rights reserved.</p><p>YUVA Club &middot; Lead. Communicate. Think. Impact.</p></div></footer></body></html>';
+        echo '<footer class="site-footer horizon-footer"><div class="horizon-container footer-grid"><div class="footer-brand"><a class="brand horizon-brand" href="index.html" aria-label="YUVA Club home"><img src="assets/logo-public.webp" alt="" width="54" height="54"><span><strong>YUVA</strong> Club</span></a><p>Building Tomorrow&rsquo;s Leaders, One Voice at a Time.</p><strong class="footer-motto">Discover. Communicate. Lead. Inspire.</strong></div><div><h2>Explore</h2><a href="programs.html">Programs</a><a href="programs.html#how-it-works">How It Works</a><a href="resources.html">Resources</a><a href="about.html">About</a><a href="faq.html">FAQ</a></div><div><h2>Join</h2><a href="registration.php">Register</a><a href="partners.html">Partner With YUVA</a><a href="portal-login.php">Student Portal</a><a href="parent-login.php">Parent Portal</a></div><div><h2>Trust</h2><a href="privacy.html">Privacy Policy</a><a href="terms.html">Terms of Service</a><a href="safety.html">Child Safety</a><a href="safety.html">Accessibility</a><a href="contact.html">Contact</a></div></div><div class="horizon-container footer-bottom"><p>&copy; 2026 YUVA Club. All rights reserved.</p><p>YUVA Club &middot; Lead. Communicate. Think. Impact.</p></div></footer></body></html>';
         return;
     }
     echo '

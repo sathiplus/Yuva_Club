@@ -54,7 +54,7 @@ usort($rows, function (array $a, array $b): int {
 $programs = array_values(array_unique(array_map(fn($student) => membership_group_label($student), $students)));
 sort($programs);
 
-portal_header('Challenge Leaderboard', false, ['assets/public-site.css?v=1']);
+portal_header('Challenge Leaderboard', false, ['assets/public-site.css?v=release-1.0.2-20260802']);
 ?>
 <a class="public-skip-link" href="#main-content">Skip to main content</a>
 <main id="main-content">
