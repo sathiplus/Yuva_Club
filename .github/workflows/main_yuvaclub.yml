@@ -316,6 +316,12 @@ jobs:
               --retry 3 --retry-delay 3 \
               "https://www.yuvaclub.app${path}" >/dev/null
           done
+          registration_health="$(curl --fail --silent --show-error \
+            --retry 3 --retry-delay 3 \
+            'https://www.yuvaclub.app/submit-registration.php?health=1')"
+          jq -e \
+            '.database_configured == true and .database_connected == true' \
+            <<<"$registration_health" >/dev/null
 
       - name: Record deployment evidence
         if: always()
