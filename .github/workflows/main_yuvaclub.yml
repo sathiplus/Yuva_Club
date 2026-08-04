@@ -11,7 +11,7 @@ on:
     paths:
       - ".github/workflows/main_yuvaclub.yml"
       - "docs/PRODUCTION_DEPLOYMENT_PLAYBOOK.md"
-  workflow_dispatch:/home/data/yuva-release-1.0.1-20260730T103906Z
+  workflow_dispatch:
     inputs:
       operation:
         description: Deploy the expected commit or roll back to a reviewed earlier commit
