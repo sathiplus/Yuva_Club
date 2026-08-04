@@ -19,6 +19,7 @@ BUILDER = ROOT / "tools" / "build-release-artifact.py"
 EXCLUSIONS = ROOT / "tools" / "release-artifact-exclusions.txt"
 WORKFLOW = ROOT / ".github" / "workflows" / "main_yuvaclub.yml"
 MUTABLE_PREFIXES = ("portal-data/", "portal-uploads/", "submissions/")
+REGISTRATION_HANDLER = "submit-registration.php"
 BACKUP_PATH_PATTERN = re.compile(
     r"^/home/data/yuva-release-1\.0\.1-[0-9]{8}T[0-9]{6}Z$"
 )
@@ -42,6 +43,7 @@ def digest(path: pathlib.Path) -> str:
 builder = load_builder()
 exclusion_rules = builder.read_exclusions(EXCLUSIONS)
 workflow = WORKFLOW.read_text(encoding="utf-8")
+assert not builder.matches_exclusion(REGISTRATION_HANDLER, exclusion_rules)
 assert (
     '[[ "$BACKUP_ROOT" =~ '
     r"^/home/data/yuva-release-1\.0\.1-[0-9]{8}T[0-9]{6}Z$ ]]"
@@ -70,6 +72,9 @@ for production_control in (
     "--clean false",
     "retention-days: 90",
     "Public production smoke tests",
+    "/submit-registration.php?health=1",
+    ".database_configured == true",
+    ".database_connected == true",
 ):
     assert production_control in workflow
 
@@ -178,6 +183,7 @@ with tempfile.TemporaryDirectory() as temp_name:
     inventory = json.loads(inventory_path.read_text(encoding="utf-8"))
     with zipfile.ZipFile(artifact) as package:
         names = [entry.filename for entry in package.infolist()]
+        assert REGISTRATION_HANDLER in names
         assert all("\\" not in name for name in names)
         assert not any(name.startswith(MUTABLE_PREFIXES) for name in names)
 
@@ -198,6 +204,7 @@ with tempfile.TemporaryDirectory() as temp_name:
     assert inventory["included_file_count"] == len(
         [name for name in names if not name.endswith("/")]
     )
+    assert REGISTRATION_HANDLER in inventory["included_files"]
     assert inventory["sha256"] == digest(artifact)
 
 print("Release artifact tooling test passed")
