@@ -6,6 +6,22 @@ require __DIR__ . '/portal-lib.php';
 $status = $_GET['status'] ?? '';
 $studentId = $_GET['id'] ?? '';
 $registrationId = $_GET['registration'] ?? '';
+$registrationFlash = registration_flash_take();
+$validationReason = (string) ($_GET['reason'] ?? ($registrationFlash['reason'] ?? ''));
+$validationMessages = [
+    'incomplete-schedule-pair' => 'Complete both the day and time for each availability row, or clear the row.',
+    'missing-required-field' => 'Complete all required fields before submitting the registration.',
+    'invalid-or-missing-age' => 'Enter a valid date of birth so we can calculate eligibility.',
+    'age-below-minimum' => 'YUVA Club registration is for students age 13 and older.',
+    'age-above-maximum' => 'YUVA Club registration is currently for students age 21 and younger.',
+    'missing-agreement' => 'Accept all three agreements before submitting the registration.',
+    'persistence-failure' => 'We could not save the registration. Please try again or contact support.',
+    'empty-generated-student-id' => 'We could not generate the student ID. Please try again or contact support.',
+    'weak-password' => 'Password must be at least 12 characters and include uppercase, lowercase, number, and special character.',
+    'password-mismatch' => 'Password and confirmation must match.',
+];
+$validationMessage = $validationMessages[$validationReason] ?? '';
+$registrationFlashValues = is_array($registrationFlash['values'] ?? null) ? $registrationFlash['values'] : [];
 ?>
 <!doctype html>
 <html lang="en">
@@ -82,9 +98,9 @@ $registrationId = $_GET['registration'] ?? '';
             <div class="form-status success">Thank you. Your registration was submitted successfully<?php echo $studentId !== '' ? ' with Yuva Club ID ' . htmlspecialchars($studentId, ENT_QUOTES, 'UTF-8') : ''; ?>.</div>
           <?php endif; ?>
         <?php elseif ($status === 'error'): ?>
-          <div class="form-status error">Please complete the required fields and accept the agreements.</div>
+          <div class="form-status error" role="alert" aria-live="assertive"><?php echo e($validationMessage !== '' ? $validationMessage : 'Please review the highlighted fields and try again.'); ?></div>
         <?php elseif ($status === 'password-error'): ?>
-          <div class="form-status error">Password must be at least 12 characters and include uppercase, lowercase, number, and special character.</div>
+          <div class="form-status error" role="alert" aria-live="assertive"><?php echo e($validationMessage !== '' ? $validationMessage : 'Review the password fields and try again.'); ?></div>
         <?php elseif ($status === 'security-error'): ?>
           <div class="form-status error">This form expired. Please try again.</div>
         <?php endif; ?>
@@ -274,7 +290,8 @@ $registrationId = $_GET['registration'] ?? '';
                 </div>
                 <div class="field">
                   <label for="preferred_time_1">First Availability Time</label>
-                  <input id="preferred_time_1" name="preferred_time_1" type="time">
+                  <input id="preferred_time_1" name="preferred_time_1" type="time" aria-describedby="schedule_error_1">
+                  <span id="schedule_error_1" class="form-note schedule-error" hidden>Choose both a day and time, or clear this row.</span>
                 </div>
               </div>
 
@@ -294,7 +311,8 @@ $registrationId = $_GET['registration'] ?? '';
                 </div>
                 <div class="field">
                   <label for="preferred_time_2">Second Availability Time</label>
-                  <input id="preferred_time_2" name="preferred_time_2" type="time">
+                  <input id="preferred_time_2" name="preferred_time_2" type="time" aria-describedby="schedule_error_2">
+                  <span id="schedule_error_2" class="form-note schedule-error" hidden>Choose both a day and time, or clear this row.</span>
                 </div>
               </div>
 
@@ -314,7 +332,8 @@ $registrationId = $_GET['registration'] ?? '';
                 </div>
                 <div class="field">
                   <label for="preferred_time_3">Third Availability Time</label>
-                  <input id="preferred_time_3" name="preferred_time_3" type="time">
+                  <input id="preferred_time_3" name="preferred_time_3" type="time" aria-describedby="schedule_error_3">
+                  <span id="schedule_error_3" class="form-note schedule-error" hidden>Choose both a day and time, or clear this row.</span>
                 </div>
               </div>
             </div>
@@ -384,6 +403,52 @@ $registrationId = $_GET['registration'] ?? '';
 
     dobInput.addEventListener('change', updateAge);
     updateAge();
+
+    const registrationFlash = <?php echo json_encode($registrationFlashValues, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
+    Object.entries(registrationFlash).forEach(([name, value]) => {
+      const fields = document.querySelectorAll(`[name="${CSS.escape(name)}"]`);
+      fields.forEach((field) => {
+        if (field.type === 'checkbox') {
+          field.checked = Array.isArray(value) ? value.includes(field.value) : value === field.value;
+        } else {
+          field.value = value;
+        }
+      });
+    });
+    updateAge();
+
+    const validationReason = <?php echo json_encode($validationReason, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
+    const focusTargets = {
+      'incomplete-schedule-pair': 'preferred_day_1',
+      'missing-required-field': 'student_first_name',
+      'invalid-or-missing-age': 'date_of_birth',
+      'age-below-minimum': 'date_of_birth',
+      'age-above-maximum': 'date_of_birth',
+      'missing-agreement': 'agree_code',
+      'weak-password': 'account_password',
+      'password-mismatch': 'account_password_confirm',
+    };
+    const focusTarget = document.getElementById(focusTargets[validationReason] || '');
+    if (focusTarget && validationReason !== '') {
+      focusTarget.focus({ preventScroll: true });
+      focusTarget.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    }
+
+    document.querySelectorAll('[id^="preferred_day_"]').forEach((dayField) => {
+      const index = dayField.id.replace('preferred_day_', '');
+      const timeField = document.getElementById(`preferred_time_${index}`);
+      if (!timeField) return;
+      const validateSchedulePair = () => {
+        const incomplete = (dayField.value !== '') !== (timeField.value !== '');
+        const message = document.getElementById(`schedule_error_${index}`);
+        dayField.setCustomValidity(incomplete ? 'Choose both a day and time, or clear this availability row.' : '');
+        timeField.setCustomValidity(incomplete ? 'Choose both a day and time, or clear this availability row.' : '');
+        if (message) message.hidden = !incomplete;
+      };
+      dayField.addEventListener('change', validateSchedulePair);
+      timeField.addEventListener('change', validateSchedulePair);
+      validateSchedulePair();
+    });
   </script>
 </body>
 </html>

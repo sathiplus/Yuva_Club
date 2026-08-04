@@ -43,6 +43,15 @@ if (isset($_GET['health'])) {
 $notificationEmail = 'support@yuvaclub.app';
 $studentIdYear = '2026';
 
+function registration_validation_redirect(string $reason, bool $preserve = true): never {
+    if ($preserve) {
+        registration_flash_store($_POST, $reason);
+    }
+    unset($_SESSION['csrf_token']);
+    header('Location: registration.php?status=error&reason=' . urlencode($reason));
+    exit;
+}
+
 function clean_email(string $value): string {
     return filter_var(trim($value), FILTER_SANITIZE_EMAIL) ?: '';
 }
@@ -132,8 +141,8 @@ $membershipType = 'individual';
 $organizationCode = '';
 $preferredName = clean_text($_POST['preferred_name'] ?? '');
 $dateOfBirth = clean_text($_POST['date_of_birth'] ?? '');
-$age = clean_text($_POST['age'] ?? '');
-$programGroup = clean_text($_POST['program_group'] ?? '');
+$age = '';
+$programGroup = '';
 $grade = clean_text($_POST['grade'] ?? '');
 $school = clean_text($_POST['school'] ?? '');
 $cityState = clean_text($_POST['city_state'] ?? '');
@@ -151,6 +160,8 @@ $accountPasswordConfirm = (string) ($_POST['account_password_confirm'] ?? '');
 $passwordError = password_policy_error($accountPassword);
 
 if ($passwordError !== '' || !hash_equals($accountPassword, $accountPasswordConfirm)) {
+    registration_flash_store($_POST, $passwordError !== '' ? 'weak-password' : 'password-mismatch');
+    unset($_SESSION['csrf_token']);
     header('Location: registration.php?status=password-error');
     exit;
 }
@@ -176,16 +187,21 @@ $presentationExperience = clean_text($_POST['presentation_experience'] ?? '');
 $presentationTopics = clean_text($_POST['presentation_topics'] ?? '');
 $suggestions = clean_text($_POST['suggestions'] ?? '');
 
-if ($programGroup === '') {
-    $ageNumber = (int) $age;
-    if ($ageNumber >= 18 && $ageNumber <= 21) {
-        $programGroup = 'College Yuva (Ages 18-21)';
-    } elseif ($ageNumber >= 13 && $ageNumber <= 17) {
-        $programGroup = 'School Yuva (Ages 13-17)';
-    } else {
-        $programGroup = '';
-    }
+$birthDate = DateTimeImmutable::createFromFormat('!Y-m-d', $dateOfBirth);
+$birthErrors = DateTimeImmutable::getLastErrors();
+if ($birthDate === false || ($birthErrors !== false && ($birthErrors['warning_count'] > 0 || $birthErrors['error_count'] > 0)) || $birthDate->format('Y-m-d') !== $dateOfBirth) {
+    registration_validation_redirect('invalid-or-missing-age');
 }
+$today = new DateTimeImmutable('today');
+$ageNumber = (int) $birthDate->diff($today)->y;
+$age = (string) $ageNumber;
+if ($ageNumber < 13) {
+    registration_validation_redirect('age-below-minimum');
+}
+if ($ageNumber > 21) {
+    registration_validation_redirect('age-above-maximum');
+}
+$programGroup = $ageNumber >= 18 ? 'College Yuva (Ages 18-21)' : 'School Yuva (Ages 13-17)';
 
 $agreeCode = checked_value('agree_code');
 $agreeRecording = checked_value('agree_recording');
@@ -199,8 +215,7 @@ for ($i = 1; $i <= 3; $i++) {
     if ($day !== '' && $time !== '') {
         $schedule[] = "Availability $i: $day at $time";
     } elseif ($day !== '' || $time !== '') {
-        header('Location: registration.php?status=error');
-        exit;
+        registration_validation_redirect('incomplete-schedule-pair');
     }
 }
 $scheduleText = implode(' | ', $schedule);
@@ -224,14 +239,12 @@ $requiredFields = [
 
 if (
     in_array('', $requiredFields, true)
-    || (int) $age < 13
-    || (int) $age > 21
-    || $agreeCode !== 'Yes'
-    || $agreeRecording !== 'Yes'
-    || $agreeParentPermission !== 'Yes'
 ) {
-    header('Location: registration.php?status=error');
-    exit;
+    registration_validation_redirect('missing-required-field');
+}
+
+if ($agreeCode !== 'Yes' || $agreeRecording !== 'Yes' || $agreeParentPermission !== 'Yes') {
+    registration_validation_redirect('missing-agreement');
 }
 
 $submittedAt = date('Y-m-d H:i:s');
@@ -356,7 +369,9 @@ if (database_settings_present()) {
         $storedInDatabase = true;
     } catch (Throwable $error) {
         error_log('Yuva Club database registration failed: ' . $error->getMessage());
-        header('Location: registration.php?status=error');
+        registration_flash_store($_POST, 'persistence-failure');
+        unset($_SESSION['csrf_token']);
+        header('Location: registration.php?status=error&reason=persistence-failure');
         exit;
     }
 } else {
@@ -364,7 +379,9 @@ if (database_settings_present()) {
 }
 
 if ($studentId === '') {
-    header('Location: registration.php?status=error');
+    registration_flash_store($_POST, 'empty-generated-student-id');
+    unset($_SESSION['csrf_token']);
+    header('Location: registration.php?status=error&reason=empty-generated-student-id');
     exit;
 }
 

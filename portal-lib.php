@@ -1612,6 +1612,37 @@ function verify_csrf_token(?string $token): bool {
         && hash_equals($_SESSION['csrf_token'], $token);
 }
 
+function registration_flash_store(array $post, string $reason): void {
+    $allowed = [
+        'student_first_name', 'student_last_name', 'preferred_name', 'date_of_birth',
+        'grade', 'school', 'city_state', 'student_email', 'student_phone',
+        'whatsapp_contact', 'parent_name', 'relationship', 'parent_email',
+        'parent_phone', 'interest_other', 'join_reason', 'presentation_experience',
+        'presentation_topics', 'preferred_day_1', 'preferred_time_1',
+        'preferred_day_2', 'preferred_time_2', 'preferred_day_3', 'preferred_time_3',
+        'suggestions', 'form_name',
+    ];
+    $values = [];
+    foreach ($allowed as $name) {
+        if (array_key_exists($name, $post) && is_scalar($post[$name])) {
+            $values[$name] = (string) $post[$name];
+        }
+    }
+    if (isset($post['interests']) && is_array($post['interests'])) {
+        $values['interests'] = array_values(array_filter(
+            array_map(static fn($value): string => (string) $value, $post['interests']),
+            static fn(string $value): bool => $value !== ''
+        ));
+    }
+    $_SESSION['registration_flash'] = ['reason' => $reason, 'values' => $values];
+}
+
+function registration_flash_take(): array {
+    $flash = $_SESSION['registration_flash'] ?? [];
+    unset($_SESSION['registration_flash']);
+    return is_array($flash) ? $flash : [];
+}
+
 function portal_network_category(?string $remoteAddress): string {
     $address = trim((string) $remoteAddress);
     if (filter_var($address, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4) !== false) {
