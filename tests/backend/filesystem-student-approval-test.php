@@ -248,12 +248,13 @@ filesystem_approval_assert(
     is_string($portalLibSource)
     && str_contains(
         $portalLibSource,
-        'find_authenticatable_filesystem_student($yuvaId)'
+        'static fn(string $yuvaId): ?array => find_student($yuvaId)'
     )
     && str_contains(
         $portalLibSource,
         '$student = find_authenticatable_filesystem_student($studentId);'
     )
+    && str_contains($portalLibSource, 'student_approval_status(')
     && str_contains($portalLibSource, 'clear_student_authentication_session();')
     && str_contains($portalLibSource, "redirect_to('portal-login.php?status=error');"),
     'Login wiring and protected-page revalidation must use the approval helper and generic failure path.'

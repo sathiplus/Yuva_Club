@@ -5,6 +5,7 @@ require_once __DIR__ . '/backend/config.php';
 require_once __DIR__ . '/backend/database.php';
 require_once __DIR__ . '/backend/authentication/PortalRepository.php';
 require_once __DIR__ . '/backend/authentication/PortalCompatibilityAdapter.php';
+require_once __DIR__ . '/backend/authentication/StudentApprovalResolver.php';
 require_once __DIR__ . '/backend/authentication/StudentAuthentication.php';
 require_once __DIR__ . '/backend/authentication/ParentAuthentication.php';
 require_once __DIR__ . '/backend/authentication/AuthenticationService.php';
@@ -1685,10 +1686,15 @@ function portal_authentication_service(): \YuvaClub\Authentication\Authenticatio
     $students = new \YuvaClub\Authentication\StudentAuthentication(
         $repository,
         $adapter,
-        static fn(string $yuvaId): ?array =>
-            find_authenticatable_filesystem_student($yuvaId),
+        static fn(string $yuvaId): ?array => find_student($yuvaId),
         static fn(array $record, string $credential): bool =>
-            hash_equals((string) ($record['Date of Birth'] ?? ''), $credential)
+            hash_equals((string) ($record['Date of Birth'] ?? ''), $credential),
+        null,
+        null,
+        static fn(array $record): bool => student_approval_status(
+            (string) ($record['yuva_id'] ?? $record['Yuva Club ID'] ?? ''),
+            $record
+        ) === \YuvaClub\Authentication\StudentApprovalResolver::APPROVED
     );
     $parents = new \YuvaClub\Authentication\ParentAuthentication(
         $repository,
@@ -2453,8 +2459,51 @@ function find_authenticatable_filesystem_student(string $studentId): ?array {
         return null;
     }
 
-    $record = student_record($studentId);
-    return ($record['approved'] ?? null) === 'Approved' ? $student : null;
+    return student_approval_status($studentId, $student)
+        === \YuvaClub\Authentication\StudentApprovalResolver::APPROVED
+        ? $student
+        : null;
+}
+
+function portal_student_approval_resolver(): \YuvaClub\Authentication\StudentApprovalResolver {
+    static $resolver = null;
+    if ($resolver instanceof \YuvaClub\Authentication\StudentApprovalResolver) {
+        return $resolver;
+    }
+
+    $resolver = new \YuvaClub\Authentication\StudentApprovalResolver(
+        database_settings_present(),
+        static function (string $yuvaId, string $studentEmail): ?array {
+            if (db_driver() !== 'sqlsrv') {
+                throw new RuntimeException(
+                    'Authoritative registration approval requires DB_DRIVER=sqlsrv.'
+                );
+            }
+
+            $repository = \YuvaClub\Authentication\PortalRepository::fromPdo(
+                Database::connection()
+            );
+            return $repository->findRegistrationApprovalByStudentIdentity(
+                normalize_yuva_id($yuvaId),
+                $studentEmail
+            );
+        },
+        static fn(string $yuvaId): mixed =>
+            student_record(normalize_yuva_id($yuvaId))['approved'] ?? null
+    );
+
+    return $resolver;
+}
+
+function student_approval_status(string $studentId, ?array $student = null): string {
+    $studentId = normalize_yuva_id($studentId);
+    $student ??= find_student($studentId);
+    return portal_student_approval_resolver()->resolve(
+        $studentId,
+        is_array($student)
+            ? (string) ($student['student_email'] ?? $student['Student Email'] ?? '')
+            : ''
+    );
 }
 
 function student_display_name(array $student): string {

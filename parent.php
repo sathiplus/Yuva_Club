@@ -9,6 +9,7 @@ $studentId = normalize_yuva_id(
 $selection = read_json_file(topic_selections_file())[$studentId] ?? [];
 $research = read_json_file(research_file())[$studentId] ?? [];
 $record = student_record($studentId);
+$approvalStatus = student_approval_status($studentId, $student);
 $hub = hub_settings();
 $badges = earned_badges($record);
 $points = student_points($record);
@@ -31,7 +32,7 @@ portal_header('Parent Dashboard');
   </nav>
 
   <section class="parent-hero" id="parent-overview" aria-labelledby="parent-overview-title">
-    <div class="parent-hero-copy"><p class="eyebrow">Parent Experience</p><h1 id="parent-overview-title">How is <?php echo e(student_display_name($student)); ?> growing?</h1><p>A clear view of your child's verified leadership activity, preparation, and recognition.</p><div class="parent-identity"><span>YUVA ID<strong><?php echo e($studentId); ?></strong></span><span>Membership<strong><?php echo e(membership_group_label($student)); ?></strong></span><span>Approval<strong><?php echo e($record['approved'] ?? 'Pending'); ?></strong></span></div></div>
+    <div class="parent-hero-copy"><p class="eyebrow">Parent Experience</p><h1 id="parent-overview-title">How is <?php echo e(student_display_name($student)); ?> growing?</h1><p>A clear view of your child's verified leadership activity, preparation, and recognition.</p><div class="parent-identity"><span>YUVA ID<strong><?php echo e($studentId); ?></strong></span><span>Membership<strong><?php echo e(membership_group_label($student)); ?></strong></span><span>Approval<strong><?php echo e($approvalStatus); ?></strong></span></div></div>
     <div class="parent-hero-mark" aria-hidden="true"><span></span><i></i><b></b></div>
   </section>
 

@@ -25,13 +25,17 @@ final class StudentAuthentication
     /** @var callable(string): bool */
     private $passwordNeedsRehash;
 
+    /** @var (callable(array<string, mixed>): bool)|null */
+    private $approvalVerifier;
+
     public function __construct(
         PortalRepository $repository,
         PortalCompatibilityAdapter $adapter,
         callable $filesystemFinder,
         callable $filesystemVerifier,
         ?callable $passwordVerifier = null,
-        ?callable $passwordNeedsRehash = null
+        ?callable $passwordNeedsRehash = null,
+        ?callable $approvalVerifier = null
     ) {
         $this->repository = $repository;
         $this->adapter = $adapter;
@@ -41,6 +45,7 @@ final class StudentAuthentication
             ?? static fn(string $password, string $hash): bool => password_verify($password, $hash);
         $this->passwordNeedsRehash = $passwordNeedsRehash
             ?? static fn(string $hash): bool => password_needs_rehash($hash, PASSWORD_DEFAULT);
+        $this->approvalVerifier = $approvalVerifier;
     }
 
     /**
@@ -152,6 +157,13 @@ final class StudentAuthentication
             return $this->failure('invalid_credentials');
         }
 
+        if (
+            $this->approvalVerifier !== null
+            && !(($this->approvalVerifier)($record))
+        ) {
+            return $this->failure('account_unavailable');
+        }
+
         return [
             'authenticated' => true,
             'source' => 'filesystem',
@@ -189,24 +201,31 @@ final class StudentAuthentication
     /** @param array<string, mixed> $student */
     private function isActivatedSqlStudent(array $student): bool
     {
-        $registrationStatus = strtolower((string) ($student['registration_status'] ?? ''));
         return strtolower((string) ($student['user_role'] ?? '')) === 'student'
             && strtolower((string) ($student['user_status'] ?? '')) === 'active'
-            && strtolower((string) ($student['student_approval_status'] ?? '')) === 'approved'
-            && ($student['approved_at'] ?? null) !== null
-            && (string) ($student['password_hash'] ?? '') !== ''
-            && ($registrationStatus === '' || $registrationStatus === 'approved');
+            && $this->hasAuthoritativeApproval($student)
+            && (string) ($student['password_hash'] ?? '') !== '';
     }
 
     /** @param array<string, mixed> $student */
     private function mayUseLegacyWhileUnactivated(array $student): bool
     {
-        $registrationStatus = strtolower((string) ($student['registration_status'] ?? ''));
         return strtolower((string) ($student['user_role'] ?? '')) === 'student'
             && strtolower((string) ($student['user_status'] ?? '')) === 'active'
-            && strtolower((string) ($student['student_approval_status'] ?? '')) === 'approved'
+            && $this->hasAuthoritativeApproval($student)
+            && (string) ($student['password_hash'] ?? '') === '';
+    }
+
+    /** @param array<string, mixed> $student */
+    private function hasAuthoritativeApproval(array $student): bool
+    {
+        if ($this->approvalVerifier !== null) {
+            return ($this->approvalVerifier)($student);
+        }
+
+        $registrationStatus = strtolower((string) ($student['registration_status'] ?? ''));
+        return strtolower((string) ($student['student_approval_status'] ?? '')) === 'approved'
             && ($student['approved_at'] ?? null) !== null
-            && (string) ($student['password_hash'] ?? '') === ''
             && ($registrationStatus === '' || $registrationStatus === 'approved');
     }
 
