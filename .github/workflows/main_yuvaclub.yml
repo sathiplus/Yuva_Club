@@ -122,6 +122,7 @@ jobs:
           php -l tests/backend/student-approval-resolver-test.php
           php -l tests/backend/filesystem-student-approval-test.php
           php -l tests/backend/admin-registration-approval-test.php
+          php -l tests/backend/registration-validation-test.php
           php tests/backend/authentication-service-test.php
           php tests/backend/student-login-workflow-test.php
           php tests/backend/parent-login-workflow-test.php
@@ -131,6 +132,7 @@ jobs:
             --suite tests/backend/filesystem-student-approval-test.php \
             --log-directory "$RUNNER_TEMP/filesystem-student-approval"
           php tests/backend/admin-registration-approval-test.php
+          php tests/backend/registration-validation-test.php
           php tests/backend/staging-readiness-test.php
           node tests/frontend/public-site-contract-test.mjs
           node tests/frontend/student-experience-contract-test.mjs
