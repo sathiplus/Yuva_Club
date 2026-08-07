@@ -59,28 +59,28 @@ final class StudentAuthentication
      *   failure_category: string|null
      * }
      */
-    public function authenticate(string $mode, string $yuvaId, string $credential): array
+    public function authenticate(string $mode, string $identifier, string $credential): array
     {
         $mode = strtolower(trim($mode));
         if (!in_array($mode, ['filesystem', 'sql', 'hybrid'], true)) {
             throw new InvalidArgumentException('Unsupported portal authentication mode.');
         }
 
-        $yuvaId = $this->normalizeYuvaId($yuvaId);
-        if ($yuvaId === '' || $credential === '') {
+        $identifier = $this->normalizeIdentifier($identifier);
+        if ($identifier === '' || $credential === '') {
             return $this->failure('invalid_credentials');
         }
 
         if ($mode === 'filesystem') {
-            return $this->authenticateFilesystem($yuvaId, $credential);
+            return $this->authenticateFilesystem($identifier, $credential);
         }
 
-        $sqlStudent = $this->repository->findStudentByYuvaId($yuvaId);
+        $sqlStudent = $this->repository->findStudentByIdentifier($identifier);
         if ($mode === 'sql') {
             return $this->authenticateSql($sqlStudent, $credential);
         }
 
-        return $this->authenticateHybrid($yuvaId, $credential, $sqlStudent);
+        return $this->authenticateHybrid($identifier, $credential, $sqlStudent);
     }
 
     /** @return array<string, mixed>|null */
@@ -106,11 +106,11 @@ final class StudentAuthentication
 
     /** @param array<string, mixed>|null $sqlStudent */
     private function authenticateHybrid(
-        string $yuvaId,
+        string $identifier,
         string $credential,
         ?array $sqlStudent
     ): array {
-        $filesystemStudent = ($this->filesystemFinder)($yuvaId);
+        $filesystemStudent = ($this->filesystemFinder)($identifier);
 
         if ($sqlStudent !== null && $filesystemStudent !== null) {
             $sqlRecord = $this->adapter->studentToLegacyRecord($sqlStudent);
@@ -132,24 +132,24 @@ final class StudentAuthentication
         }
 
         return $this->authenticateFilesystemRecord(
-            $yuvaId,
+            $identifier,
             $credential,
             $filesystemStudent
         );
     }
 
-    private function authenticateFilesystem(string $yuvaId, string $credential): array
+    private function authenticateFilesystem(string $identifier, string $credential): array
     {
-        $record = ($this->filesystemFinder)($yuvaId);
+        $record = ($this->filesystemFinder)($identifier);
         if ($record === null) {
             return $this->failure('invalid_credentials');
         }
-        return $this->authenticateFilesystemRecord($yuvaId, $credential, $record);
+        return $this->authenticateFilesystemRecord($identifier, $credential, $record);
     }
 
     /** @param array<string, mixed> $record */
     private function authenticateFilesystemRecord(
-        string $yuvaId,
+        string $identifier,
         string $credential,
         array $record
     ): array {
@@ -164,10 +164,15 @@ final class StudentAuthentication
             return $this->failure('account_unavailable');
         }
 
+        $studentId = $this->filesystemStudentId($record, $identifier);
+        if ($studentId === '') {
+            return $this->failure('invalid_credentials');
+        }
+
         return [
             'authenticated' => true,
             'source' => 'filesystem',
-            'student_id' => $yuvaId,
+            'student_id' => $studentId,
             'user_id' => null,
             'record' => $record,
             'password_rehash_required' => false,
@@ -260,6 +265,25 @@ final class StudentAuthentication
             return sprintf('YC%s%03d', $matches[1], (int) $matches[2]);
         }
         return str_replace('-', '', $value);
+    }
+
+    private function normalizeIdentifier(string $value): string
+    {
+        $value = trim($value);
+        if (str_contains($value, '@')) {
+            return strtolower($value);
+        }
+        return $this->normalizeYuvaId($value);
+    }
+
+    /** @param array<string, mixed> $record */
+    private function filesystemStudentId(array $record, string $identifier): string
+    {
+        $studentId = (string) ($record['yuva_id'] ?? $record['Yuva Club ID'] ?? '');
+        if ($studentId === '' && !str_contains($identifier, '@')) {
+            $studentId = $identifier;
+        }
+        return $this->normalizeYuvaId($studentId);
     }
 
     /** @return array<string, mixed> */

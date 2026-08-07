@@ -69,13 +69,19 @@ function filesystem_approval_service(
     $students = new StudentAuthentication(
         $repository,
         $adapter,
-        static fn(string $yuvaId): ?array =>
-            find_authenticatable_filesystem_student($yuvaId),
-        static fn(array $record, string $credential): bool =>
-            hash_equals((string) ($record['Date of Birth'] ?? ''), $credential),
+        static fn(string $identifier): ?array =>
+            find_filesystem_student_login_identity($identifier),
+        static function (array $record, string $credential): bool {
+            $hash = (string) ($record['password_hash'] ?? '');
+            return $hash !== '' && password_verify($credential, $hash);
+        },
         static fn(string $password, string $hash): bool =>
             $password === 'correct-password' && $hash === 'student-hash',
-        static fn(string $hash): bool => false
+        static fn(string $hash): bool => false,
+        static fn(array $record): bool => student_approval_status(
+            (string) ($record['yuva_id'] ?? $record['Yuva Club ID'] ?? ''),
+            $record
+        ) === \YuvaClub\Authentication\StudentApprovalResolver::APPROVED
     );
     $parents = new ParentAuthentication(
         $repository,
@@ -106,6 +112,22 @@ fputcsv($handle, array_map(
     $headers
 ));
 fclose($handle);
+
+$studentPassword = 'CorrectPass!2026';
+create_student_account(
+    $studentId,
+    (string) $student['Student Email'],
+    (string) $student['Parent Email'],
+    $studentPassword
+);
+$createdAccount = find_student_account_by_identifier((string) $student['Student Email']);
+$createdHash = (string) ($createdAccount['password_hash'] ?? '');
+filesystem_approval_assert(
+    $createdHash !== ''
+    && !hash_equals($studentPassword, $createdHash)
+    && password_verify($studentPassword, $createdHash),
+    'Registration-created student credentials must be stored only as a usable password hash.'
+);
 
 write_json_file(portal_records_file(), []);
 filesystem_approval_assert(
@@ -157,8 +179,8 @@ $workflow = new StudentLoginWorkflow(
 $session = [];
 $success = $workflow->attempt(
     $session,
-    $studentId,
-    '2010-01-02',
+    (string) $student['Student Email'],
+    $studentPassword,
     'valid-csrf',
     '192.0.2.0/24'
 );
@@ -166,27 +188,47 @@ filesystem_approval_assert(
     $success === ['authenticated' => true]
     && $session === ['student_id' => $studentId]
     && $regenerations === 1,
-    'Approved filesystem login must preserve the legacy session and regenerate it.'
+    'Approved filesystem email/password login must preserve the session and regenerate it.'
 );
+$_SESSION = $session;
+$dashboardStudent = require_student();
+filesystem_approval_assert(
+    ($dashboardStudent['Yuva Club ID'] ?? null) === $studentId,
+    'The approved email/password session must pass the student dashboard guard.'
+);
+$_SESSION = [];
 
-$wrongDobSession = [];
+$yuvaIdSession = [];
 filesystem_approval_assert(
     $workflow->attempt(
-        $wrongDobSession,
+        $yuvaIdSession,
         $studentId,
-        'wrong-dob',
+        $studentPassword,
+        'valid-csrf',
+        '203.0.113.0/24'
+    ) === ['authenticated' => true]
+    && $yuvaIdSession === ['student_id' => $studentId],
+    'The previously supported Yuva Club ID alternate identifier must remain available.'
+);
+
+$wrongPasswordSession = [];
+filesystem_approval_assert(
+    $workflow->attempt(
+        $wrongPasswordSession,
+        (string) $student['Student Email'],
+        'wrong-password',
         'valid-csrf',
         '198.51.100.0/24'
     ) === ['authenticated' => false]
-    && $wrongDobSession === [],
-    'Wrong DOB must retain the generic rejection without session state.'
+    && $wrongPasswordSession === [],
+    'Wrong password must retain the generic rejection without session state.'
 );
 
 filesystem_approval_write_record($studentId, ['approved' => 'Pending']);
 filesystem_approval_assert(
     $filesystemService->authenticateStudent(
         $studentId,
-        '2010-01-02'
+        $studentPassword
     )['authenticated'] === false,
     'Pending filesystem students must not establish a new session.'
 );
@@ -219,7 +261,7 @@ $hybridService = filesystem_approval_service('hybrid', $unactivatedSqlRow);
 filesystem_approval_assert(
     $hybridService->authenticateStudent(
         $studentId,
-        '2010-01-02'
+        $studentPassword
     )['authenticated'] === false,
     'Hybrid legacy fallback must reject a non-approved filesystem student.'
 );
@@ -228,7 +270,7 @@ filesystem_approval_write_record($studentId, ['approved' => 'Approved']);
 filesystem_approval_assert(
     $hybridService->authenticateStudent(
         $studentId,
-        '2010-01-02'
+        $studentPassword
     )['source'] === 'filesystem',
     'Hybrid legacy fallback may authenticate an approved filesystem student.'
 );
@@ -238,9 +280,9 @@ $activatedHybridService = filesystem_approval_service('hybrid', $activatedSqlRow
 filesystem_approval_assert(
     $activatedHybridService->authenticateStudent(
         $studentId,
-        '2010-01-02'
+        $studentPassword
     )['authenticated'] === false,
-    'Activated SQL password failure must not downgrade to filesystem DOB.'
+    'Activated SQL password failure must not downgrade to the filesystem account.'
 );
 
 $portalLibSource = file_get_contents($expectedRoot . '/portal-lib.php');
@@ -248,7 +290,7 @@ filesystem_approval_assert(
     is_string($portalLibSource)
     && str_contains(
         $portalLibSource,
-        'static fn(string $yuvaId): ?array => find_student($yuvaId)'
+        'find_filesystem_student_login_identity($identifier)'
     )
     && str_contains(
         $portalLibSource,
@@ -265,6 +307,6 @@ if (is_file($throttlePath)) {
 }
 
 fwrite(STDOUT, "PASS filesystem approval states fail closed\n");
-fwrite(STDOUT, "PASS approved filesystem login and generic DOB rejection\n");
+fwrite(STDOUT, "PASS approved filesystem email/password login and generic rejection\n");
 fwrite(STDOUT, "PASS filesystem protected-session approval revalidation contract\n");
 fwrite(STDOUT, "PASS hybrid approved fallback and SQL no-downgrade contract\n");

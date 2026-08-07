@@ -42,17 +42,17 @@ final class StudentLoginWorkflow
      */
     public function attempt(
         array &$session,
-        string $yuvaId,
+        string $identifier,
         string $credential,
         ?string $csrfToken,
         string $networkCategory
     ): array {
-        $normalizedYuvaId = $this->normalizeYuvaId($yuvaId);
+        $normalizedIdentifier = $this->normalizeIdentifier($identifier);
 
         try {
             if ($this->throttle->isBlocked(
                 self::THROTTLE_SCOPE,
-                $normalizedYuvaId,
+                $normalizedIdentifier,
                 $networkCategory
             )) {
                 ($this->auditLogger)('student.login.failed');
@@ -62,7 +62,7 @@ final class StudentLoginWorkflow
             if (!(($this->csrfVerifier)($csrfToken))) {
                 $this->throttle->recordFailure(
                     self::THROTTLE_SCOPE,
-                    $normalizedYuvaId,
+                    $normalizedIdentifier,
                     $networkCategory
                 );
                 ($this->auditLogger)('student.login.failed');
@@ -70,13 +70,13 @@ final class StudentLoginWorkflow
             }
 
             $result = $this->authentication->authenticateStudent(
-                $normalizedYuvaId,
+                $normalizedIdentifier,
                 $credential
             );
             if (($result['authenticated'] ?? false) !== true) {
                 $this->throttle->recordFailure(
                     self::THROTTLE_SCOPE,
-                    $normalizedYuvaId,
+                    $normalizedIdentifier,
                     $networkCategory
                 );
                 ($this->auditLogger)('student.login.failed');
@@ -85,7 +85,7 @@ final class StudentLoginWorkflow
 
             $this->throttle->clear(
                 self::THROTTLE_SCOPE,
-                $normalizedYuvaId,
+                $normalizedIdentifier,
                 $networkCategory
             );
             ($this->sessionRegenerator)();
@@ -148,9 +148,14 @@ final class StudentLoginWorkflow
         );
     }
 
-    private function normalizeYuvaId(string $value): string
+    private function normalizeIdentifier(string $value): string
     {
-        $value = strtoupper(trim($value));
+        $value = trim($value);
+        if (str_contains($value, '@')) {
+            return strtolower($value);
+        }
+
+        $value = strtoupper($value);
         if (preg_match('/^YC-?(\d{4})-?(\d+)$/', $value, $matches) === 1) {
             return sprintf('YC%s%03d', $matches[1], (int) $matches[2]);
         }

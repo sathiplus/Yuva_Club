@@ -26,6 +26,7 @@ function approval_resolver_filesystem_student(): array
         'Date of Birth' => '2010-05-15',
         'Student Email' => 'release2.student@example.test',
         'Parent Email' => 'release2.parent@example.test',
+        'password_hash' => 'registered-password-hash',
     ];
 }
 
@@ -44,7 +45,8 @@ function approval_resolver_service(
         static fn(string $yuvaId): ?array =>
             $yuvaId === 'YC2026003' ? $filesystemStudent : null,
         static fn(array $record, string $credential): bool =>
-            hash_equals((string) ($record['Date of Birth'] ?? ''), $credential),
+            $credential === 'CorrectPass!2026'
+            && ($record['password_hash'] ?? '') === 'registered-password-hash',
         null,
         null,
         static fn(array $record): bool => $resolver->isApproved(
@@ -76,7 +78,7 @@ approval_resolver_assert(
     $approvedService->authenticate(
         'filesystem',
         'YC2026003',
-        '2010-05-15'
+        'CorrectPass!2026'
     )['authenticated'] === true,
     'SQL Approved must authorize a valid filesystem identity even when its file says Pending.'
 );
@@ -93,7 +95,7 @@ approval_resolver_assert(
     approval_resolver_service($sqlResolver)->authenticate(
         'filesystem',
         'YC2026003',
-        '2010-05-15'
+        'CorrectPass!2026'
     )['authenticated'] === false
     && $sqlResolver->resolve('YC2026003', 'release2.student@example.test')
         === StudentApprovalResolver::PENDING,
@@ -105,7 +107,7 @@ approval_resolver_assert(
     approval_resolver_service($sqlResolver)->authenticate(
         'filesystem',
         'YC2026003',
-        '2010-05-15'
+        'CorrectPass!2026'
     )['authenticated'] === false
     && $sqlResolver->resolve('YC2026003', 'release2.student@example.test')
         === StudentApprovalResolver::REJECTED,
@@ -117,7 +119,7 @@ approval_resolver_assert(
     approval_resolver_service($sqlResolver)->authenticate(
         'filesystem',
         'YC2026003',
-        '2010-05-15'
+        'CorrectPass!2026'
     )['authenticated'] === false,
     'A configured SQL source with no matching registration must fail closed.'
 );
@@ -135,7 +137,7 @@ approval_resolver_assert(
     && approval_resolver_service($unavailableResolver)->authenticate(
         'filesystem',
         'YC2026003',
-        '2010-05-15'
+        'CorrectPass!2026'
     )['authenticated'] === false,
     'Configured but unavailable SQL must fail closed without filesystem downgrade.'
 );
@@ -154,7 +156,7 @@ approval_resolver_assert(
     approval_resolver_service($filesystemResolver)->authenticate(
         'filesystem',
         'YC2026003',
-        '2010-05-15'
+        'CorrectPass!2026'
     )['authenticated'] === true,
     'Filesystem-only mode must preserve exact Approved behavior.'
 );
@@ -163,7 +165,7 @@ approval_resolver_assert(
     approval_resolver_service($filesystemResolver)->authenticate(
         'filesystem',
         'YC2026003',
-        '2010-05-15'
+        'CorrectPass!2026'
     )['authenticated'] === false,
     'Filesystem-only Pending must remain blocked.'
 );

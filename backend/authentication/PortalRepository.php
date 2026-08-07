@@ -46,6 +46,14 @@ class PortalRepository
     /** @return array<string, mixed>|null */
     public function findStudentByYuvaId(string $yuvaId): ?array
     {
+        return $this->findStudentByIdentifier($yuvaId);
+    }
+
+    /** @return array<string, mixed>|null */
+    public function findStudentByIdentifier(string $identifier): ?array
+    {
+        $identifier = trim($identifier);
+        $isEmail = str_contains($identifier, '@');
         return ($this->fetchOne)(
             <<<'SQL'
 SELECT TOP (1)
@@ -140,9 +148,21 @@ OUTER APPLY (
         student_parent.created_at,
         student_parent.parent_id
 ) AS primary_parent
-WHERE student.yuva_id = :yuva_id
+WHERE (
+        :yuva_id_present <> N''
+        AND student.yuva_id = :yuva_id
+    )
+    OR (
+        :student_email_present <> N''
+        AND LOWER(LTRIM(RTRIM(student_user.email))) = :student_email
+    )
 SQL,
-            ['yuva_id' => $yuvaId]
+            [
+                'yuva_id_present' => $isEmail ? '' : $identifier,
+                'yuva_id' => $isEmail ? '' : strtoupper($identifier),
+                'student_email_present' => $isEmail ? $identifier : '',
+                'student_email' => $isEmail ? strtolower($identifier) : '',
+            ]
         );
     }
 

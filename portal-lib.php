@@ -1686,9 +1686,12 @@ function portal_authentication_service(): \YuvaClub\Authentication\Authenticatio
     $students = new \YuvaClub\Authentication\StudentAuthentication(
         $repository,
         $adapter,
-        static fn(string $yuvaId): ?array => find_student($yuvaId),
-        static fn(array $record, string $credential): bool =>
-            hash_equals((string) ($record['Date of Birth'] ?? ''), $credential),
+        static fn(string $identifier): ?array =>
+            find_filesystem_student_login_identity($identifier),
+        static function (array $record, string $credential): bool {
+            $hash = (string) ($record['password_hash'] ?? '');
+            return $hash !== '' && password_verify($credential, $hash);
+        },
         null,
         null,
         static fn(array $record): bool => student_approval_status(
@@ -1824,6 +1827,31 @@ function find_student_account_by_identifier(string $identifier): ?array {
         }
     }
     return null;
+}
+
+function find_filesystem_student_login_identity(string $identifier): ?array {
+    $account = find_student_account_by_identifier($identifier);
+    if (
+        $account === null
+        || strtolower((string) ($account['status'] ?? '')) !== 'active'
+    ) {
+        return null;
+    }
+
+    $studentId = normalize_yuva_id((string) ($account['yuva_id'] ?? ''));
+    $student = find_student($studentId);
+    if ($studentId === '' || $student === null) {
+        return null;
+    }
+
+    $student['yuva_id'] = $studentId;
+    $student['student_email'] = (string) (
+        $account['student_email']
+        ?? $student['Student Email']
+        ?? ''
+    );
+    $student['password_hash'] = (string) ($account['password_hash'] ?? '');
+    return $student;
 }
 
 function login_rate_limited(string $identifier): bool {

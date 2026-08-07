@@ -49,11 +49,15 @@ function student_login_sql_row(array $overrides = []): array
 /** @return array<string, string> */
 function student_login_filesystem_row(): array
 {
+    $password = 'CorrectPass!2026';
     return [
         'Yuva Club ID' => 'YC2026001',
+        'yuva_id' => 'YC2026001',
         'Date of Birth' => '2010-01-02',
         'Student Email' => 'synthetic.student@example.test',
         'Parent Email' => 'parent@example.test',
+        'password_hash' => password_hash($password, PASSWORD_DEFAULT),
+        'resolved_approval' => 'approved',
     ];
 }
 
@@ -81,16 +85,37 @@ function student_login_service(
     $students = new StudentAuthentication(
         $repository,
         $adapter,
-        static fn(string $yuvaId): ?array =>
-            $filesystemRow !== null
-            && ($filesystemRow['Yuva Club ID'] ?? '') === $yuvaId
+        static function (string $identifier) use ($filesystemRow): ?array {
+            if ($filesystemRow === null) {
+                return null;
+            }
+            return $identifier === ($filesystemRow['Yuva Club ID'] ?? '')
+                || strtolower($identifier) === strtolower(
+                    (string) ($filesystemRow['Student Email'] ?? '')
+                )
                 ? $filesystemRow
-                : null,
-        static fn(array $record, string $credential): bool =>
-            hash_equals((string) ($record['Date of Birth'] ?? ''), $credential),
+                : null;
+        },
+        static function (array $record, string $credential): bool {
+            $hash = (string) ($record['password_hash'] ?? '');
+            return $hash !== '' && password_verify($credential, $hash);
+        },
         static fn(string $password, string $hash): bool =>
             $password === 'correct-password' && $hash === 'student-hash',
-        static fn(string $hash): bool => false
+        static fn(string $hash): bool => false,
+        static function (array $record): bool {
+            if (array_key_exists('resolved_approval', $record)) {
+                return strtolower((string) $record['resolved_approval']) === 'approved';
+            }
+            $registrationStatus = strtolower((string) (
+                $record['registration_status'] ?? ''
+            ));
+            return strtolower((string) (
+                $record['student_approval_status'] ?? ''
+            )) === 'approved'
+                && ($record['approved_at'] ?? null) !== null
+                && ($registrationStatus === '' || $registrationStatus === 'approved');
+        }
     );
     $parents = new ParentAuthentication(
         $repository,
@@ -140,8 +165,8 @@ $filesystemWorkflow = new StudentLoginWorkflow(
 $filesystemSession = [];
 $filesystemSuccess = $filesystemWorkflow->attempt(
     $filesystemSession,
-    'YC-2026-1',
-    '2010-01-02',
+    'Synthetic.Student@Example.Test',
+    'CorrectPass!2026',
     'valid-csrf',
     '192.0.2.0/24'
 );
@@ -150,19 +175,46 @@ student_login_assert(
     && $filesystemSession === ['student_id' => 'YC2026001']
     && $regenerations === 1
     && $sqlFetches === 0,
-    'Filesystem login must preserve the legacy session without SQL access.'
+    'Filesystem email/password login must preserve the student session without SQL access.'
 );
 $filesystemFailure = $filesystemWorkflow->attempt(
     $filesystemSession,
-    'YC2026001',
-    'wrong-dob',
+    'synthetic.student@example.test',
+    'wrong-password',
     'valid-csrf',
     '192.0.2.0/24'
 );
 student_login_assert(
     $filesystemFailure['authenticated'] === false,
-    'Filesystem credential failure must be generic.'
+    'Wrong filesystem password must fail generically.'
 );
+$filesystemAccount = student_login_filesystem_row();
+student_login_assert(
+    ($filesystemAccount['password_hash'] ?? '') !== 'CorrectPass!2026'
+    && password_verify(
+        'CorrectPass!2026',
+        (string) ($filesystemAccount['password_hash'] ?? '')
+    ),
+    'Filesystem student passwords must remain one-way hashes.'
+);
+foreach (['pending', 'rejected'] as $approvalState) {
+    $blockedFilesystem = student_login_filesystem_row();
+    $blockedFilesystem['resolved_approval'] = $approvalState;
+    $blockedFetches = 0;
+    $blockedService = student_login_service(
+        'filesystem',
+        $sqlRow,
+        $blockedFilesystem,
+        $blockedFetches
+    );
+    student_login_assert(
+        $blockedService->authenticateStudent(
+            'synthetic.student@example.test',
+            'CorrectPass!2026'
+        )['authenticated'] === false,
+        'Filesystem ' . $approvalState . ' students must remain blocked.'
+    );
+}
 student_login_remove_throttle($filesystemPath);
 
 $sqlRow = student_login_sql_row();
@@ -286,7 +338,7 @@ student_login_assert(
 student_login_assert(
     $hybridService->authenticateStudent(
         'YC2026001',
-        '2010-01-02'
+        'CorrectPass!2026'
     )['authenticated'] === false,
     'Hybrid mode must not downgrade after an activated SQL password failure.'
 );
@@ -302,9 +354,9 @@ $unactivatedService = student_login_service(
 student_login_assert(
     $unactivatedService->authenticateStudent(
         'YC2026001',
-        '2010-01-02'
+        'CorrectPass!2026'
     )['source'] === 'filesystem',
-    'Compatible unactivated SQL student may use temporary legacy login.'
+    'Compatible unactivated SQL student may use its filesystem password account.'
 );
 
 $conflictingFilesystem = student_login_filesystem_row();
@@ -420,9 +472,10 @@ student_login_assert(
     is_string($loginSource)
     && str_contains($loginSource, 'csrf_field()')
     && str_contains($loginSource, "portal_student_login_workflow()->attempt")
-    && str_contains($loginSource, "\$authMode === 'filesystem'")
-    && str_contains($loginSource, "\$authMode === 'sql'"),
-    'Student login handler must use the mode-aware workflow and CSRF.'
+    && str_contains($loginSource, 'name="login_identifier"')
+    && str_contains($loginSource, 'name="password"')
+    && !str_contains($loginSource, 'name="date_of_birth"'),
+    'Student login must use the secured workflow with email/password and no DOB credential.'
 );
 student_login_assert(
     is_string($portalSource)
@@ -433,7 +486,7 @@ student_login_assert(
 );
 
 student_login_remove_throttle($sqlPath);
-fwrite(STDOUT, "PASS filesystem student login regression\n");
+fwrite(STDOUT, "PASS filesystem student email/password login regression\n");
 fwrite(STDOUT, "PASS SQL student login and exact session mapping\n");
 fwrite(STDOUT, "PASS student CSRF and throttling controls\n");
 fwrite(STDOUT, "PASS hybrid precedence and no-downgrade behavior\n");

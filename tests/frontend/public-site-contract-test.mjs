@@ -235,6 +235,21 @@ for (const name of ['portal-login.php', 'parent-login.php', 'admin-login.php']) 
   assert.ok(source.includes("portal_footer(false, true);"), `${name} lacks the approved public footer`);
 }
 
+const studentLogin = await readFile(new URL('portal-login.php', root), 'utf8');
+for (const contract of [
+  'Email Address *',
+  'name="login_identifier"',
+  'name="password"',
+  'autocomplete="current-password"',
+  'Forgot password?',
+]) {
+  assert.ok(studentLogin.includes(contract), `Student login restoration missing: ${contract}`);
+}
+assert.ok(
+  !studentLogin.includes('name="date_of_birth"'),
+  'Student login must not use date of birth as the normal credential'
+);
+
 for (const name of ['privacy.html', 'terms.html', 'contact.html']) {
   const source = await readFile(new URL(name, root), 'utf8');
   for (const href of ['index.html', 'safety.html', 'privacy.html', 'terms.html', 'contact.html']) {
