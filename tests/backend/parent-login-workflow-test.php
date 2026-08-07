@@ -241,6 +241,7 @@ $filesystemWorkflow = new ParentLoginWorkflow(
     }
 );
 $filesystemSession = [];
+$filesystemLoginStartedAt = time();
 $filesystemResult = $filesystemWorkflow->attempt(
     $filesystemSession,
     'parent@example.test',
@@ -254,10 +255,15 @@ parent_login_assert(
         'authenticated' => true,
         'requires_child_selection' => false,
     ]
-    && $filesystemSession === ['parent_student_id' => 'YC2026001']
+    && ($filesystemSession['parent_email'] ?? null) === 'parent@example.test'
+    && is_int($filesystemSession['parent_session_started_at'] ?? null)
+    && $filesystemSession['parent_session_started_at'] >= $filesystemLoginStartedAt
+    && $filesystemSession['parent_session_started_at'] <= time()
+    && ($filesystemSession['parent_student_id'] ?? null) === 'YC2026001'
+    && count($filesystemSession) === 3
     && $regenerations === 1
     && $fetches === 0,
-    'Filesystem parent login must preserve the legacy session without SQL.'
+    'Filesystem parent login must establish the complete legacy parent session without SQL.'
 );
 $mismatchSession = [];
 parent_login_assert(
