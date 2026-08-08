@@ -116,9 +116,23 @@ jobs:
           php -l parent.php
           php -l admin.php
           php -l registration.php
+          php -l backend/authentication/PortalRepository.php
+          php -l backend/authentication/StudentApprovalResolver.php
+          php -l backend/authentication/StudentAuthentication.php
+          php -l tests/backend/student-approval-resolver-test.php
+          php -l tests/backend/filesystem-student-approval-test.php
+          php -l tests/backend/admin-registration-approval-test.php
+          php -l tests/backend/registration-validation-test.php
           php tests/backend/authentication-service-test.php
           php tests/backend/student-login-workflow-test.php
           php tests/backend/parent-login-workflow-test.php
+          php tests/backend/student-approval-resolver-test.php
+          python3 tools/run-isolated-validation.py \
+            --source . \
+            --suite tests/backend/filesystem-student-approval-test.php \
+            --log-directory "$RUNNER_TEMP/filesystem-student-approval"
+          php tests/backend/admin-registration-approval-test.php
+          php tests/backend/registration-validation-test.php
           php tests/backend/staging-readiness-test.php
           node tests/frontend/public-site-contract-test.mjs
           node tests/frontend/student-experience-contract-test.mjs

@@ -50,6 +50,15 @@ function authentication_test_repository(
             $key = $parameters['parent_user_id'] . ':' . ($parameters['yuva_id'] ?? '');
             return $links[$key] ?? null;
         }
+        $studentEmail = strtolower((string) ($parameters['student_email'] ?? ''));
+        if ($studentEmail !== '') {
+            foreach ($students as $student) {
+                if (strtolower((string) ($student['student_email'] ?? '')) === $studentEmail) {
+                    return $student;
+                }
+            }
+            return null;
+        }
         return $students[(string) ($parameters['yuva_id'] ?? '')] ?? null;
     };
 
@@ -216,6 +225,31 @@ authentication_test_assert(
     && $sqlStudentResult['student_id'] === 'YC2026001'
     && $sqlStudentResult['password_rehash_required'] === true,
     'Activated SQL student must authenticate and report required rehashing.'
+);
+$sqlEmailRow = authentication_test_sql_student([
+    'student_email' => 'synthetic.student@example.test',
+]);
+$sqlEmailQueries = [];
+$sqlEmailAuthentication = new StudentAuthentication(
+    authentication_test_repository(
+        ['YC2026001' => $sqlEmailRow],
+        queries: $sqlEmailQueries
+    ),
+    $adapter,
+    static fn(string $id): ?array => null,
+    static fn(array $record, string $credential): bool => false,
+    static fn(string $password, string $hash): bool =>
+        $password === 'student-password' && $hash === 'student-hash',
+    static fn(string $hash): bool => false
+);
+authentication_test_assert(
+    $sqlEmailAuthentication->authenticate(
+        'sql',
+        'Synthetic.Student@Example.Test',
+        'student-password'
+    )['student_id'] === 'YC2026001'
+    && str_contains((string) ($sqlEmailQueries[0] ?? ''), 'student_user.email'),
+    'SQL student authentication must accept the normalized student email identifier.'
 );
 authentication_test_assert(
     $studentAuthentication->authenticate('sql', 'YC2026001', 'wrong')['authenticated'] === false,

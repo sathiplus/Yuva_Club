@@ -54,9 +54,9 @@ final class AuthenticationService
     }
 
     /** @return array<string, mixed> */
-    public function authenticateStudent(string $yuvaId, string $credential): array
+    public function authenticateStudent(string $identifier, string $credential): array
     {
-        return $this->students->authenticate($this->mode, $yuvaId, $credential);
+        return $this->students->authenticate($this->mode, $identifier, $credential);
     }
 
     /** @return array<string, mixed>|null */

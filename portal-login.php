@@ -2,16 +2,13 @@
 require __DIR__ . '/portal-lib.php';
 
 $status = $_GET['status'] ?? '';
-$authMode = portal_auth_mode();
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $studentId = normalize_yuva_id($_POST['student_id'] ?? '');
-    $credential = $authMode === 'filesystem'
-        ? clean_text($_POST['date_of_birth'] ?? '')
-        : (string) ($_POST['credential'] ?? '');
+    $identifier = normalize_login_identifier($_POST['login_identifier'] ?? '');
+    $password = (string) ($_POST['password'] ?? '');
     $result = portal_student_login_workflow()->attempt(
         $_SESSION,
-        $studentId,
-        $credential,
+        $identifier,
+        $password,
         isset($_POST['csrf_token']) ? (string) $_POST['csrf_token'] : null,
         portal_network_category($_SERVER['REMOTE_ADDR'] ?? null)
     );
@@ -32,13 +29,7 @@ portal_header('Student Portal Login', false, ['assets/public-site.css?v=release-
       <div class="section-head">
         <p class="eyebrow">Student Portal</p>
         <h1>Student Login</h1>
-        <?php if ($authMode === 'filesystem'): ?>
-          <p>Students can log in with their Yuva Club ID and date of birth after registration.</p>
-        <?php elseif ($authMode === 'sql'): ?>
-          <p>Students can log in with their Yuva Club ID and password.</p>
-        <?php else: ?>
-          <p>Students can log in with their Yuva Club ID and current credential.</p>
-        <?php endif; ?>
+        <p>Students log in with their email address and the password created during registration.</p>
       </div>
 
       <?php if ($status === 'error'): ?>
@@ -50,29 +41,16 @@ portal_header('Student Portal Login', false, ['assets/public-site.css?v=release-
       <form class="form-card" method="post">
         <?php echo csrf_field(); ?>
         <div class="field">
-          <label for="student_id">Yuva Club ID *</label>
-          <input id="student_id" name="student_id" type="text" required placeholder="YC2026001">
+          <label for="login_identifier">Email Address *</label>
+          <input id="login_identifier" name="login_identifier" type="text" required autocomplete="username" aria-describedby="login-identifier-help" placeholder="student@example.com">
+          <p id="login-identifier-help">You may also use your Yuva Club ID.</p>
         </div>
-        <?php if ($authMode === 'filesystem'): ?>
-          <div class="field">
-            <label for="date_of_birth">Date of Birth *</label>
-            <input id="date_of_birth" name="date_of_birth" type="date" required>
-          </div>
-        <?php elseif ($authMode === 'sql'): ?>
-          <div class="field">
-            <label for="credential">Password *</label>
-            <input id="credential" name="credential" type="password" required autocomplete="current-password">
-          </div>
-        <?php else: ?>
-          <div class="field">
-            <label for="credential">Credential *</label>
-            <input id="credential" name="credential" type="password" required autocomplete="current-password" placeholder="Password or YYYY-MM-DD">
-          </div>
-        <?php endif; ?>
+        <div class="field">
+          <label for="password">Password *</label>
+          <input id="password" name="password" type="password" required autocomplete="current-password">
+        </div>
         <button class="button primary" type="submit">Log In</button>
-        <?php if ($authMode !== 'filesystem'): ?>
-          <p><a href="forgot-password.php?account=student">Forgot password?</a></p>
-        <?php endif; ?>
+        <p><a href="forgot-password.php?account=student">Forgot password?</a></p>
       </form>
     </div>
   </section>

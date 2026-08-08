@@ -104,6 +104,8 @@ final class ParentLoginWorkflow
                 ];
             }
 
+            $session['parent_email'] = $normalizedEmail;
+            $session['parent_session_started_at'] = time();
             $session['parent_student_id'] = (string) (
                 $result['parent_student_id'] ?? ''
             );
@@ -263,6 +265,8 @@ final class ParentLoginWorkflow
             $session['parent_auth_source'],
             $session['parent_user_id'],
             $session['parent_id'],
+            $session['parent_email'],
+            $session['parent_session_started_at'],
             $session['portal_role'],
             $session['admin_logged_in'],
             $session['admin_email']

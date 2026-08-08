@@ -226,7 +226,14 @@ assert.ok(
   'Public login presentation must be opt-in and preserve protected-page defaults'
 );
 assert.ok(portalLibrary.includes('horizon-public-login'));
-for (const name of ['portal-login.php', 'parent-login.php', 'admin-login.php']) {
+for (const name of [
+  'portal-login.php',
+  'parent-login.php',
+  'admin-login.php',
+  'forgot-password.php',
+  'reset-password.php',
+  'parent-activate.php',
+]) {
   const source = await readFile(new URL(name, root), 'utf8');
   assert.ok(
     source.includes("portal_header(") && /portal_header\([^;]+,\s*true\);/.test(source),
@@ -234,6 +241,21 @@ for (const name of ['portal-login.php', 'parent-login.php', 'admin-login.php']) 
   );
   assert.ok(source.includes("portal_footer(false, true);"), `${name} lacks the approved public footer`);
 }
+
+const studentLogin = await readFile(new URL('portal-login.php', root), 'utf8');
+for (const contract of [
+  'Email Address *',
+  'name="login_identifier"',
+  'name="password"',
+  'autocomplete="current-password"',
+  'Forgot password?',
+]) {
+  assert.ok(studentLogin.includes(contract), `Student login restoration missing: ${contract}`);
+}
+assert.ok(
+  !studentLogin.includes('name="date_of_birth"'),
+  'Student login must not use date of birth as the normal credential'
+);
 
 for (const name of ['privacy.html', 'terms.html', 'contact.html']) {
   const source = await readFile(new URL(name, root), 'utf8');

@@ -38,7 +38,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-portal_header('Parent Account Setup');
+portal_header('Parent Account Setup', false, ['assets/public-site.css?v=release-1.0.2-20260802'], true);
 ?>
 <main>
   <section class="band">
@@ -89,4 +89,4 @@ portal_header('Parent Account Setup');
     </div>
   </section>
 </main>
-<?php portal_footer(); ?>
+<?php portal_footer(false, true); ?>

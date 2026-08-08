@@ -46,6 +46,14 @@ class PortalRepository
     /** @return array<string, mixed>|null */
     public function findStudentByYuvaId(string $yuvaId): ?array
     {
+        return $this->findStudentByIdentifier($yuvaId);
+    }
+
+    /** @return array<string, mixed>|null */
+    public function findStudentByIdentifier(string $identifier): ?array
+    {
+        $identifier = trim($identifier);
+        $isEmail = str_contains($identifier, '@');
         return ($this->fetchOne)(
             <<<'SQL'
 SELECT TOP (1)
@@ -140,9 +148,66 @@ OUTER APPLY (
         student_parent.created_at,
         student_parent.parent_id
 ) AS primary_parent
-WHERE student.yuva_id = :yuva_id
+WHERE (
+        :yuva_id_present <> N''
+        AND student.yuva_id = :yuva_id
+    )
+    OR (
+        :student_email_present <> N''
+        AND LOWER(LTRIM(RTRIM(student_user.email))) = :student_email
+    )
 SQL,
-            ['yuva_id' => $yuvaId]
+            [
+                'yuva_id_present' => $isEmail ? '' : $identifier,
+                'yuva_id' => $isEmail ? '' : strtoupper($identifier),
+                'student_email_present' => $isEmail ? $identifier : '',
+                'student_email' => $isEmail ? strtolower($identifier) : '',
+            ]
+        );
+    }
+
+    /** @return array<string, mixed>|null */
+    public function findRegistrationApprovalByStudentIdentity(
+        string $yuvaId,
+        string $normalizedEmail
+    ): ?array {
+        return ($this->fetchOne)(
+            <<<'SQL'
+SELECT TOP (1)
+    registration.id AS registration_id,
+    registration.status AS registration_status,
+    registration.student_id,
+    registration.reserved_yuva_id,
+    student.yuva_id,
+    student.approval_status AS student_approval_status,
+    student.approved_at
+FROM dbo.registrations AS registration
+LEFT JOIN dbo.students AS student
+    ON student.id = registration.student_id
+WHERE student.yuva_id = :student_yuva_id
+   OR registration.reserved_yuva_id = :reserved_yuva_id
+   OR (
+        :student_email_present <> N''
+        AND LOWER(LTRIM(RTRIM(registration.student_email))) = :student_email_lookup
+   )
+ORDER BY
+    CASE
+        WHEN student.yuva_id = :ordered_student_yuva_id THEN 0
+        WHEN registration.reserved_yuva_id = :ordered_reserved_yuva_id THEN 1
+        ELSE 2
+    END,
+    registration.reviewed_at DESC,
+    registration.submitted_at DESC,
+    registration.id DESC
+SQL,
+            [
+                'student_yuva_id' => $yuvaId,
+                'reserved_yuva_id' => $yuvaId,
+                'ordered_student_yuva_id' => $yuvaId,
+                'ordered_reserved_yuva_id' => $yuvaId,
+                'student_email_present' => $normalizedEmail,
+                'student_email_lookup' => $normalizedEmail,
+            ]
         );
     }
 

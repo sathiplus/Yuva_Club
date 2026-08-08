@@ -30,7 +30,7 @@ $labels = [
     'admin' => 'Administrator account',
 ];
 
-portal_header('Forgot Password');
+portal_header('Forgot Password', false, ['assets/public-site.css?v=release-1.0.2-20260802'], true);
 ?>
 <main>
   <section class="band">
@@ -67,4 +67,4 @@ portal_header('Forgot Password');
     </div>
   </section>
 </main>
-<?php portal_footer(); ?>
+<?php portal_footer(false, true); ?>
