@@ -226,7 +226,14 @@ assert.ok(
   'Public login presentation must be opt-in and preserve protected-page defaults'
 );
 assert.ok(portalLibrary.includes('horizon-public-login'));
-for (const name of ['portal-login.php', 'parent-login.php', 'admin-login.php']) {
+for (const name of [
+  'portal-login.php',
+  'parent-login.php',
+  'admin-login.php',
+  'forgot-password.php',
+  'reset-password.php',
+  'parent-activate.php',
+]) {
   const source = await readFile(new URL(name, root), 'utf8');
   assert.ok(
     source.includes("portal_header(") && /portal_header\([^;]+,\s*true\);/.test(source),
