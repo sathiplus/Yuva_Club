@@ -12,10 +12,12 @@ require_once __DIR__ . '/backend/authentication/LoginThrottle.php';
 require_once __DIR__ . '/backend/authentication/StudentLoginWorkflow.php';
 require_once __DIR__ . '/backend/authentication/ParentLoginWorkflow.php';
 require_once __DIR__ . '/backend/ai/AiProvider.php';
+require_once __DIR__ . '/backend/ai/AiReviewStore.php';
 require_once __DIR__ . '/backend/ai/AiPromptCatalog.php';
 require_once __DIR__ . '/backend/ai/AiReviewValidator.php';
 require_once __DIR__ . '/backend/ai/AiReviewState.php';
 require_once __DIR__ . '/backend/ai/AiReviewRepository.php';
+require_once __DIR__ . '/backend/ai/SqlAiReviewRepository.php';
 require_once __DIR__ . '/backend/ai/OpenAiResponsesProvider.php';
 require_once __DIR__ . '/backend/ai/AiMentorService.php';
 require_once __DIR__ . '/backend/submission/ResearchUploadValidator.php';
@@ -2739,7 +2741,7 @@ function safety_reports(): array {
 }
 
 function ai_reviews(): array {
-    return read_json_file(ai_reviews_file(), []);
+    return ai_review_repository()->all();
 }
 
 function ai_review_identifier(string $studentId, array $reviewRecord): string {
@@ -2755,6 +2757,11 @@ function ai_review_identifier(string $studentId, array $reviewRecord): string {
 }
 
 function mark_ai_review_stale(string $studentId, string $reason): void {
+    $repository = ai_review_repository();
+    if ($repository instanceof \YuvaClub\AI\SqlAiReviewRepository) {
+        $repository->markLatestStale($studentId, $reason);
+        return;
+    }
     $reviews = ai_reviews();
     if (!isset($reviews[$studentId]) || !is_array($reviews[$studentId])) {
         return;
@@ -2822,9 +2829,12 @@ function openai_model_name(): string {
     return 'gpt-4.1-mini';
 }
 
-function ai_review_repository(): \YuvaClub\AI\AiReviewRepository {
+function ai_review_repository(): \YuvaClub\AI\AiReviewStore {
+    if (database_settings_present() && db_is_sqlsrv()) {
+        return new \YuvaClub\AI\SqlAiReviewRepository(db());
+    }
     return new \YuvaClub\AI\AiReviewRepository(
-        static fn(): array => ai_reviews(),
+        static fn(): array => read_json_file(ai_reviews_file(), []),
         static function (array $records): void {
             write_json_file(ai_reviews_file(), $records);
         }

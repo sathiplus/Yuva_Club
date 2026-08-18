@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace YuvaClub\AI;
 
-final class AiReviewRepository
+final class AiReviewRepository implements AiReviewStore
 {
     /** @var callable(): array<string, array<string, mixed>> */
     private $load;
