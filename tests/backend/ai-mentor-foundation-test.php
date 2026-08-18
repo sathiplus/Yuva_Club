@@ -13,6 +13,7 @@ require_once __DIR__ . '/../../backend/ai/AiProvider.php';
 require_once __DIR__ . '/../../backend/ai/AiPromptCatalog.php';
 require_once __DIR__ . '/../../backend/ai/AiReviewValidator.php';
 require_once __DIR__ . '/../../backend/ai/AiReviewState.php';
+require_once __DIR__ . '/../../backend/ai/AiReviewStore.php';
 require_once __DIR__ . '/../../backend/ai/AiReviewRepository.php';
 require_once __DIR__ . '/../../backend/ai/AiMentorService.php';
 
@@ -40,6 +41,7 @@ function ai_foundation_valid_review(): array
         'communication_skills' => 'The outline supports clear delivery.',
         'leadership_milestones' => 'The student is connecting ideas to action.',
         'suggested_tokens' => 3,
+        'recommended_next_step' => 'Add one concrete example to the opening.',
         'admin_notes' => 'Review the source quality before approval.',
     ];
 }
@@ -96,7 +98,7 @@ $draft = $service->createDraft(
 );
 
 ai_foundation_assert(
-    $draft['status'] === 'Draft - Pending Admin Approval'
+    $draft['status'] === 'Draft'
     && $draft['prompt_version'] === AiPromptCatalog::RESEARCH_REVIEW_VERSION
     && $repository->find('YC2026001')['review']['total_points'] === 85,
     'Service must persist a backward-compatible draft with prompt version.'
@@ -107,6 +109,25 @@ ai_foundation_assert(
         'Prompt version: ' . AiPromptCatalog::RESEARCH_REVIEW_VERSION
     ),
     'Every provider request must contain the prompt version.'
+);
+
+$failedRecords = [];
+$failedRepository = new AiReviewRepository(
+    static function () use (&$failedRecords): array { return $failedRecords; },
+    static function (array $updated) use (&$failedRecords): void { $failedRecords = $updated; }
+);
+$malformed = ai_foundation_valid_review();
+$malformed['total_points'] = 100;
+$failedDraft = (new AiMentorService(
+    new AiFoundationProvider($malformed),
+    new AiPromptCatalog(),
+    new AiReviewValidator(),
+    $failedRepository
+))->createDraft('YC2026002', [], [], []);
+ai_foundation_assert(
+    $failedDraft['status'] === 'Failed'
+    && AiReviewState::fromRuntime(true, $failedDraft) === AiReviewState::UNAVAILABLE,
+    'Malformed provider output must persist Failed and remain student-invisible.'
 );
 
 $validator = new AiReviewValidator();
@@ -132,12 +153,12 @@ $states = [
     AiReviewState::NOT_CREATED => [true, []],
     AiReviewState::AWAITING_APPROVAL => [
         true,
-        ['status' => 'Draft - Pending Admin Approval'],
+        ['status' => 'Draft'],
     ],
-    AiReviewState::APPROVED => [true, ['status' => 'Applied by Admin']],
+    AiReviewState::APPROVED => [true, ['status' => 'Applied']],
     AiReviewState::UNAVAILABLE => [
         true,
-        ['status' => 'Needs Setup', 'error' => 'Provider unavailable'],
+        ['status' => 'Failed', 'error' => 'Provider unavailable'],
     ],
 ];
 foreach ($states as $expected => [$hasResearch, $record]) {

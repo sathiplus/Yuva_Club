@@ -73,6 +73,7 @@ Return only valid JSON with these keys:
   "communication_skills": "short note about clarity, organization, and speaking preparation",
   "leadership_milestones": "short milestone-style note",
   "suggested_tokens": 0-4,
+  "recommended_next_step": "one clear, practical action the student should take next",
   "admin_notes": "short note for adult reviewer"
 }
 PROMPT;

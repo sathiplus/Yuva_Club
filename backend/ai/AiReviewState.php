@@ -22,11 +22,11 @@ final class AiReviewState
         if ($reviewRecord === []) {
             return self::NOT_CREATED;
         }
-        if (($reviewRecord['status'] ?? '') === 'Applied by Admin') {
+        if (in_array(($reviewRecord['status'] ?? ''), ['Applied', 'Applied by Admin'], true)) {
             return self::APPROVED;
         }
         if (
-            ($reviewRecord['status'] ?? '') === 'Needs Setup'
+            in_array(($reviewRecord['status'] ?? ''), ['Failed', 'Needs Setup', 'Stale'], true)
             || trim((string) ($reviewRecord['error'] ?? '')) !== ''
         ) {
             return self::UNAVAILABLE;

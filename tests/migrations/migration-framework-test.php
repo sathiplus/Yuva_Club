@@ -30,15 +30,33 @@ if (!mkdir($temporaryDirectory, 0700, true) && !is_dir($temporaryDirectory)) {
 
 try {
     $repositoryMigrations = migration_discover(__DIR__ . '/../../database');
+    $repositoryFilenames = array_column($repositoryMigrations, 'filename');
+    $historicalFilenames = [
+        '01-schema.azure-sql.sql',
+        '02-schema-migrations.azure-sql.sql',
+        '03-phase-a-identity-approval.azure-sql.sql',
+        '04-phase-a-portal-student-view.azure-sql.sql',
+        '05-organization-admin-foundation.azure-sql.sql',
+    ];
     test_assert(
-        array_column($repositoryMigrations, 'filename') === [
-            '01-schema.azure-sql.sql',
-            '02-schema-migrations.azure-sql.sql',
-            '03-phase-a-identity-approval.azure-sql.sql',
-            '04-phase-a-portal-student-view.azure-sql.sql',
-            '05-organization-admin-foundation.azure-sql.sql',
-        ],
+        array_slice($repositoryFilenames, 0, count($historicalFilenames)) === $historicalFilenames,
+        'Historical repository migration filenames or order changed.'
+    );
+
+    $expectedRepositoryOrder = $repositoryFilenames;
+    usort($expectedRepositoryOrder, 'strnatcmp');
+    test_assert(
+        $repositoryFilenames === $expectedRepositoryOrder,
         'Repository migrations are not discovered in deterministic order.'
+    );
+
+    $expectedVersions = array_map(
+        static fn (int $version): string => str_pad((string) $version, 2, '0', STR_PAD_LEFT),
+        range(1, count($repositoryMigrations))
+    );
+    test_assert(
+        array_column($repositoryMigrations, 'version') === $expectedVersions,
+        'Repository migration versions are not contiguous.'
     );
 
     $identitySql = file_get_contents(

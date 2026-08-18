@@ -33,7 +33,7 @@ includes(studentJs, '[data-app-section]', 'preserved section observer');
 pass('AI Mentor label over preserved IDs and navigation');
 
 for (const contract of [
-  ["$aiReviewApproved = ($aiReviewRecord['status'] ?? '') === 'Applied by Admin';", 'admin-applied approval gate'],
+  ["$aiReviewApproved = ($aiReviewRecord['status'] ?? '') === 'Applied';", 'admin-applied approval gate'],
   ["$approvedAiReview = $aiReviewApproved && is_array($aiReviewRecord['review'] ?? null)", 'approved-review extraction gate'],
   ["$aiReviewState = ai_review_state($research !== null, $aiReviewRecord);", 'central review-state delegation'],
   ["$aiReviewRecord['applied_at']", 'approved review date'],
@@ -102,7 +102,7 @@ for (const binding of [
   '$aiMentorLeadershipNote',
   '$aiMentorTopic',
   '$aiMentorCategory',
-  'Review status: Applied by Admin',
+  'Review status: Applied',
   '$aiResearchCategories',
   '$rubricScore',
   '$rubricCompleted',
@@ -121,7 +121,7 @@ for (const contract of [
   ['$rubricCompleted > 0', 'official-rubric presence guard'],
   ['No valid overall research result was stored', 'missing overall-result state'],
   ['No official rubric scores recorded', 'missing official-rubric state'],
-  ['Prioritized Next Action', 'approved next-action priority'],
+  ['Recommended Next Step', 'approved next-action priority'],
   ['Start With Strengths', 'strength-first presentation'],
   ['Communication Note', 'communication note'],
   ['Leadership Note', 'leadership note'],
