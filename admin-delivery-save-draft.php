@@ -1,5 +1,6 @@
 <?php
 require __DIR__.'/portal-lib.php';
+require_once __DIR__ . '/backend/repositories.php';
 $admin=require_admin_post([YUVA_ROLE_MASTER_ADMIN]);$studentId=normalize_yuva_id($_POST['student_id']??'');$repo=delivery_review_repository();$latest=$repo->findLatest($studentId);$review=$latest['review']??[];
 if(!ai_mentor_feature_enabled('media_analysis_enabled')){http_response_code(404);exit('Not available.');}
 if(($latest['status']??'')!=='Draft'||!is_array($review))redirect_to('admin.php?status=delivery-stale#ai-mentor-delivery-reviews');
