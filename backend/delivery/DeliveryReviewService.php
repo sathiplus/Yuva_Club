@@ -29,7 +29,9 @@ final class DeliveryReviewService
             'ok'=>true,'status'=>'Draft','review'=>$validated['review'],'transcript'=>$transcript->toArray(),'metrics'=>$metrics,
             'duration_seconds'=>$transcript->durationSeconds,'source_revision_hash'=>$media->sourceRevisionHash($transcript->durationSeconds,$this->transcription->modelName()),
             'transcription_provider'=>$this->transcription->providerName(),'transcription_model'=>$this->transcription->modelName(),'coaching_model'=>$this->coaching->modelName(),
-            'visual_status'=>$sampledVisualObservations===null?'Unavailable':'Sampled'
+            'coaching_provider'=>$this->coaching->providerName(),'prompt_version'=>DeliveryPromptCatalog::VERSION,
+            'visual_status'=>$sampledVisualObservations===null?'Unavailable':'Sampled',
+            'visual_analysis'=>$sampledVisualObservations
         ];
     }
 }

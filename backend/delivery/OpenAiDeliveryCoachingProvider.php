@@ -7,6 +7,7 @@ final class OpenAiDeliveryCoachingProvider implements DeliveryCoachingProvider
 {
     public function __construct(private readonly string $apiKey, private readonly string $model, private readonly int $timeoutSeconds = 60) {}
     public function modelName(): string { return $this->model; }
+    public function providerName(): string { return 'openai'; }
     public function generate(string $prompt): array
     {
         if ($this->apiKey === '') return ['ok'=>false,'error_code'=>'provider_rejected'];
