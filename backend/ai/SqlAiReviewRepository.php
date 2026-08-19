@@ -44,6 +44,7 @@ final class SqlAiReviewRepository implements AiReviewStore
             $statement = $this->pdo->prepare(
                 'UPDATE dbo.ai_mentor_reviews SET status = :status, generated_result = :result,
                  recommended_next_step = :next_step, error_code = :error_code, error_category = :error_category,
+                 document_analysis_status = :document_status, document_analysis_warnings = :document_warnings,
                  generated_at = CASE WHEN :is_draft = 1 THEN SYSUTCDATETIME() ELSE generated_at END,
                  updated_at = SYSUTCDATETIME() WHERE id = :id'
             );
@@ -60,10 +61,12 @@ final class SqlAiReviewRepository implements AiReviewStore
         $statement = $this->pdo->prepare(
             "INSERT INTO dbo.ai_mentor_reviews
              (student_id, yuva_id, source_submission_reference, source_revision_hash, provider, model, prompt_version, status, generated_result,
-              recommended_next_step, error_code, error_category, generated_at)
+              recommended_next_step, error_code, error_category, generated_at, source_file_reference, source_file_original_name,
+              source_file_mime_type, source_file_size_bytes, source_file_sha256, document_analysis_status, document_analysis_warnings)
              OUTPUT INSERTED.id
              VALUES (:student_id, :yuva_id, :source_reference, :source_hash, :provider, :model, :prompt_version, :status, :result,
-              :next_step, :error_code, :error_category, CASE WHEN :is_draft = 1 THEN SYSUTCDATETIME() ELSE NULL END)"
+              :next_step, :error_code, :error_category, CASE WHEN :is_draft = 1 THEN SYSUTCDATETIME() ELSE NULL END,
+              :file_reference, :file_name, :file_mime, :file_size, :file_sha256, :document_status, :document_warnings)"
         );
         $statement->execute([
             'student_id' => (int) $studentKey,
@@ -79,6 +82,13 @@ final class SqlAiReviewRepository implements AiReviewStore
             'next_step' => $review['recommended_next_step'] ?? null,
             'error_code' => $record['error_code'] ?? null,
             'error_category' => $record['error_category'] ?? null,
+            'file_reference' => $record['source_file_reference'] ?? null,
+            'file_name' => $record['source_file_original_name'] ?? null,
+            'file_mime' => $record['source_file_mime_type'] ?? null,
+            'file_size' => $record['source_file_size_bytes'] ?? null,
+            'file_sha256' => $record['source_file_sha256'] ?? null,
+            'document_status' => $record['document_analysis_status'] ?? 'NotApplicable',
+            'document_warnings' => $this->warningsJson($record['document_analysis_warnings'] ?? []),
         ]);
         $record['id'] = (int) $statement->fetchColumn();
     }
@@ -225,6 +235,13 @@ final class SqlAiReviewRepository implements AiReviewStore
             'reviewed_at' => (string) ($row['generated_at'] ?? $row['created_at']),
             'applied_at' => (string) ($row['applied_at'] ?? ''),
             'version' => bin2hex((string) $row['row_version']),
+            'source_file_reference' => (string) ($row['source_file_reference'] ?? ''),
+            'source_file_original_name' => (string) ($row['source_file_original_name'] ?? ''),
+            'source_file_mime_type' => (string) ($row['source_file_mime_type'] ?? ''),
+            'source_file_size_bytes' => isset($row['source_file_size_bytes']) ? (int) $row['source_file_size_bytes'] : null,
+            'source_file_sha256' => (string) ($row['source_file_sha256'] ?? ''),
+            'document_analysis_status' => (string) ($row['document_analysis_status'] ?? 'NotApplicable'),
+            'document_analysis_warnings' => json_decode((string) ($row['document_analysis_warnings'] ?? '[]'), true) ?: [],
         ];
     }
 
@@ -239,6 +256,16 @@ final class SqlAiReviewRepository implements AiReviewStore
             'next_step' => $review['recommended_next_step'] ?? null,
             'error_code' => $record['error_code'] ?? null,
             'error_category' => $record['error_category'] ?? null,
+            'document_status' => $record['document_analysis_status'] ?? 'NotApplicable',
+            'document_warnings' => $this->warningsJson($record['document_analysis_warnings'] ?? []),
         ];
+    }
+
+    private function warningsJson(mixed $warnings): ?string
+    {
+        if (!is_array($warnings) || $warnings === []) {
+            return null;
+        }
+        return json_encode(array_values(array_map('strval', $warnings)), JSON_UNESCAPED_SLASHES) ?: null;
     }
 }

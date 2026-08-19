@@ -40,6 +40,9 @@ $rejectUpload = static function (string $status) use (
 ): never {
     $record['file_original'] = $existing['file_original'] ?? '';
     $record['file_stored'] = $existing['file_stored'] ?? '';
+    foreach (['file_mime', 'file_size', 'file_sha256', 'file_format'] as $metadataKey) {
+        $record[$metadataKey] = $existing[$metadataKey] ?? null;
+    }
     if ($researchChanged) {
         $record['status'] = 'Pending Admin Review';
     }
@@ -62,6 +65,7 @@ if ($hasUploadAttempt) {
     $uploadSize = (int) ($upload['size'] ?? 0);
     $detectedMime = '';
     $prefix = '';
+    $uploadSha256 = '';
 
     if (
         $uploadError === UPLOAD_ERR_OK
@@ -72,6 +76,8 @@ if ($hasUploadAttempt) {
         $detectedMime = (string) $finfo->file($temporaryPath);
         $prefixValue = file_get_contents($temporaryPath, false, null, 0, 8);
         $prefix = is_string($prefixValue) ? $prefixValue : '';
+        $hashValue = hash_file('sha256', $temporaryPath);
+        $uploadSha256 = is_string($hashValue) ? $hashValue : '';
     } elseif ($uploadError === UPLOAD_ERR_OK) {
         $uploadError = UPLOAD_ERR_CANT_WRITE;
     }
@@ -82,7 +88,8 @@ if ($hasUploadAttempt) {
         $uploadSize,
         $uploadError,
         $detectedMime,
-        $prefix
+        $prefix,
+        $temporaryPath !== '' ? $temporaryPath : null
     );
     if (!($validation['ok'] ?? false)) {
         $status = match ($validation['code'] ?? 'upload-failed') {
@@ -92,6 +99,9 @@ if ($hasUploadAttempt) {
             default => 'upload-failed',
         };
         $rejectUpload($status);
+    }
+    if ($uploadSha256 === '') {
+        $rejectUpload('upload-failed');
     }
 
     if ($temporaryPath === '' || !is_uploaded_file($temporaryPath)) {
@@ -107,6 +117,10 @@ if ($hasUploadAttempt) {
     if (move_uploaded_file($temporaryPath, $target)) {
         $record['file_original'] = $original;
         $record['file_stored'] = $storedName;
+        $record['file_mime'] = strtolower($detectedMime);
+        $record['file_size'] = $uploadSize;
+        $record['file_sha256'] = $uploadSha256;
+        $record['file_format'] = (string) ($validation['extension'] ?? '');
         $researchChanged = true;
     } else {
         $rejectUpload('upload-failed');
@@ -114,6 +128,9 @@ if ($hasUploadAttempt) {
 } else {
     $record['file_original'] = $existing['file_original'] ?? '';
     $record['file_stored'] = $existing['file_stored'] ?? '';
+    foreach (['file_mime', 'file_size', 'file_sha256', 'file_format'] as $metadataKey) {
+        $record[$metadataKey] = $existing[$metadataKey] ?? null;
+    }
 }
 
 $record['status'] = $researchChanged ? 'Pending Admin Review' : ($existing['status'] ?? 'Pending Admin Review');

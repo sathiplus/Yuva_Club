@@ -41,7 +41,8 @@ final class ResearchUploadValidator
         int $size,
         int $uploadError,
         string $detectedMime,
-        string $prefix
+        string $prefix,
+        ?string $filePath = null
     ): array {
         if ($uploadError !== UPLOAD_ERR_OK) {
             if ($uploadError === UPLOAD_ERR_INI_SIZE || $uploadError === UPLOAD_ERR_FORM_SIZE) {
@@ -69,6 +70,13 @@ final class ResearchUploadValidator
 
         if (!$this->signatureMatches($extension, $prefix)) {
             return ['ok' => false, 'code' => 'type-mismatch'];
+        }
+
+        if (in_array($extension, ['docx', 'pptx'], true) && $filePath !== null) {
+            $container = (new OfficeContainerValidator())->validate($filePath, $extension);
+            if (!($container['ok'] ?? false)) {
+                return $container;
+            }
         }
 
         return ['ok' => true, 'code' => 'accepted', 'extension' => $extension];
