@@ -22,8 +22,11 @@ final class AiReviewValidator
         'summary',
         'communication_skills',
         'leadership_milestones',
+        'recommended_next_step',
         'admin_notes',
     ];
+
+    private const MAX_TEXT_LENGTH = 2000;
 
     /**
      * @param array<string, mixed> $review
@@ -48,6 +51,9 @@ final class AiReviewValidator
                 return $this->failure('AI response was missing required feedback.');
             }
             $normalized[$field] = trim($review[$field]);
+            if ($normalized[$field] === '' || mb_strlen($normalized[$field]) > self::MAX_TEXT_LENGTH) {
+                return $this->failure('AI response contained invalid feedback length.');
+            }
         }
 
         foreach (['strengths', 'improvements'] as $field) {
@@ -61,10 +67,30 @@ final class AiReviewValidator
                 }
                 $items[] = trim($item);
             }
-            if ($items === []) {
+            if ($items === [] || count($items) > 6) {
                 return $this->failure('AI response contained no feedback items.');
             }
-            $normalized[$field] = array_slice($items, 0, 10);
+            foreach ($items as $item) {
+                if (mb_strlen($item) > 600) {
+                    return $this->failure('AI response contained an oversized feedback item.');
+                }
+            }
+            $normalized[$field] = $items;
+        }
+
+        $expected = $normalized['research_quality']
+            + $normalized['presentation_structure']
+            + $normalized['topic_understanding']
+            + $normalized['discussion_questions']
+            + $normalized['leadership_lesson']
+            + $normalized['effort_and_readiness'];
+        if ($normalized['total_points'] !== $expected) {
+            return $this->failure('AI response total did not match its category scores.');
+        }
+
+        $allowed = array_merge(array_keys(self::SCORES), self::TEXT_FIELDS, ['strengths', 'improvements']);
+        if (array_diff(array_keys($review), $allowed) !== []) {
+            return $this->failure('AI response contained unexpected fields.');
         }
 
         return ['ok' => true, 'review' => $normalized];

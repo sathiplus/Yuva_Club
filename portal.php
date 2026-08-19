@@ -40,7 +40,7 @@ $rubricCompleted = rubric_completed_count($record);
 $certificateStatus = $record['certificate_status'] ?? 'Not Ready';
 $certificateReady = in_array($certificateStatus, ['Ready', 'Issued'], true);
 $aiReviewRecord = ai_reviews()[$studentId] ?? [];
-$aiReviewApproved = ($aiReviewRecord['status'] ?? '') === 'Applied by Admin';
+$aiReviewApproved = ($aiReviewRecord['status'] ?? '') === 'Applied';
 $approvedAiReview = $aiReviewApproved && is_array($aiReviewRecord['review'] ?? null) ? $aiReviewRecord['review'] : [];
 $aiReviewState = ai_review_state($research !== null, $aiReviewRecord);
 $aiReviewDate = $aiReviewApproved ? ($aiReviewRecord['applied_at'] ?? $aiReviewRecord['reviewed_at'] ?? '') : '';
@@ -77,6 +77,7 @@ $aiMentorTodayFocus = $aiReviewApproved && $aiMentorImprovements !== []
 $aiMentorSummary = trim((string) ($approvedAiReview['summary'] ?? ''));
 $aiMentorCommunicationNote = trim((string) ($approvedAiReview['communication_skills'] ?? ''));
 $aiMentorLeadershipNote = trim((string) ($approvedAiReview['leadership_milestones'] ?? ''));
+$aiMentorRecommendedNextStep = trim((string) ($approvedAiReview['recommended_next_step'] ?? ''));
 $aiMentorHasValidTotal = array_key_exists('total_points', $approvedAiReview)
     && is_numeric($approvedAiReview['total_points'])
     && (int) $approvedAiReview['total_points'] >= 0
@@ -688,14 +689,14 @@ portal_header('Student Dashboard', true);
             <div>
               <h3>Keep growing with purpose.</h3>
               <p><?php echo e($aiMentorSummary !== '' ? $aiMentorSummary : 'No summary was included in this approved review.'); ?></p>
-              <?php if ($aiMentorHasSuggestedTokens): ?><span class="ai-token-award"><?php echo e((string) $aiMentorSuggestedTokens); ?> suggested tokens</span><?php endif; ?>
+              <?php if ($aiMentorHasSuggestedTokens): ?><span class="ai-token-award"><?php echo e((string) $aiMentorSuggestedTokens); ?> approved tokens</span><?php endif; ?>
             </div>
           </article>
           <article class="ai-topic-card ai-mentor-topic-card">
             <p class="eyebrow">Reviewed Context</p>
             <h3><?php echo e($aiMentorTopic !== '' ? $aiMentorTopic : 'Topic not recorded'); ?></h3>
             <p><?php echo e($aiMentorCategory !== '' ? $aiMentorCategory : 'Category not recorded'); ?></p>
-            <small>Review status: Applied by Admin</small>
+            <small>Review status: Applied</small>
           </article>
         </div>
 
@@ -717,7 +718,7 @@ portal_header('Student Dashboard', true);
 
         <div class="ai-feedback-grid">
           <article class="ai-feedback-card ai-strengths-card"><div class="ai-feedback-title"><span aria-hidden="true"></span><div><p class="eyebrow">Start With Strengths</p><h3>Carry these strengths forward</h3></div></div><?php if ($aiMentorStrengths !== []): ?><ul><?php foreach ($aiMentorStrengths as $strength): ?><li><?php echo e((string) $strength); ?></li><?php endforeach; ?></ul><?php else: ?><p>No strengths were included in this approved review.</p><?php endif; ?></article>
-          <article class="ai-feedback-card ai-priority-action-card"><p class="eyebrow">Prioritized Next Action</p><h3>One thoughtful step</h3><p><?php echo e($aiMentorImprovements[0] ?? 'No prioritized next action was included in this approved review.'); ?></p></article>
+          <article class="ai-feedback-card ai-priority-action-card"><p class="eyebrow">Recommended Next Step</p><h3>One thoughtful step</h3><p><?php echo e($aiMentorRecommendedNextStep !== '' ? $aiMentorRecommendedNextStep : 'No recommended next step was included in this approved review.'); ?></p></article>
           <article class="ai-feedback-card ai-improvements-card"><div class="ai-feedback-title"><span aria-hidden="true"></span><div><p class="eyebrow">Improvement Opportunities</p><h3>Build on what is already working</h3></div></div><?php if ($aiMentorImprovements !== []): ?><ul><?php foreach ($aiMentorImprovements as $improvement): ?><li><?php echo e((string) $improvement); ?></li><?php endforeach; ?></ul><?php else: ?><p>No improvement opportunities were included in this approved review.</p><?php endif; ?></article>
           <article class="ai-feedback-card ai-coaching-note"><p class="eyebrow">Communication Note</p><h3>Clarity and communication</h3><p><?php echo e($aiMentorCommunicationNote !== '' ? $aiMentorCommunicationNote : 'No communication note was included in this approved review.'); ?></p></article>
           <article class="ai-feedback-card ai-milestone-note"><p class="eyebrow">Leadership Note</p><h3>The leader you are becoming</h3><p><?php echo e($aiMentorLeadershipNote !== '' ? $aiMentorLeadershipNote : 'No leadership note was included in this approved review.'); ?></p></article>

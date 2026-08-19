@@ -54,7 +54,7 @@ final class ResearchSubmissionState
         }
 
         $reviewStatus = trim((string) ($review['status'] ?? ''));
-        if ($reviewStatus === 'Applied by Admin') {
+        if (in_array($reviewStatus, ['Applied', 'Applied by Admin'], true)) {
             return self::REVIEW_APPROVED;
         }
         if (
@@ -64,7 +64,7 @@ final class ResearchSubmissionState
             return self::NEEDS_RESUBMISSION;
         }
         if (
-            $reviewStatus === 'Needs Setup'
+            in_array($reviewStatus, ['Failed', 'Needs Setup'], true)
             || trim((string) ($review['error'] ?? '')) !== ''
         ) {
             return self::REVIEW_UNAVAILABLE;
@@ -75,7 +75,7 @@ final class ResearchSubmissionState
         ) {
             return self::REVIEW_PROCESSING;
         }
-        if ($reviewStatus === 'Draft - Pending Admin Approval') {
+        if (in_array($reviewStatus, ['Draft', 'Draft - Pending Admin Approval'], true)) {
             return self::REVIEW_PENDING_APPROVAL;
         }
         return self::REVIEW_NOT_STARTED;

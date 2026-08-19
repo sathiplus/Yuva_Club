@@ -12,6 +12,16 @@ final class OpenAiResponsesProvider implements AiProvider
     ) {
     }
 
+    public function providerName(): string
+    {
+        return 'openai';
+    }
+
+    public function modelName(): string
+    {
+        return $this->model;
+    }
+
     public function generateStructuredReview(string $prompt): array
     {
         if ($this->apiKey === '') {

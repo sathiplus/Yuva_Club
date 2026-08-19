@@ -190,8 +190,14 @@ portal_header('Master Admin', false, ['assets/master-admin.css?v=1']);
       <div class="form-status error">Admin login was not updated. Check current login, new email, and matching password fields.</div>
     <?php elseif ($status === 'ai-reviewed'): ?>
       <div class="form-status success">AI Coach draft review created. Please review and apply it before it becomes official.</div>
+    <?php elseif ($status === 'ai-draft-saved'): ?>
+      <div class="form-status success">AI Mentor draft edits were saved.</div>
+    <?php elseif ($status === 'ai-edit-invalid'): ?>
+      <div class="form-status error">Draft edits were not valid. Check every required field.</div>
+    <?php elseif ($status === 'ai-edit-conflict'): ?>
+      <div class="form-status error">The draft changed in another session. Reload before editing again.</div>
     <?php elseif ($status === 'ai-applied'): ?>
-      <div class="form-status success">AI Coach feedback and points were applied to the student profile.</div>
+      <div class="form-status success">AI Mentor feedback and its approved token award were applied.</div>
     <?php elseif ($status === 'ai-already-applied'): ?>
       <div class="form-status success">This AI Coach review was already applied. No additional tokens were awarded.</div>
     <?php elseif ($status === 'ai-stale'): ?>
@@ -581,10 +587,10 @@ portal_header('Master Admin', false, ['assets/master-admin.css?v=1']);
       <?php endif; ?>
     </section>
 
-    <section class="form-card master-panel">
+    <section class="form-card master-panel" id="ai-mentor-reviews">
       <p class="master-kicker">Review workflow</p>
       <h2>AI Mentor reviews</h2>
-      <p class="form-note">Run AI Coach after a student has selected a topic and submitted research. AI creates a draft score and feedback; admin must apply it before it becomes official.</p>
+      <p class="form-note">Run AI Mentor after a student has selected a topic and submitted text research. AI creates an advisory Draft; an administrator must review, edit, and apply it before the student can see it.</p>
       <div class="portal-table-wrap">
         <table class="portal-table compact-table">
           <thead>
@@ -640,11 +646,25 @@ portal_header('Master Admin', false, ['assets/master-admin.css?v=1']);
                       <input type="hidden" name="student_id" value="<?php echo e($studentId); ?>">
                       <button class="button ghost" type="submit">Run AI Coach Review</button>
                     </form>
-                    <?php if ($aiDraft): ?>
+                    <?php if ($aiDraft && ($aiReview['status'] ?? '') === 'Draft'): ?>
+                      <form action="admin-ai-save-draft.php" method="post" class="form-card">
+                        <?php echo csrf_field(); ?>
+                        <input type="hidden" name="student_id" value="<?php echo e($studentId); ?>">
+                        <input type="hidden" name="version" value="<?php echo e((string) ($aiReview['version'] ?? '')); ?>">
+                        <label>Summary<textarea name="summary" required maxlength="2000"><?php echo e((string) ($aiDraft['summary'] ?? '')); ?></textarea></label>
+                        <label>Strengths, one per line<textarea name="strengths" required maxlength="3600"><?php echo e(implode("\n", $aiDraft['strengths'] ?? [])); ?></textarea></label>
+                        <label>Improvements, one per line<textarea name="improvements" required maxlength="3600"><?php echo e(implode("\n", $aiDraft['improvements'] ?? [])); ?></textarea></label>
+                        <label>Communication feedback<textarea name="communication_skills" required maxlength="2000"><?php echo e((string) ($aiDraft['communication_skills'] ?? '')); ?></textarea></label>
+                        <label>Leadership feedback<textarea name="leadership_milestones" required maxlength="2000"><?php echo e((string) ($aiDraft['leadership_milestones'] ?? '')); ?></textarea></label>
+                        <label>Recommended next step<textarea name="recommended_next_step" required maxlength="1200"><?php echo e((string) ($aiDraft['recommended_next_step'] ?? '')); ?></textarea></label>
+                        <label>Suggested tokens<input type="number" name="suggested_tokens" min="0" max="4" required value="<?php echo e((string) ($aiDraft['suggested_tokens'] ?? '0')); ?>"></label>
+                        <p class="form-note">Category scores are read-only advisory evidence and remain separate from the official presentation rubric.</p>
+                        <button class="button ghost" type="submit">Save Draft</button>
+                      </form>
                       <form action="admin-ai-apply.php" method="post">
                         <?php echo csrf_field(); ?>
                         <input type="hidden" name="student_id" value="<?php echo e($studentId); ?>">
-                        <button class="button primary" type="submit">Apply AI Draft</button>
+                        <button class="button primary" type="submit">Apply Review</button>
                       </form>
                     <?php endif; ?>
                   <?php else: ?>
