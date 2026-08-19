@@ -41,6 +41,10 @@ require_once __DIR__ . '/backend/delivery/OpenAiDeliveryCoachingProvider.php';
 require_once __DIR__ . '/backend/delivery/DeliveryReviewService.php';
 require_once __DIR__ . '/backend/delivery/SqlDeliveryReviewRepository.php';
 require_once __DIR__ . '/backend/delivery/PresentationMediaResolver.php';
+require_once __DIR__ . '/backend/delivery/MediaConsentStore.php';
+require_once __DIR__ . '/backend/delivery/MediaConsentService.php';
+require_once __DIR__ . '/backend/delivery/SqlMediaConsentRepository.php';
+require_once __DIR__ . '/backend/delivery/PresentationMediaManager.php';
 
 $configuredAppUrl = app_url();
 $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
@@ -2980,6 +2984,20 @@ function delivery_review_repository(): \YuvaClub\Delivery\SqlDeliveryReviewRepos
 
 function presentation_media_resolver(): \YuvaClub\Delivery\PresentationMediaResolver {
     return new \YuvaClub\Delivery\PresentationMediaResolver(portal_path('portal-uploads'));
+}
+
+function media_consent_service(): \YuvaClub\Delivery\MediaConsentService {
+    if(!database_settings_present()||!db_is_sqlsrv()) throw new RuntimeException('Media consent requires Azure SQL.');
+    return new \YuvaClub\Delivery\MediaConsentService(new \YuvaClub\Delivery\SqlMediaConsentRepository(db()));
+}
+
+function presentation_media_manager(): \YuvaClub\Delivery\PresentationMediaManager {
+    return new \YuvaClub\Delivery\PresentationMediaManager(portal_path('portal-uploads'));
+}
+
+function media_retention_days(): ?int {
+    $days=(int)(app_config()['features']['ai_mentor']['media_retention_days']??0);
+    return $days>0?$days:null;
 }
 
 function delivery_review_service(): \YuvaClub\Delivery\DeliveryReviewService {

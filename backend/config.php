@@ -209,6 +209,11 @@ function app_config(): array {
                     'AI_MENTOR_MEDIA_ANALYSIS_ENABLED',
                     false
                 ),
+                // Empty/zero means no automated deletion. A value requires policy approval.
+                'media_retention_days' => max(0, (int) env_value(
+                    'YUVA_MEDIA_RETENTION_DAYS',
+                    '0'
+                )),
                 'transcription_model' => env_value(
                     'OPENAI_TRANSCRIBE_MODEL',
                     'whisper-1'

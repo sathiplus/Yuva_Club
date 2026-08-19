@@ -114,6 +114,12 @@ jobs:
           php -l portal.php
           php -l portal-lib.php
           php -l parent.php
+          php -l parent-media-consent.php
+          php -l portal-submit-media.php
+          php -l portal-delete-media.php
+          php -l admin-delivery-review.php
+          php -l backend/delivery/MediaConsentService.php
+          php -l backend/delivery/SqlMediaConsentRepository.php
           php -l admin.php
           php -l registration.php
           php -l backend/authentication/PortalRepository.php
@@ -123,6 +129,7 @@ jobs:
           php -l tests/backend/filesystem-student-approval-test.php
           php -l tests/backend/admin-registration-approval-test.php
           php -l tests/backend/registration-validation-test.php
+          php -l tests/backend/ai-mentor-media-consent-test.php
           php tests/backend/authentication-service-test.php
           php tests/backend/student-login-workflow-test.php
           php tests/backend/parent-login-workflow-test.php
@@ -139,6 +146,8 @@ jobs:
           php tests/backend/ai-mentor-phase1a-contract-test.php
           php tests/backend/ai-mentor-phase1b-contract-test.php
           php tests/backend/ai-mentor-phase1b-document-test.php
+          php tests/backend/ai-mentor-phase1c-delivery-test.php
+          php tests/backend/ai-mentor-media-consent-test.php
           php tests/migrations/migration-framework-test.php
           node tests/frontend/public-site-contract-test.mjs
           node tests/frontend/student-experience-contract-test.mjs
@@ -146,6 +155,7 @@ jobs:
           node tests/frontend/master-admin-contract-test.mjs
           node tests/frontend/ai-mentor-contract-test.mjs
           node tests/frontend/ai-mentor-phase1a-contract-test.mjs
+          node tests/frontend/ai-mentor-phase1c-contract-test.mjs
 
       - name: Build tracked-files-only ZIP
         shell: bash

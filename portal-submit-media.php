@@ -4,7 +4,9 @@ $student=require_student();
 $studentId=normalize_yuva_id((string)$student['Yuva Club ID']);
 if(!ai_mentor_feature_enabled('media_analysis_enabled')){http_response_code(404);exit('Not available.');}
 if($_SERVER['REQUEST_METHOD']!=='POST'||!verify_csrf_token($_POST['csrf_token']??null)){redirect_to('portal.php?status=security-error#app-present');}
-if(($_POST['media_ai_acknowledgement']??'')!=='yes'){redirect_to('portal.php?status=media-consent-required#app-present');}
+if(($_POST['media_ai_acknowledgement']??'')!=='yes'||($_POST['consent_version']??'')!==\YuvaClub\Delivery\MediaConsentService::VERSION){redirect_to('portal.php?status=media-consent-required#app-present');}
+try{$mediaConsent=media_consent_service()->acknowledgeStudent($studentId);}catch(Throwable){redirect_to('portal.php?status=media-consent-unavailable#app-present');}
+if(!($mediaConsent['ready']??false)){redirect_to('portal.php?status=media-parent-consent-required#app-present');}
 $upload=$_FILES['presentation_media']??null;
 if(!is_array($upload)){redirect_to('portal.php?status=media-invalid#app-present');}
 $tmp=(string)($upload['tmp_name']??''); $error=(int)($upload['error']??UPLOAD_ERR_NO_FILE); $size=(int)($upload['size']??0); $original=basename((string)($upload['name']??''));
@@ -19,7 +21,7 @@ $rootReal=realpath($root); if($rootReal===false){redirect_to('portal.php?status=
 $stored=gmdate('YmdHis').'-'.bin2hex(random_bytes(8)).'.'.(string)$validation['format'];$target=$rootReal.DIRECTORY_SEPARATOR.$stored;
 if(!move_uploaded_file($tmp,$target)){redirect_to('portal.php?status=media-storage-failed#app-present');}
 $records=read_json_file(presentation_media_file());$prior=$records[$studentId]??null;
-$records[$studentId]=['original_filename'=>$original,'stored_filename'=>$stored,'mime_type'=>strtolower($mime),'size_bytes'=>$size,'sha256'=>$sha,'format'=>$validation['format'],'status'=>'Pending Admin Review','acknowledged_at'=>gmdate('c'),'updated_at'=>gmdate('c')];
+$records[$studentId]=['original_filename'=>$original,'stored_filename'=>$stored,'mime_type'=>strtolower($mime),'size_bytes'=>$size,'sha256'=>$sha,'format'=>$validation['format'],'status'=>'Pending Admin Review','consent_version'=>\YuvaClub\Delivery\MediaConsentService::VERSION,'acknowledged_at'=>gmdate('c'),'updated_at'=>gmdate('c')];
 write_json_file(presentation_media_file(),$records);
 if(is_array($prior)&&!empty($prior['stored_filename'])){$old=$rootReal.DIRECTORY_SEPARATOR.basename((string)$prior['stored_filename']);$oldReal=realpath($old);if($oldReal!==false&&str_starts_with($oldReal,$rootReal.DIRECTORY_SEPARATOR)&&is_file($oldReal))@unlink($oldReal);}
 audit_log_event($studentId,YUVA_ROLE_STUDENT,student_organization_id($student),'student.presentation_media.upload','student',$studentId,true,['mime'=>strtolower($mime),'size_bytes'=>$size,'replaced'=>is_array($prior)]);
