@@ -24,9 +24,7 @@ final class OpenAiTranscriptionProvider implements MediaTranscriptionProvider
                 'file' => $file,
                 'model' => $this->model,
                 'response_format' => 'verbose_json',
-                'timestamp_granularities[0]' => 'segment',
-                'timestamp_granularities[1]' => 'word',
-            ],
+            ] + $this->timestampGranularityFields(),
         ]);
         $raw = curl_exec($curl);
         $status = (int) curl_getinfo($curl, CURLINFO_RESPONSE_CODE);
@@ -35,13 +33,30 @@ final class OpenAiTranscriptionProvider implements MediaTranscriptionProvider
         if ($failed || $status < 200 || $status >= 300) return ['ok' => false, 'error_code' => $status === 408 ? 'provider_timeout' : 'transcription_failed'];
         $data = json_decode((string) $raw, true);
         if (!is_array($data) || trim((string) ($data['text'] ?? '')) === '') return ['ok' => false, 'error_code' => 'no_speech_detected'];
+        $timing=$this->normalizeTiming($data);
         return ['ok' => true, 'transcript' => new PresentationTranscript(
             trim((string) $data['text']),
             (float) ($data['duration'] ?? 0),
-            is_array($data['segments'] ?? null) ? $data['segments'] : [],
-            is_array($data['words'] ?? null) ? $data['words'] : [],
+            $timing['segments'],
+            $timing['words'],
             (string) ($data['language'] ?? ''),
-            ['provider' => 'openai', 'model' => $this->model]
+            ['provider' => 'openai', 'model' => $this->model, 'segments_derived_from_words'=>$timing['segments_derived_from_words']]
         )];
+    }
+
+    /** @return array<string,string> */
+    private function timestampGranularityFields(): array
+    {
+        return ['timestamp_granularities[]' => 'word'];
+    }
+
+    /** @return array{segments:array<int,array<string,mixed>>,words:array<int,array<string,mixed>>,segments_derived_from_words:bool} */
+    private function normalizeTiming(array $data): array
+    {
+        $words=is_array($data['words']??null)?$data['words']:[];
+        $segments=is_array($data['segments']??null)?$data['segments']:[];
+        $derived=$segments===[]&&$words!==[];
+        if($derived)$segments=array_map(static fn(array $word):array=>['start'=>(float)($word['start']??0),'end'=>(float)($word['end']??$word['start']??0),'text'=>(string)($word['word']??'')],$words);
+        return ['segments'=>$segments,'words'=>$words,'segments_derived_from_words'=>$derived];
     }
 }
