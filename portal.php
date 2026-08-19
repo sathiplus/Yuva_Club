@@ -42,6 +42,8 @@ $certificateReady = in_array($certificateStatus, ['Ready', 'Issued'], true);
 $aiReviewRecord = ai_reviews()[$studentId] ?? [];
 $aiReviewApproved = ($aiReviewRecord['status'] ?? '') === 'Applied';
 $approvedAiReview = $aiReviewApproved && is_array($aiReviewRecord['review'] ?? null) ? $aiReviewRecord['review'] : [];
+$aiReviewIncludedDocument = $aiReviewApproved
+    && ($aiReviewRecord['document_analysis_status'] ?? '') === 'Analyzed';
 $aiReviewState = ai_review_state($research !== null, $aiReviewRecord);
 $aiReviewDate = $aiReviewApproved ? ($aiReviewRecord['applied_at'] ?? $aiReviewRecord['reviewed_at'] ?? '') : '';
 $aiMentorNameParts = preg_split('/\s+/', trim($name), -1, PREG_SPLIT_NO_EMPTY) ?: [];
@@ -676,6 +678,7 @@ portal_header('Student Dashboard', true);
           <p class="eyebrow">AI Research Review</p>
           <h2 id="ai-research-review-title">Your approved preparation review</h2>
           <p>This review reflects submitted research and presentation preparation. It is separate from the official presentation rubric.</p>
+          <?php if ($aiReviewIncludedDocument): ?><p class="form-note">Your uploaded document was included in this AI Mentor review.</p><?php endif; ?>
         </div>
 
         <div class="ai-studio-overview ai-approved-review-overview">

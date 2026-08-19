@@ -21,12 +21,31 @@ if ($adminUserId !== null) {
         log_activity($adminUserId, 'ai_mentor.retry', 'ai_mentor_review', (int) ($priorReview['id'] ?? 0));
     }
 }
-$reviewRecord = ai_mentor_service()->createDraft(
-    $studentId,
-    $student,
-    $selection,
-    $research
-);
+try {
+    $document = research_document_for_student($studentId, $research);
+    $reviewRecord = ai_mentor_service()->createDraft(
+        $studentId,
+        $student,
+        $selection,
+        $research,
+        $document
+    );
+} catch (\YuvaClub\Submission\DocumentResolutionException $error) {
+    $reviewRecord = [
+        'ok' => false,
+        'review' => [],
+        'source_revision_hash' => \YuvaClub\AI\AiMentorService::sourceRevisionHash($selection, $research),
+        'provider' => 'openai',
+        'model' => openai_model_name(),
+        'prompt_version' => \YuvaClub\AI\AiPromptCatalog::DOCUMENT_REVIEW_VERSION,
+        'status' => 'Failed',
+        'error_code' => $error->safeCode,
+        'error_category' => 'Uploaded document validation failed.',
+        'document_analysis_status' => 'Failed',
+        'document_analysis_warnings' => [$error->safeCode],
+    ];
+    ai_review_repository()->save($studentId, $reviewRecord);
+}
 if ($adminUserId !== null) {
     $storedReview = ai_review_repository()->find($studentId);
     log_activity($adminUserId, ($reviewRecord['ok'] ?? false) ? 'ai_mentor.generation_succeeded' : 'ai_mentor.generation_failed', 'ai_mentor_review', (int) ($storedReview['id'] ?? 0), ['prompt_version' => $reviewRecord['prompt_version']]);
@@ -34,6 +53,7 @@ if ($adminUserId !== null) {
 audit_log_event($admin['id'], $admin['role'], $admin['organization_id'], 'admin.ai_review.create', 'student', $studentId, (bool) ($reviewRecord['ok'] ?? false), [
     'status' => $reviewRecord['status'],
     'prompt_version' => $reviewRecord['prompt_version'],
+    'document_analysis_status' => $reviewRecord['document_analysis_status'] ?? 'NotApplicable',
 ]);
 
 redirect_to(($reviewRecord['ok'] ?? false) ? 'admin.php?status=ai-reviewed' : 'admin.php?status=ai-error');

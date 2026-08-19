@@ -623,6 +623,12 @@ portal_header('Master Admin', false, ['assets/master-admin.css?v=1']);
                   <?php if ($research): ?>
                     Submitted <?php echo e($research['updated_at'] ?? ''); ?><br>
                     <?php echo e($research['status'] ?? 'Pending Admin Review'); ?>
+                    <?php if (!empty($research['file_original'])): ?>
+                      <br><strong>Document:</strong> <?php echo e((string) $research['file_original']); ?>
+                      <?php if (!empty($research['file_size'])): ?>
+                        (<?php echo e(number_format(((int) $research['file_size']) / 1048576, 2)); ?> MiB)
+                      <?php endif; ?>
+                    <?php endif; ?>
                   <?php else: ?>
                     No research submitted yet.
                   <?php endif; ?>
@@ -632,6 +638,10 @@ portal_header('Master Admin', false, ['assets/master-admin.css?v=1']);
                     <strong>Setup/Error:</strong> <?php echo e($aiReview['error']); ?>
                   <?php elseif ($aiDraft): ?>
                     <strong><?php echo e($aiReview['status'] ?? 'Draft'); ?></strong><br>
+                    <?php if (($aiReview['document_analysis_status'] ?? 'NotApplicable') !== 'NotApplicable'): ?>
+                      Document: <?php echo e((string) ($aiReview['source_file_original_name'] ?? 'Uploaded document')); ?>
+                      — <?php echo e((string) $aiReview['document_analysis_status']); ?><br>
+                    <?php endif; ?>
                     Points: <?php echo e((string) ($aiDraft['total_points'] ?? '0')); ?><br>
                     Tokens: <?php echo e((string) ($aiDraft['suggested_tokens'] ?? '0')); ?><br>
                     <?php echo e($aiDraft['summary'] ?? ''); ?>

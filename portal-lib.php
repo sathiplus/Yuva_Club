@@ -13,6 +13,7 @@ require_once __DIR__ . '/backend/authentication/LoginThrottle.php';
 require_once __DIR__ . '/backend/authentication/StudentLoginWorkflow.php';
 require_once __DIR__ . '/backend/authentication/ParentLoginWorkflow.php';
 require_once __DIR__ . '/backend/ai/AiProvider.php';
+require_once __DIR__ . '/backend/ai/DocumentAwareAiProvider.php';
 require_once __DIR__ . '/backend/ai/AiReviewStore.php';
 require_once __DIR__ . '/backend/ai/AiPromptCatalog.php';
 require_once __DIR__ . '/backend/ai/AiReviewValidator.php';
@@ -21,7 +22,11 @@ require_once __DIR__ . '/backend/ai/AiReviewRepository.php';
 require_once __DIR__ . '/backend/ai/SqlAiReviewRepository.php';
 require_once __DIR__ . '/backend/ai/OpenAiResponsesProvider.php';
 require_once __DIR__ . '/backend/ai/AiMentorService.php';
+require_once __DIR__ . '/backend/submission/ResearchDocument.php';
+require_once __DIR__ . '/backend/submission/DocumentResolutionException.php';
+require_once __DIR__ . '/backend/submission/OfficeContainerValidator.php';
 require_once __DIR__ . '/backend/submission/ResearchUploadValidator.php';
+require_once __DIR__ . '/backend/submission/ResearchDocumentResolver.php';
 require_once __DIR__ . '/backend/submission/ResearchSubmissionState.php';
 
 $configuredAppUrl = app_url();
@@ -2966,6 +2971,19 @@ function ai_mentor_service(
         new \YuvaClub\AI\AiReviewValidator(),
         ai_review_repository()
     );
+}
+
+function research_document_resolver(): \YuvaClub\Submission\ResearchDocumentResolver
+{
+    return new \YuvaClub\Submission\ResearchDocumentResolver(portal_path('portal-uploads'));
+}
+
+/** @param array<string, mixed> $research */
+function research_document_for_student(
+    string $studentId,
+    array $research
+): ?\YuvaClub\Submission\ResearchDocument {
+    return research_document_resolver()->resolve(normalize_yuva_id($studentId), $research);
 }
 
 function ai_review_state(bool $hasResearch, array $reviewRecord): string {

@@ -134,10 +134,18 @@ jobs:
           php tests/backend/admin-registration-approval-test.php
           php tests/backend/registration-validation-test.php
           php tests/backend/staging-readiness-test.php
+          php tests/backend/research-submission-foundation-test.php
+          php tests/backend/ai-mentor-foundation-test.php
+          php tests/backend/ai-mentor-phase1a-contract-test.php
+          php tests/backend/ai-mentor-phase1b-contract-test.php
+          php tests/backend/ai-mentor-phase1b-document-test.php
+          php tests/migrations/migration-framework-test.php
           node tests/frontend/public-site-contract-test.mjs
           node tests/frontend/student-experience-contract-test.mjs
           node tests/frontend/parent-experience-contract-test.mjs
           node tests/frontend/master-admin-contract-test.mjs
+          node tests/frontend/ai-mentor-contract-test.mjs
+          node tests/frontend/ai-mentor-phase1a-contract-test.mjs
 
       - name: Build tracked-files-only ZIP
         shell: bash

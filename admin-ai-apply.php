@@ -18,7 +18,17 @@ try {
     if ($adminUserId === null) {
         throw new RuntimeException('SQL admin identity is unavailable.');
     }
-    $result = $repository->apply($studentId, \YuvaClub\AI\AiMentorService::sourceRevisionHash($selection, $research), $adminUserId);
+    try {
+        $document = research_document_for_student($studentId, $research);
+    } catch (\YuvaClub\Submission\DocumentResolutionException) {
+        $repository->markLatestStale($studentId, 'Research Document Changed');
+        redirect_to('admin.php?status=ai-stale#ai-mentor-reviews');
+    }
+    $result = $repository->apply(
+        $studentId,
+        \YuvaClub\AI\AiMentorService::sourceRevisionHash($selection, $research, $document),
+        $adminUserId
+    );
     redirect_to(match ($result) {
         'stale' => 'admin.php?status=ai-stale#ai-mentor-reviews',
         'missing' => 'admin.php?status=ai-missing#ai-mentor-reviews',
