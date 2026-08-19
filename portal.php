@@ -92,6 +92,13 @@ $aiMentorSuggestedTokens = $aiMentorHasSuggestedTokens
     ? (int) $approvedAiReview['suggested_tokens']
     : null;
 $aiMentorCoachMeEnabled = ai_mentor_feature_enabled('coach_me_enabled');
+$aiMentorMediaEnabled = ai_mentor_feature_enabled('media_analysis_enabled');
+$presentationMedia = read_json_file(presentation_media_file())[$studentId] ?? [];
+$deliveryReview = [];
+if ($aiMentorMediaEnabled && database_settings_present() && db_is_sqlsrv()) {
+    try { $deliveryReview = delivery_review_repository()->findLatest($studentId, true); } catch (Throwable) { $deliveryReview = []; }
+}
+$approvedDelivery = is_array($deliveryReview['review'] ?? null) ? $deliveryReview['review'] : [];
 $submissionUploadOutcome = match ($status) {
     'upload-error', 'upload-unsupported' => 'unsupported',
     'upload-mismatch' => 'type-mismatch',
@@ -562,6 +569,17 @@ portal_header('Student Dashboard', true);
       </section>
 
       <div class="present-future-heading present-card-wide"><p class="eyebrow">Coming to Presentation Center</p><h2>More ways to grow your voice</h2><p>These capabilities are planned for future YUVA Club updates.</p></div>
+      <?php if ($aiMentorMediaEnabled): ?>
+      <form class="present-card-wide studio-card" action="portal-submit-media.php" method="post" enctype="multipart/form-data">
+        <input type="hidden" name="csrf_token" value="<?php echo e(csrf_token()); ?>">
+        <p class="eyebrow">Presentation Delivery Review</p><h2>Upload a short practice presentation</h2>
+        <p>MP4, WebM, MP3, WAV, or M4A. Maximum 25 MB and 5 minutes. Your review stays hidden until a YUVA Club administrator applies it.</p>
+        <label for="presentation_media">Practice recording</label><input id="presentation_media" name="presentation_media" type="file" accept=".mp4,.webm,.mp3,.wav,.m4a" required>
+        <label><input name="media_ai_acknowledgement" type="checkbox" value="yes" required> I understand this recording will be processed by YUVA Club’s AI service to provide presentation coaching.</label>
+        <?php if (!empty($presentationMedia['original_filename'])): ?><p>Current recording: <?php echo e((string)$presentationMedia['original_filename']); ?></p><?php endif; ?>
+        <button class="button primary" type="submit">Submit Practice Recording</button>
+      </form>
+      <?php endif; ?>
       <div class="present-future-grid present-card-wide">
         <article class="present-future-card present-future-timer"><span class="present-icon" aria-hidden="true"></span><div><h3>Presentation Timer</h3><p>Practice pacing before your live session.</p></div><strong>Coming Soon</strong></article>
         <article class="present-future-card present-future-history"><span class="present-icon" aria-hidden="true"></span><div><h3>Past Presentations</h3><p>Review individual sessions and feedback.</p></div><strong>Coming Soon</strong></article>
@@ -580,6 +598,22 @@ portal_header('Student Dashboard', true);
       </div>
       <img src="assets/student-ai-coach-illustration.svg" alt="" aria-hidden="true">
     </div>
+
+    <?php if ($approvedDelivery !== []): ?>
+    <section class="ai-approved-review-section" aria-labelledby="ai-delivery-review-title">
+      <div class="ai-studio-section-heading"><p class="eyebrow">Presentation Delivery Review</p><h2 id="ai-delivery-review-title">Your approved delivery coaching</h2><p>This AI Mentor coaching is advisory and separate from the official presentation rubric.</p></div>
+      <article><p>Overall delivery score</p><strong><?php echo e((string)($approvedDelivery['overall_delivery_score']??0)); ?> / 100</strong><p><?php echo e((string)($approvedDelivery['summary']??'')); ?></p><span><?php echo e((string)($approvedDelivery['suggested_tokens']??0)); ?> approved tokens</span></article>
+      <div class="ai-score-list">
+      <?php foreach(['pace_score'=>'Pacing','pause_control_score'=>'Pause control','clarity_score'=>'Clarity','vocal_variety_score'=>'Vocal variety','emphasis_score'=>'Emphasis','filler_word_score'=>'Filler words','visual_presence_score'=>'Sampled visual presence'] as $field=>$label): ?><?php if(array_key_exists($field,$approvedDelivery)&&$approvedDelivery[$field]!==null): ?><div><span><?php echo e($label); ?></span><strong><?php echo e((string)$approvedDelivery[$field]); ?> / 100</strong></div><?php endif; ?><?php endforeach; ?>
+      </div>
+      <article><h3>Strengths</h3><ul><?php foreach(($approvedDelivery['strengths']??[]) as $item): ?><li><?php echo e((string)$item); ?></li><?php endforeach; ?></ul></article>
+      <article><h3>Improvement priorities</h3><ul><?php foreach(($approvedDelivery['improvements']??[]) as $item): ?><li><?php echo e((string)$item); ?></li><?php endforeach; ?></ul></article>
+      <article><h3>Delivery notes</h3><p><?php echo e((string)($approvedDelivery['pacing_feedback']??'')); ?></p><p><?php echo e((string)($approvedDelivery['pause_feedback']??'')); ?></p><p><?php echo e((string)($approvedDelivery['clarity_feedback']??'')); ?></p><p><?php echo e((string)($approvedDelivery['filler_word_feedback']??'')); ?></p><p><?php echo e((string)($approvedDelivery['visual_feedback']??'')); ?></p></article>
+      <?php if(!empty($approvedDelivery['pronunciation_practice'])): ?><article><h3>Optional clarity practice</h3><ul><?php foreach($approvedDelivery['pronunciation_practice'] as $item): ?><li><?php echo e(is_array($item)?(string)($item['recommendation']??$item['word']??''):(string)$item); ?></li><?php endforeach; ?></ul></article><?php endif; ?>
+      <article><h3>Time-coded coaching</h3><ol><?php foreach(($approvedDelivery['timecoded_coaching']??[]) as $moment): $seconds=max(0,(int)($moment['start_seconds']??0)); ?><li><strong><?php echo e(sprintf('%d:%02d',intdiv($seconds,60),$seconds%60)); ?></strong> — <?php echo e((string)($moment['observation']??'')); ?> <?php echo e((string)($moment['recommendation']??'')); ?></li><?php endforeach; ?></ol></article>
+      <article><h3>Recommended next practice step</h3><p><?php echo e((string)($approvedDelivery['recommended_next_step']??'')); ?></p></article>
+    </section>
+    <?php endif; ?>
 
     <div class="ai-mentor-home-grid">
       <article class="ai-mentor-home-card ai-mentor-context-card">
