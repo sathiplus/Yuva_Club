@@ -35,4 +35,5 @@ check(strpos($upload,'media_consent_service()->acknowledgeStudent')<strpos($uplo
 check(str_contains($admin,"media_consent_service()->status"),'admin processing must recheck current consent');
 check(str_contains($migration,'consent_version')&&str_contains($migration,'row_version'),'consent migration must be versioned and concurrent');
 check(!str_contains($upload,'OPENAI_API_KEY')&&!str_contains($admin,'transcript='),'controllers must not log secrets or media contents');
+check(str_contains($upload,"'uploaded_at'=>\$uploadedAt")&&str_contains($upload,"'media_reference'=>\$safeId.'/media/'.\$stored"),'upload metadata must carry an authoritative retention clock and owned reference');
 echo "AI Mentor media consent tests: PASS\n";

@@ -94,6 +94,7 @@ $aiMentorSuggestedTokens = $aiMentorHasSuggestedTokens
 $aiMentorCoachMeEnabled = ai_mentor_feature_enabled('coach_me_enabled');
 $aiMentorMediaEnabled = ai_mentor_feature_enabled('media_analysis_enabled');
 $presentationMedia = read_json_file(presentation_media_file())[$studentId] ?? [];
+$presentationMediaActive = is_array($presentationMedia) && ($presentationMedia['retention_status'] ?? 'Active') === 'Active';
 $mediaConsent = ['ready'=>false,'student_granted'=>false,'parent_required'=>true,'parent_granted'=>false,'version'=>\YuvaClub\Delivery\MediaConsentService::VERSION];
 if ($aiMentorMediaEnabled && database_settings_present() && db_is_sqlsrv()) {
     try { $mediaConsent = media_consent_service()->status($studentId); } catch (Throwable) { $mediaConsent['ready'] = false; }
@@ -587,7 +588,7 @@ portal_header('Student Dashboard', true);
           <label><input name="media_ai_acknowledgement" type="checkbox" value="yes" required> I understand that this recording will be processed by YUVA Club's AI service to provide presentation coaching.</label>
           <button class="button primary" type="submit">Submit Practice Recording</button>
         <?php endif; ?>
-        <?php if (!empty($presentationMedia['original_filename'])): ?><p>Current recording: <?php echo e((string)$presentationMedia['original_filename']); ?> · Analysis status: <?php echo e((string)($presentationMedia['status']??'Pending')); ?></p><button class="button ghost" type="submit" formmethod="post" formaction="portal-delete-media.php" formnovalidate>Delete recording</button><p>Deleting removes the uploaded recording. Contact support to request deletion of retained transcripts or applied program records.</p><?php endif; ?>
+        <?php if ($presentationMediaActive && !empty($presentationMedia['original_filename'])): ?><p>Current recording: <?php echo e((string)$presentationMedia['original_filename']); ?> · Analysis status: <?php echo e((string)($presentationMedia['status']??'Pending')); ?></p><button class="button ghost" type="submit" formmethod="post" formaction="portal-delete-media.php" formnovalidate>Delete recording</button><p>Deleting removes the uploaded recording. Contact support to request deletion of retained transcripts or applied program records.</p><?php endif; ?>
       </form>
       <?php endif; ?>
       <div class="present-future-grid present-card-wide">

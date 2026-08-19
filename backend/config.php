@@ -18,6 +18,15 @@ function env_bool(string $name, bool $default = false): bool {
     return filter_var($value, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) ?? $default;
 }
 
+function env_positive_int(string $name): ?int {
+    $value = env_value($name);
+    if ($value === '' || preg_match('/^[1-9][0-9]*$/', $value) !== 1) {
+        return null;
+    }
+    $parsed = filter_var($value, FILTER_VALIDATE_INT, ['options'=>['min_range'=>1]]);
+    return is_int($parsed) ? $parsed : null;
+}
+
 function mutable_path_definitions(): array {
     return [
         'portal-data' => 'YUVA_PORTAL_DATA_PATH',
@@ -210,10 +219,7 @@ function app_config(): array {
                     false
                 ),
                 // Empty/zero means no automated deletion. A value requires policy approval.
-                'media_retention_days' => max(0, (int) env_value(
-                    'YUVA_MEDIA_RETENTION_DAYS',
-                    '0'
-                )),
+                'media_retention_days' => env_positive_int('YUVA_MEDIA_RETENTION_DAYS'),
                 'transcription_model' => env_value(
                     'OPENAI_TRANSCRIBE_MODEL',
                     'whisper-1'

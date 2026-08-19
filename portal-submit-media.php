@@ -21,8 +21,10 @@ $rootReal=realpath($root); if($rootReal===false){redirect_to('portal.php?status=
 $stored=gmdate('YmdHis').'-'.bin2hex(random_bytes(8)).'.'.(string)$validation['format'];$target=$rootReal.DIRECTORY_SEPARATOR.$stored;
 if(!move_uploaded_file($tmp,$target)){redirect_to('portal.php?status=media-storage-failed#app-present');}
 $records=read_json_file(presentation_media_file());$prior=$records[$studentId]??null;
-$records[$studentId]=['original_filename'=>$original,'stored_filename'=>$stored,'mime_type'=>strtolower($mime),'size_bytes'=>$size,'sha256'=>$sha,'format'=>$validation['format'],'status'=>'Pending Admin Review','consent_version'=>\YuvaClub\Delivery\MediaConsentService::VERSION,'acknowledged_at'=>gmdate('c'),'updated_at'=>gmdate('c')];
+$priorActive=is_array($prior)&&($prior['retention_status']??'Active')==='Active'&&!empty($prior['stored_filename']);
+if($priorActive&&!presentation_media_manager()->delete($studentId,$prior)){@unlink($target);redirect_to('portal.php?status=media-storage-failed#app-present');}
+$uploadedAt=gmdate('c');
+$records[$studentId]=['original_filename'=>$original,'stored_filename'=>$stored,'media_reference'=>$safeId.'/media/'.$stored,'mime_type'=>strtolower($mime),'size_bytes'=>$size,'sha256'=>$sha,'format'=>$validation['format'],'status'=>'Pending Admin Review','retention_status'=>'Active','consent_version'=>\YuvaClub\Delivery\MediaConsentService::VERSION,'acknowledged_at'=>$uploadedAt,'uploaded_at'=>$uploadedAt,'updated_at'=>$uploadedAt];
 write_json_file(presentation_media_file(),$records);
-if(is_array($prior)&&!empty($prior['stored_filename'])){$old=$rootReal.DIRECTORY_SEPARATOR.basename((string)$prior['stored_filename']);$oldReal=realpath($old);if($oldReal!==false&&str_starts_with($oldReal,$rootReal.DIRECTORY_SEPARATOR)&&is_file($oldReal))@unlink($oldReal);}
-audit_log_event($studentId,YUVA_ROLE_STUDENT,student_organization_id($student),'student.presentation_media.upload','student',$studentId,true,['mime'=>strtolower($mime),'size_bytes'=>$size,'replaced'=>is_array($prior)]);
+audit_log_event($studentId,YUVA_ROLE_STUDENT,student_organization_id($student),'student.presentation_media.upload','student',$studentId,true,['mime'=>strtolower($mime),'size_bytes'=>$size,'replaced'=>$priorActive]);
 redirect_to('portal.php?status=media-saved#app-present');
