@@ -209,6 +209,14 @@ function app_config(): array {
                     'AI_MENTOR_MEDIA_ANALYSIS_ENABLED',
                     false
                 ),
+                'transcription_model' => env_value(
+                    'OPENAI_TRANSCRIBE_MODEL',
+                    'whisper-1'
+                ),
+                'visual_model' => env_value(
+                    'OPENAI_VISUAL_MODEL',
+                    env_value('OPENAI_MODEL', 'gpt-4.1-mini')
+                ),
                 'weekly_reports_enabled' => env_bool(
                     'AI_MENTOR_WEEKLY_REPORTS_ENABLED',
                     false

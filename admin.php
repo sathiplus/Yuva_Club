@@ -24,6 +24,14 @@ $selections = read_json_file(topic_selections_file());
 $researchAll = read_json_file(research_file());
 $records = read_json_file(portal_records_file());
 $aiReviews = ai_reviews();
+$mediaAnalysisEnabled = ai_mentor_feature_enabled('media_analysis_enabled');
+$presentationMediaAll = read_json_file(presentation_media_file());
+$deliveryReviews = [];
+if ($mediaAnalysisEnabled && database_settings_present() && db_is_sqlsrv()) {
+    foreach (array_keys($students) as $deliveryStudentId) {
+        try { $deliveryReviews[$deliveryStudentId] = delivery_review_repository()->findLatest((string)$deliveryStudentId); } catch (Throwable) { $deliveryReviews[$deliveryStudentId] = []; }
+    }
+}
 $hub = hub_settings();
 $schoolSession = group_session($hub, 'junior');
 $collegeSession = group_session($hub, 'senior');
@@ -690,6 +698,26 @@ portal_header('Master Admin', false, ['assets/master-admin.css?v=1']);
         </table>
       </div>
     </section>
+
+    <?php if ($mediaAnalysisEnabled): ?>
+    <section class="form-card master-panel" id="ai-mentor-delivery-reviews">
+      <p class="master-kicker">Presentation coaching</p><h2>AI Mentor delivery reviews</h2>
+      <p class="form-note">Recordings are sensitive student content. AI creates a Draft; only an Applied, administrator-reviewed version becomes student-visible. Delivery scores remain advisory and separate from the official rubric.</p>
+      <div class="portal-table-wrap"><table class="portal-table compact-table"><thead><tr><th>Student</th><th>Recording</th><th>Evidence</th><th>Action</th></tr></thead><tbody>
+      <?php foreach ($students as $deliveryStudentId => $deliveryStudent): $media=$presentationMediaAll[$deliveryStudentId]??[];$delivery=$deliveryReviews[$deliveryStudentId]??[];$coaching=$delivery['review']??[]; ?>
+      <tr><td><strong><?php echo e(student_display_name($deliveryStudent)); ?></strong><br><?php echo e((string)$deliveryStudentId); ?></td>
+      <td><?php echo $media?e((string)($media['original_filename']??'Recording')):'No recording submitted.'; ?><?php if($media): ?><br><?php echo e((string)($media['mime_type']??'')); ?> · <?php echo e(number_format(((int)($media['size_bytes']??0))/1048576,2)); ?> MiB<?php endif; ?></td>
+      <td><?php if($delivery): ?><strong><?php echo e((string)($delivery['status']??'')); ?></strong><br><?php echo e((string)($delivery['transcription_model']??'')); ?> · <?php echo e((string)($delivery['media_duration_seconds']??'')); ?> seconds<?php if($coaching): ?><br>Delivery score: <?php echo e((string)($coaching['overall_delivery_score']??'')); ?> · Tokens: <?php echo e((string)($coaching['suggested_tokens']??0)); ?><?php endif; ?><?php else: ?>No delivery review yet.<?php endif; ?></td>
+      <td><?php if($media): ?><form action="admin-delivery-review.php" method="post"><?php echo csrf_field(); ?><input type="hidden" name="student_id" value="<?php echo e((string)$deliveryStudentId); ?>"><button class="button ghost" type="submit">Run Delivery Review</button></form><?php endif; ?>
+      <?php if($coaching&&($delivery['status']??'')==='Draft'): ?><form action="admin-delivery-save-draft.php" method="post" class="form-card"><?php echo csrf_field(); ?><input type="hidden" name="student_id" value="<?php echo e((string)$deliveryStudentId); ?>"><input type="hidden" name="version" value="<?php echo e((string)($delivery['version']??'')); ?>">
+      <?php foreach(['summary','pacing_feedback','pause_feedback','clarity_feedback','filler_word_feedback','visual_feedback','recommended_next_step','admin_notes'] as $field): ?><label><?php echo e(ucwords(str_replace('_',' ',$field))); ?><textarea name="<?php echo e($field); ?>" required maxlength="2400"><?php echo e((string)($coaching[$field]??'')); ?></textarea></label><?php endforeach; ?>
+      <?php foreach(['strengths','improvements','pronunciation_practice','emphasis_opportunities'] as $field): ?><label><?php echo e(ucwords(str_replace('_',' ',$field))); ?>, one per line<textarea name="<?php echo e($field); ?>" maxlength="6000"><?php echo e(implode("\n",$coaching[$field]??[])); ?></textarea></label><?php endforeach; ?>
+      <label>Time-coded coaching JSON<textarea name="timecoded_coaching_json" required maxlength="12000"><?php echo e(json_encode($coaching['timecoded_coaching']??[],JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES)?:'[]'); ?></textarea></label>
+      <label>Suggested tokens<input type="number" name="suggested_tokens" min="0" max="4" value="<?php echo e((string)($coaching['suggested_tokens']??0)); ?>"></label><button class="button ghost" type="submit">Save Delivery Draft</button></form>
+      <form action="admin-delivery-apply.php" method="post"><?php echo csrf_field(); ?><input type="hidden" name="student_id" value="<?php echo e((string)$deliveryStudentId); ?>"><button class="button primary" type="submit">Apply Delivery Review</button></form><?php endif; ?></td></tr>
+      <?php endforeach; ?></tbody></table></div>
+    </section>
+    <?php endif; ?>
 
     <section class="master-panel master-student-panel" id="students">
       <div class="master-panel-heading" id="certificates"><div><p class="master-kicker">Students / Certificates</p><h2>Student records and recognition</h2></div><span class="master-count"><?php echo $issuedCertificateCount; ?> issued</span></div>

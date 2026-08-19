@@ -28,6 +28,19 @@ require_once __DIR__ . '/backend/submission/OfficeContainerValidator.php';
 require_once __DIR__ . '/backend/submission/ResearchUploadValidator.php';
 require_once __DIR__ . '/backend/submission/ResearchDocumentResolver.php';
 require_once __DIR__ . '/backend/submission/ResearchSubmissionState.php';
+require_once __DIR__ . '/backend/delivery/MediaTranscriptionProvider.php';
+require_once __DIR__ . '/backend/delivery/PresentationTranscript.php';
+require_once __DIR__ . '/backend/delivery/MediaUploadValidator.php';
+require_once __DIR__ . '/backend/delivery/OpenAiTranscriptionProvider.php';
+require_once __DIR__ . '/backend/delivery/DeliveryMetricsCalculator.php';
+require_once __DIR__ . '/backend/delivery/DeliveryReviewValidator.php';
+require_once __DIR__ . '/backend/delivery/DeliveryPromptCatalog.php';
+require_once __DIR__ . '/backend/delivery/PresentationMedia.php';
+require_once __DIR__ . '/backend/delivery/DeliveryCoachingProvider.php';
+require_once __DIR__ . '/backend/delivery/OpenAiDeliveryCoachingProvider.php';
+require_once __DIR__ . '/backend/delivery/DeliveryReviewService.php';
+require_once __DIR__ . '/backend/delivery/SqlDeliveryReviewRepository.php';
+require_once __DIR__ . '/backend/delivery/PresentationMediaResolver.php';
 
 $configuredAppUrl = app_url();
 $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
@@ -2944,6 +2957,37 @@ function openai_model_name(): string {
     }
 
     return 'gpt-4.1-mini';
+}
+
+function presentation_media_file(): string {
+    return portal_path('portal-data') . DIRECTORY_SEPARATOR . 'presentation-media.json';
+}
+
+function openai_transcription_model_name(): string {
+    $features = app_config()['features']['ai_mentor'] ?? [];
+    return trim((string) ($features['transcription_model'] ?? 'whisper-1')) ?: 'whisper-1';
+}
+
+function openai_visual_model_name(): string {
+    $features = app_config()['features']['ai_mentor'] ?? [];
+    return trim((string) ($features['visual_model'] ?? openai_model_name())) ?: openai_model_name();
+}
+
+function delivery_review_repository(): \YuvaClub\Delivery\SqlDeliveryReviewRepository {
+    if(!database_settings_present()||!db_is_sqlsrv()) throw new RuntimeException('Delivery reviews require Azure SQL.');
+    return new \YuvaClub\Delivery\SqlDeliveryReviewRepository(db());
+}
+
+function presentation_media_resolver(): \YuvaClub\Delivery\PresentationMediaResolver {
+    return new \YuvaClub\Delivery\PresentationMediaResolver(portal_path('portal-uploads'));
+}
+
+function delivery_review_service(): \YuvaClub\Delivery\DeliveryReviewService {
+    return new \YuvaClub\Delivery\DeliveryReviewService(
+        new \YuvaClub\Delivery\OpenAiTranscriptionProvider(openai_api_key(),openai_transcription_model_name()),
+        new \YuvaClub\Delivery\OpenAiDeliveryCoachingProvider(openai_api_key(),openai_model_name()),
+        new \YuvaClub\Delivery\DeliveryMetricsCalculator(),new \YuvaClub\Delivery\DeliveryPromptCatalog(),new \YuvaClub\Delivery\DeliveryReviewValidator()
+    );
 }
 
 function ai_review_repository(): \YuvaClub\AI\AiReviewStore {
