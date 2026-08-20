@@ -36,7 +36,7 @@ assert.ok(topicNames.length > 100, 'Topic page inventory is unexpectedly incompl
 for (const name of publicPages) {
   const source = await readFile(new URL(name, root), 'utf8');
   const appVersion = ['index.html', 'programs.html', 'partners.html', 'contact.html'].includes(name)
-    ? 'demo-request-v1'
+    ? 'demo-request-v2'
     : releaseVersion;
   auditedSources.push([name, source]);
   assert.ok(source.includes(`assets/site.css?v=${releaseVersion}`), `${name} lacks current base CSS`);
