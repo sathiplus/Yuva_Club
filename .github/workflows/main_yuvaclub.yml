@@ -132,6 +132,7 @@ jobs:
           php -l tests/backend/filesystem-student-approval-test.php
           php -l tests/backend/admin-registration-approval-test.php
           php -l tests/backend/registration-validation-test.php
+          php -l tests/backend/student-password-policy-test.php
           php -l tests/backend/ai-mentor-media-consent-test.php
           php -l tests/backend/ai-mentor-media-retention-test.php
           php tests/backend/authentication-service-test.php
@@ -144,6 +145,7 @@ jobs:
             --log-directory "$RUNNER_TEMP/filesystem-student-approval"
           php tests/backend/admin-registration-approval-test.php
           php tests/backend/registration-validation-test.php
+          php tests/backend/student-password-policy-test.php
           php tests/backend/staging-readiness-test.php
           php tests/backend/research-submission-foundation-test.php
           php tests/backend/ai-mentor-foundation-test.php
@@ -155,6 +157,7 @@ jobs:
           php tests/backend/ai-mentor-media-retention-test.php
           php tests/migrations/migration-framework-test.php
           node tests/frontend/public-site-contract-test.mjs
+          node tests/frontend/password-visibility-contract-test.mjs
           node tests/frontend/student-experience-contract-test.mjs
           node tests/frontend/parent-experience-contract-test.mjs
           node tests/frontend/master-admin-contract-test.mjs

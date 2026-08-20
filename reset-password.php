@@ -14,7 +14,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $password = (string) ($_POST['password'] ?? '');
     $confirmPassword = (string) ($_POST['confirm_password'] ?? '');
-    $policyError = password_policy_error($password);
+    $policyError = $accountType === 'student'
+        ? student_password_policy_error($password)
+        : password_policy_error($password);
 
     if ($record === null) {
         redirect_to('reset-password.php?status=invalid');
@@ -38,7 +40,7 @@ portal_header('Reset Password', false, ['assets/public-site.css?v=release-1.0.2-
       <div class="section-head">
         <p class="eyebrow">Account Security</p>
         <h1>Create New Password</h1>
-        <p>Use at least 12 characters with uppercase, lowercase, number, and special character.</p>
+        <p>Use at least <?php echo $accountType === 'student' ? '8' : '12'; ?> characters with uppercase, lowercase, number, and special character.</p>
       </div>
 
       <?php if ($status === 'invalid' || $record === null): ?>
@@ -55,11 +57,11 @@ portal_header('Reset Password', false, ['assets/public-site.css?v=release-1.0.2-
           <input type="hidden" name="token" value="<?php echo e($token); ?>">
           <div class="field">
             <label for="password">New Password *</label>
-            <input id="password" name="password" type="password" required autocomplete="new-password">
+            <input id="password" name="password" type="password" minlength="<?php echo $accountType === 'student' ? '8' : '12'; ?>" required autocomplete="new-password">
           </div>
           <div class="field">
             <label for="confirm_password">Confirm New Password *</label>
-            <input id="confirm_password" name="confirm_password" type="password" required autocomplete="new-password">
+            <input id="confirm_password" name="confirm_password" type="password" minlength="<?php echo $accountType === 'student' ? '8' : '12'; ?>" required autocomplete="new-password">
           </div>
           <button class="button primary" type="submit">Update Password</button>
         </form>

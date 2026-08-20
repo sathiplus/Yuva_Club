@@ -157,7 +157,7 @@ $studentPhone = clean_text($_POST['student_phone'] ?? '');
 $whatsappContact = clean_text($_POST['whatsapp_contact'] ?? '');
 $accountPassword = (string) ($_POST['account_password'] ?? '');
 $accountPasswordConfirm = (string) ($_POST['account_password_confirm'] ?? '');
-$passwordError = password_policy_error($accountPassword);
+$passwordError = student_password_policy_error($accountPassword);
 
 if ($passwordError !== '' || !hash_equals($accountPassword, $accountPasswordConfirm)) {
     registration_flash_store($_POST, $passwordError !== '' ? 'weak-password' : 'password-mismatch');

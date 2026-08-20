@@ -856,11 +856,17 @@ function password_reset_token_record(string $token): ?array {
 
 function complete_password_reset(string $token, string $password): bool {
     $record = password_reset_token_record($token);
-    if ($record === null || password_policy_error($password) !== '') {
+    if ($record === null) {
         return false;
     }
 
     $accountType = (string) ($record['account_type'] ?? '');
+    $passwordError = $accountType === 'student'
+        ? student_password_policy_error($password)
+        : password_policy_error($password);
+    if ($passwordError !== '') {
+        return false;
+    }
     $accountIdentifier = (string) ($record['account_key'] ?? '');
     $email = normalize_email((string) ($record['email'] ?? ''));
     $ok = false;
@@ -1806,6 +1812,25 @@ function password_policy_error(string $password): string {
     return '';
 }
 
+function student_password_policy_error(string $password): string {
+    if (strlen($password) < 8) {
+        return 'Password must be at least 8 characters.';
+    }
+    if (!preg_match('/[A-Z]/', $password)) {
+        return 'Password must include an uppercase letter.';
+    }
+    if (!preg_match('/[a-z]/', $password)) {
+        return 'Password must include a lowercase letter.';
+    }
+    if (!preg_match('/[0-9]/', $password)) {
+        return 'Password must include a number.';
+    }
+    if (!preg_match('/[^A-Za-z0-9]/', $password)) {
+        return 'Password must include a special character.';
+    }
+    return '';
+}
+
 function normalize_login_identifier(string $value): string {
     $value = clean_text($value);
     if (str_contains($value, '@')) {
@@ -1824,7 +1849,7 @@ function write_student_accounts(array $accounts): void {
 
 function create_student_account(string $yuvaId, string $studentEmail, string $parentEmail, string $password): void {
     $yuvaId = normalize_yuva_id($yuvaId);
-    if ($yuvaId === '' || password_policy_error($password) !== '') {
+    if ($yuvaId === '' || student_password_policy_error($password) !== '') {
         return;
     }
 

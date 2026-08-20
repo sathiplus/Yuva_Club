@@ -301,11 +301,11 @@ portal_header('Master Admin', false, ['assets/master-admin.css?v=1']);
         </div>
         <div class="field">
           <label for="new_password">New Password *</label>
-          <input id="new_password" name="new_password" type="password" required minlength="8">
+          <input id="new_password" name="new_password" type="password" required minlength="12">
         </div>
         <div class="field">
           <label for="confirm_password">Confirm New Password *</label>
-          <input id="confirm_password" name="confirm_password" type="password" required minlength="8">
+          <input id="confirm_password" name="confirm_password" type="password" required minlength="12">
         </div>
       </div>
       <button class="button primary" type="submit">Update Admin Login</button>

@@ -17,7 +17,7 @@ $validationMessages = [
     'missing-agreement' => 'Accept all three agreements before submitting the registration.',
     'persistence-failure' => 'We could not save the registration. Please try again or contact support.',
     'empty-generated-student-id' => 'We could not generate the student ID. Please try again or contact support.',
-    'weak-password' => 'Password must be at least 12 characters and include uppercase, lowercase, number, and special character.',
+    'weak-password' => 'Password must be at least 8 characters and include uppercase, lowercase, number, and special character.',
     'password-mismatch' => 'Password and confirmation must match.',
 ];
 $validationMessage = $validationMessages[$validationReason] ?? '';
@@ -173,13 +173,13 @@ $registrationFlashValues = is_array($registrationFlash['values'] ?? null) ? $reg
 
             <div class="field">
               <label for="account_password">Create Password *</label>
-              <input id="account_password" name="account_password" type="password" minlength="12" required autocomplete="new-password" aria-describedby="password_help">
-              <p class="form-note" id="password_help">Use at least 12 characters with uppercase, lowercase, number, and special character.</p>
+              <input id="account_password" name="account_password" type="password" minlength="8" required autocomplete="new-password" aria-describedby="password_help">
+              <p class="form-note" id="password_help">Use at least 8 characters with uppercase, lowercase, number, and special character.</p>
             </div>
 
             <div class="field">
               <label for="account_password_confirm">Confirm Password *</label>
-              <input id="account_password_confirm" name="account_password_confirm" type="password" minlength="12" required autocomplete="new-password">
+              <input id="account_password_confirm" name="account_password_confirm" type="password" minlength="8" required autocomplete="new-password">
             </div>
 
             <div class="field">

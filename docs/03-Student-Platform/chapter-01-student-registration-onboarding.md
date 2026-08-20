@@ -264,7 +264,7 @@ Required wireframes:
 | Field | Rule | Error Message |
 |---|---|---|
 | Email | Required, valid format, unique | Enter a valid email address that is not already registered. |
-| Password | 12+ characters, uppercase, lowercase, number, special character | Password must meet all security requirements. |
+| Password | 8+ characters, uppercase, lowercase, number, special character | Password must meet all security requirements. |
 | Join Code | Valid, active, not expired, organization allows joins | This join code is invalid or expired. |
 | Invitation Token | Valid, unexpired, not already consumed | This invitation link is no longer valid. |
 | Parent Email | Required for minor if consent threshold applies | Parent or guardian email is required. |
