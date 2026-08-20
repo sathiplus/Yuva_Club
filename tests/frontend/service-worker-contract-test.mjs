@@ -3,11 +3,13 @@ import { readFile } from 'node:fs/promises';
 
 const root = new URL('../../', import.meta.url);
 const sw = await readFile(new URL('service-worker.js', root), 'utf8');
+const app = await readFile(new URL('assets/app.js', root), 'utf8');
 
-assert.ok(sw.includes("const CACHE_NAME = 'yuva-club-release-1-0-2-v1'"), 'Cache name must be release-1.0.2 value');
+assert.ok(sw.includes("const CACHE_NAME = 'yuva-club-demo-request-v1'"), 'Cache name must invalidate pre-demo-request public pages');
+assert.ok(app.includes("serviceWorker.register('/service-worker.js?v=15')"), 'Service-worker registration must request the demo-request cache version');
 assert.ok(sw.includes('/assets/site.css?v=release-1.0.2-20260802'), 'service worker must precache versioned site.css');
 assert.ok(sw.includes('/assets/public-site.css?v=release-1.0.2-20260802'), 'service worker must precache versioned public-site.css');
-assert.ok(sw.includes('/assets/app.js?v=release-1.0.2-20260802'), 'service worker must precache versioned app.js');
+assert.ok(sw.includes('/assets/app.js?v=demo-request-v1'), 'service worker must precache the demo-request app.js version');
 assert.ok(!sw.includes('/assets/site.css?v=20260714-pwa-install-icon'), 'stale versioned site.css URL should be removed');
 assert.ok(!sw.includes('/assets/app.js?v=20260714-pwa-install-icon'), 'stale versioned app.js URL should be removed');
 assert.ok(!sw.includes('yuva-club-app-v14'), 'old cache name should be removed');

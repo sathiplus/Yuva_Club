@@ -1,4 +1,4 @@
-const CACHE_NAME = 'yuva-club-release-1-0-2-v1';
+const CACHE_NAME = 'yuva-club-demo-request-v1';
 const STATIC_ASSETS = [
   '/index.html',
   '/programs.html',
@@ -14,7 +14,7 @@ const STATIC_ASSETS = [
   '/manifest.webmanifest',
   '/assets/site.css?v=release-1.0.2-20260802',
   '/assets/public-site.css?v=release-1.0.2-20260802',
-  '/assets/app.js?v=release-1.0.2-20260802',
+  '/assets/app.js?v=demo-request-v1',
   '/assets/website-v3-hero.webp',
   '/assets/logo.png',
   '/assets/app-icon-180.png',
