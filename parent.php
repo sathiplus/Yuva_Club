@@ -19,6 +19,10 @@ $rank = approved_rank($record);
 $eligibleRank = rank_eligibility($record);
 $challengeStage = challenge_stage($record);
 $rubricScore = rubric_score($record);
+$mediaConsent = null;
+if(ai_mentor_feature_enabled('media_analysis_enabled')&&database_settings_present()&&db_is_sqlsrv()){
+    try{$mediaConsent=media_consent_service()->status($studentId);}catch(Throwable){$mediaConsent=null;}
+}
 
 portal_header('Parent Dashboard');
 ?>
@@ -67,6 +71,7 @@ portal_header('Parent Dashboard');
     <div class="parent-mentor-grid">
       <article class="parent-card parent-mentor-feature"><div class="parent-card-heading"><span class="parent-card-icon" aria-hidden="true"></span><div><p class="eyebrow">AI Mentor Review</p><h2>Approved growth guidance</h2></div></div><p class="parent-guidance-summary"><?php echo e($record['ai_feedback_summary'] ?? 'No AI feedback yet.'); ?></p><dl class="parent-detail-list"><div><dt>Communication Skills</dt><dd><?php echo e($record['communication_skills'] ?? 'Not recorded yet.'); ?></dd></div><div><dt>Leadership Milestones</dt><dd><?php echo e($record['leadership_milestones'] ?? 'Not recorded yet.'); ?></dd></div><div><dt>Score</dt><dd><?php echo e($record['score'] ?? 'Optional'); ?></dd></div></dl></article>
       <article class="parent-card"><div class="parent-card-heading"><span class="parent-card-icon" aria-hidden="true"></span><div><p class="eyebrow">People Supporting Growth</p><h2>Feedback</h2></div></div><div class="parent-feedback-list"><div><span>Teacher</span><p><?php echo e($record['teacher_feedback'] ?? 'No feedback yet.'); ?></p></div><div><span>Mentor</span><p><?php echo e($record['mentor_feedback'] ?? 'No mentor feedback yet.'); ?></p></div><div><span>Rank Status</span><p><?php echo e($record['rank_status'] ?? 'Approved'); ?></p></div></div></article>
+      <?php if(is_array($mediaConsent)&&!empty($mediaConsent['parent_required'])): ?><article class="parent-card"><p class="eyebrow">Media AI permission</p><h2>Presentation coaching recordings</h2><p>Your child may upload audio or video that YUVA Club sends to OpenAI for presentation coaching. Analysis may include a transcript, pace, pauses, filler words, clarity, emphasis, and sampled presentation observations where supported. AI can be wrong; an administrator controls feedback, and it is not an official academic grade. Please remind your child not to share unnecessary sensitive information.</p><p><strong>Status: <?php echo !empty($mediaConsent['parent_granted'])?'Granted':'Not granted'; ?></strong></p><form action="parent-media-consent.php" method="post"><?php echo csrf_field(); ?><input type="hidden" name="consent_version" value="<?php echo e((string)$mediaConsent['version']); ?>"><input type="hidden" name="action" value="<?php echo !empty($mediaConsent['parent_granted'])?'withdraw':'grant'; ?>"><button class="button <?php echo !empty($mediaConsent['parent_granted'])?'ghost':'primary'; ?>" type="submit"><?php echo !empty($mediaConsent['parent_granted'])?'Withdraw permission':'Allow media AI coaching'; ?></button></form></article><?php endif; ?>
     </div>
   </section>
 

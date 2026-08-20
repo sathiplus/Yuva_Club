@@ -55,8 +55,10 @@ for (const route of [
 ]) includes(parent, route, `${route} route`);
 includes(parent, 'parse_link_lines($hub[\'recordings\'])', 'recording link parser');
 includes(parent, 'rel="noopener"', 'external-link protection');
-assert.ok(!/<form\b|<input\b|<select\b|<textarea\b/i.test(parent), 'Parent redesign adds no forms or fields');
-pass('preserved routes and no new workflow surface');
+assert.equal((parent.match(/<form\b/g)||[]).length,1,'only the approved media-consent form is added');
+includes(parent,'action="parent-media-consent.php"','media consent route');
+assert.ok(!/<select\b|<textarea\b/i.test(parent),'parent consent adds no unrelated fields');
+pass('preserved routes and scoped media-consent workflow');
 
 for (const landmark of [
   'id="parent-main"',

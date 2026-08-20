@@ -94,6 +94,11 @@ $aiMentorSuggestedTokens = $aiMentorHasSuggestedTokens
 $aiMentorCoachMeEnabled = ai_mentor_feature_enabled('coach_me_enabled');
 $aiMentorMediaEnabled = ai_mentor_feature_enabled('media_analysis_enabled');
 $presentationMedia = read_json_file(presentation_media_file())[$studentId] ?? [];
+$presentationMediaActive = is_array($presentationMedia) && ($presentationMedia['retention_status'] ?? 'Active') === 'Active';
+$mediaConsent = ['ready'=>false,'student_granted'=>false,'parent_required'=>true,'parent_granted'=>false,'version'=>\YuvaClub\Delivery\MediaConsentService::VERSION];
+if ($aiMentorMediaEnabled && database_settings_present() && db_is_sqlsrv()) {
+    try { $mediaConsent = media_consent_service()->status($studentId); } catch (Throwable) { $mediaConsent['ready'] = false; }
+}
 $deliveryReview = [];
 if ($aiMentorMediaEnabled && database_settings_present() && db_is_sqlsrv()) {
     try { $deliveryReview = delivery_review_repository()->findLatest($studentId, true); } catch (Throwable) { $deliveryReview = []; }
@@ -572,12 +577,18 @@ portal_header('Student Dashboard', true);
       <?php if ($aiMentorMediaEnabled): ?>
       <form class="present-card-wide studio-card" action="portal-submit-media.php" method="post" enctype="multipart/form-data">
         <input type="hidden" name="csrf_token" value="<?php echo e(csrf_token()); ?>">
+        <input type="hidden" name="consent_version" value="<?php echo e((string)$mediaConsent['version']); ?>">
         <p class="eyebrow">Presentation Delivery Review</p><h2>Upload a short practice presentation</h2>
-        <p>MP4, WebM, MP3, WAV, or M4A. Maximum 25 MB and 5 minutes. Your review stays hidden until a YUVA Club administrator applies it.</p>
-        <label for="presentation_media">Practice recording</label><input id="presentation_media" name="presentation_media" type="file" accept=".mp4,.webm,.mp3,.wav,.m4a" required>
-        <label><input name="media_ai_acknowledgement" type="checkbox" value="yes" required> I understand this recording will be processed by YUVA Club’s AI service to provide presentation coaching.</label>
-        <?php if (!empty($presentationMedia['original_filename'])): ?><p>Current recording: <?php echo e((string)$presentationMedia['original_filename']); ?></p><?php endif; ?>
-        <button class="button primary" type="submit">Submit Practice Recording</button>
+        <p><strong>AI processing is enabled for this tool.</strong> Your recording is sent to OpenAI to create presentation coaching. Where supported, this may include transcription, pace, pauses, filler words, clarity, emphasis, and sampled presentation observations. AI can make mistakes. A YUVA Club administrator controls what feedback you see, and this review does not determine an official academic grade. Avoid including sensitive personal information you do not need to share.</p>
+        <p>MP4, WebM, MP3, WAV, or M4A. Maximum 25 MB and 5 minutes. YUVA Club's automatic media deletion schedule is <?php echo media_retention_days()===null?'not yet enabled':e((string)media_retention_days()).' days'; ?>.</p>
+        <?php if (!empty($mediaConsent['parent_required']) && empty($mediaConsent['parent_granted'])): ?>
+          <p role="status"><strong>Parent/guardian permission is required.</strong> Ask your linked parent or guardian to approve media AI coaching in their dashboard before you upload.</p>
+        <?php else: ?>
+          <label for="presentation_media">Practice recording</label><input id="presentation_media" name="presentation_media" type="file" accept=".mp4,.webm,.mp3,.wav,.m4a" required>
+          <label><input name="media_ai_acknowledgement" type="checkbox" value="yes" required> I understand that this recording will be processed by YUVA Club's AI service to provide presentation coaching.</label>
+          <button class="button primary" type="submit">Submit Practice Recording</button>
+        <?php endif; ?>
+        <?php if ($presentationMediaActive && !empty($presentationMedia['original_filename'])): ?><p>Current recording: <?php echo e((string)$presentationMedia['original_filename']); ?> · Analysis status: <?php echo e((string)($presentationMedia['status']??'Pending')); ?></p><button class="button ghost" type="submit" formmethod="post" formaction="portal-delete-media.php" formnovalidate>Delete recording</button><p>Deleting removes the uploaded recording. Contact support to request deletion of retained transcripts or applied program records.</p><?php endif; ?>
       </form>
       <?php endif; ?>
       <div class="present-future-grid present-card-wide">

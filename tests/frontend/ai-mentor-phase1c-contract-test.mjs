@@ -7,6 +7,8 @@ const config=read('backend/config.php');
 const admin=read('admin.php');
 const apply=read('admin-delivery-apply.php');
 const sqlRepo=read('backend/delivery/SqlDeliveryReviewRepository.php');
+const consentRoute=read('parent-media-consent.php');
+const deleteRoute=read('portal-delete-media.php');
 for(const token of ['Presentation Delivery Review','media_ai_acknowledgement','.mp4,.webm,.mp3,.wav,.m4a','Maximum 25 MB and 5 minutes']) assert.ok(portal.includes(token),token);
 for(const token of ["ai_mentor_feature_enabled('media_analysis_enabled')",'is_uploaded_file(','move_uploaded_file(','realpath(','hash_file(\'sha256\'','basename(']) assert.ok(upload.includes(token),token);
 assert.match(config,/AI_MENTOR_MEDIA_ANALYSIS_ENABLED[\s\S]*false/);
@@ -18,4 +20,9 @@ assert.ok(sqlRepo.includes("source_type=N'ai_mentor_delivery_review'"),'delivery
 assert.ok(sqlRepo.includes("'SERIALIZABLE'"),'delivery apply is transactional');
 assert.ok(sqlRepo.includes("return'already-applied'"),'duplicate apply is idempotent');
 assert.ok(apply.includes('sourceRevisionHash'),'apply recalculates source revision');
+for(const token of ['OpenAI','AI can make mistakes','does not determine an official academic grade','media_ai_acknowledgement','consent_version']) assert.ok(portal.includes(token),token);
+assert.ok(upload.indexOf('acknowledgeStudent')<upload.indexOf('$_FILES'),'consent precedes media access');
+assert.ok(consentRoute.includes('require_parent_student()'),'parent consent preserves linked-child authorization');
+assert.ok(deleteRoute.includes("$records[$studentId]['retention_status']='StudentDeleted'"),'delete is scoped to current student with a durable tombstone');
+assert.ok(config.includes('YUVA_MEDIA_RETENTION_DAYS'),'retention is configurable');
 console.log('PASS Phase 1C upload, consent, feature gate, and model configuration contracts');

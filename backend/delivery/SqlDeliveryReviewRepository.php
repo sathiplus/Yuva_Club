@@ -53,6 +53,13 @@ final class SqlDeliveryReviewRepository
         },'SERIALIZABLE',true);
     }
 
+    public function markUnappliedStale(string $yuvaId,string $reason): int
+    {
+        $q=$this->pdo->prepare("UPDATE dbo.ai_mentor_delivery_reviews SET status=N'Stale',error_code=:reason,updated_at=SYSUTCDATETIME() WHERE yuva_id=:yuva_id AND status IN(N'Processing',N'Draft')");
+        $q->execute(['reason'=>$reason,'yuva_id'=>$yuvaId]);
+        return $q->rowCount();
+    }
+
     private function hydrate(array $row): array
     {
         $generated=json_decode((string)($row['generated_coaching_result']??''),true);$edited=json_decode((string)($row['admin_edited_result']??''),true);

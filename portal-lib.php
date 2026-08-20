@@ -41,6 +41,11 @@ require_once __DIR__ . '/backend/delivery/OpenAiDeliveryCoachingProvider.php';
 require_once __DIR__ . '/backend/delivery/DeliveryReviewService.php';
 require_once __DIR__ . '/backend/delivery/SqlDeliveryReviewRepository.php';
 require_once __DIR__ . '/backend/delivery/PresentationMediaResolver.php';
+require_once __DIR__ . '/backend/delivery/MediaConsentStore.php';
+require_once __DIR__ . '/backend/delivery/MediaConsentService.php';
+require_once __DIR__ . '/backend/delivery/SqlMediaConsentRepository.php';
+require_once __DIR__ . '/backend/delivery/PresentationMediaManager.php';
+require_once __DIR__ . '/backend/delivery/MediaRetentionService.php';
 
 $configuredAppUrl = app_url();
 $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
@@ -2980,6 +2985,46 @@ function delivery_review_repository(): \YuvaClub\Delivery\SqlDeliveryReviewRepos
 
 function presentation_media_resolver(): \YuvaClub\Delivery\PresentationMediaResolver {
     return new \YuvaClub\Delivery\PresentationMediaResolver(portal_path('portal-uploads'));
+}
+
+function media_consent_service(): \YuvaClub\Delivery\MediaConsentService {
+    if(!database_settings_present()||!db_is_sqlsrv()) throw new RuntimeException('Media consent requires Azure SQL.');
+    return new \YuvaClub\Delivery\MediaConsentService(new \YuvaClub\Delivery\SqlMediaConsentRepository(db()));
+}
+
+function presentation_media_manager(): \YuvaClub\Delivery\PresentationMediaManager {
+    return new \YuvaClub\Delivery\PresentationMediaManager(portal_path('portal-uploads'));
+}
+
+function media_retention_days(): ?int {
+    $days=app_config()['features']['ai_mentor']['media_retention_days']??null;
+    return is_int($days)&&$days>0?$days:null;
+}
+
+function media_retention_service(): \YuvaClub\Delivery\MediaRetentionService {
+    return new \YuvaClub\Delivery\MediaRetentionService(
+        presentation_media_file(),
+        portal_path('portal-uploads'),
+        static function(string $yuvaId): bool {
+            if (!database_settings_present() || !db_is_sqlsrv()) return false;
+            $q=db()->prepare('SELECT COUNT(*) FROM dbo.students WHERE yuva_id=:yuva_id');
+            $q->execute(['yuva_id'=>$yuvaId]);
+            return (int)$q->fetchColumn()===1;
+        },
+        static function(string $yuvaId,string $reference): bool {
+            if (!database_settings_present() || !db_is_sqlsrv()) return true;
+            $q=db()->prepare("SELECT COUNT(*) FROM dbo.ai_mentor_delivery_reviews WHERE yuva_id=:yuva_id AND media_reference=:reference AND status=N'Processing'");
+            $q->execute(['yuva_id'=>$yuvaId,'reference'=>$reference]);
+            return (int)$q->fetchColumn()>0;
+        },
+        static function(array $item): void {
+            audit_log_event(null,'System',null,'system.presentation_media.retention','student',(string)($item['yuva_id']??''),($item['result']??'')==='deleted',[
+                'run_id'=>(string)($item['run_id']??''),'media_reference'=>(string)($item['media_reference']??''),'sha256'=>(string)($item['sha256']??''),
+                'uploaded_at'=>(string)($item['uploaded_at']??''),'retention_age_days'=>(int)($item['retention_age_days']??0),
+                'deleted_at'=>(string)($item['deleted_at']??''),'result'=>(string)($item['result']??''),'failure_category'=>(string)($item['failure_category']??''),
+            ]);
+        }
+    );
 }
 
 function delivery_review_service(): \YuvaClub\Delivery\DeliveryReviewService {

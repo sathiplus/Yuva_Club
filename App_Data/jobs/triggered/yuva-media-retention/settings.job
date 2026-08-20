@@ -1,0 +1,6 @@
+{
+  "schedule": "0 15 3 * * *",
+  "is_singleton": true,
+  "stopping_wait_time": 60,
+  "shutdownGraceTimeLimit": 300
+}
