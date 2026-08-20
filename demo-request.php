@@ -33,7 +33,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $adminSent = send_yuva_email(demo_request_notification_email(),
                 'New YUVA Club Demo Request: ' . $requestId, $adminMessage, $values['email']);
             $confirmationSent = send_yuva_email($values['email'], 'We received your YUVA Club demo request',
-                "Hello {$values['contact_name']},\n\nThank you for your interest in bringing YUVA Club to {$values['organization_name']}. We received your request ({$requestId}) and will follow up using your preferred contact details.\n\nNo organization account or access has been created.\n\nYUVA Club");
+                "Hello {$values['contact_name']},\n\nThank you for your interest in bringing YUVA Club to {$values['organization_name']}. We received your request ({$requestId}) and will review the submitted information.\n\nNo organization account or access has been created. If the request is approved, you will receive a separate secure invitation to activate the Organization Admin account and create your password.\n\nYUVA Club");
             if (!$adminSent || !$confirmationSent) {
                 error_log('YUVA demo request email delivery incomplete for request ' . $requestId);
             }
@@ -52,9 +52,9 @@ portal_header('Request a School or Organization Demo', false, [
 ?>
 <a class="public-skip-link" href="#main-content">Skip to main content</a>
 <main id="main-content"><section class="band demo-request-page"><div class="form-shell">
-  <div class="section-head"><p class="eyebrow">Schools and Organizations</p><h1>Request a YUVA Club Demo</h1><p>Tell us about your students and goals. This request begins a conversation only—it does not create an account or provide organization access.</p></div>
+  <div class="section-head"><p class="eyebrow">Schools and Organizations</p><h1>Request a YUVA Club Demo</h1><p>Tell us about your students and goals. A request does not create an account or provide access. Master Admin review and approval are required first.</p></div>
   <?php if ($status === 'success'): ?>
-    <div class="form-status success" role="status"><h2>Thank you. Your request was received.</h2><p>We sent a confirmation to the email provided and will follow up soon.</p><?php if (!empty($_GET['reference'])): ?><p>Reference: <strong><?php echo e(clean_text((string) $_GET['reference'])); ?></strong></p><?php endif; ?></div>
+    <div class="form-status success" role="status"><h2>Thank you. Your request was received.</h2><p>We sent a confirmation to the email provided. YUVA Club will review the request; if approved, the organization contact will receive a separate secure account-activation invitation.</p><?php if (!empty($_GET['reference'])): ?><p>Reference: <strong><?php echo e(clean_text((string) $_GET['reference'])); ?></strong></p><?php endif; ?></div>
   <?php else: ?>
     <?php if ($error !== ''): ?><div class="form-status error" role="alert"><?php echo e($error); ?></div><?php endif; ?>
     <form class="form-card demo-request-form" method="post" action="demo-request.php">
