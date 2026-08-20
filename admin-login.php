@@ -29,7 +29,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     redirect_to('admin-login.php?status=error');
 }
 
-portal_header('Admin Login', false, ['assets/public-site.css?v=release-1.0.2-20260802'], true);
+portal_header('Admin Login', false, [
+    'assets/public-site.css?v=release-1.0.2-20260802',
+    'assets/password-visibility.css?v=auth-ux-20260820',
+], true);
 ?>
 <a class="public-skip-link" href="#main-content">Skip to main content</a>
 <main id="main-content">
@@ -57,7 +60,12 @@ portal_header('Admin Login', false, ['assets/public-site.css?v=release-1.0.2-202
         </div>
         <div class="field">
           <label for="password">Password *</label>
-          <input id="password" name="password" type="password" required>
+          <div class="password-input-wrap">
+            <input id="password" name="password" type="password" required autocomplete="current-password">
+            <button class="password-toggle" type="button" data-password-toggle="password" aria-controls="password" aria-label="Show password" aria-pressed="false">
+              <svg class="password-toggle-icon" width="20" height="20" aria-hidden="true" viewBox="0 0 24 24" focusable="false"><path d="M2.2 12s3.4-6 9.8-6 9.8 6 9.8 6-3.4 6-9.8 6-9.8-6-9.8-6Zm9.8 3.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"/></svg>
+            </button>
+          </div>
         </div>
         <button class="button primary" type="submit">Log In</button>
         <p><a href="forgot-password.php?account=admin">Forgot password?</a></p>
@@ -65,4 +73,5 @@ portal_header('Admin Login', false, ['assets/public-site.css?v=release-1.0.2-202
     </div>
   </section>
 </main>
+<script src="assets/password-visibility.js" defer></script>
 <?php portal_footer(false, true); ?>

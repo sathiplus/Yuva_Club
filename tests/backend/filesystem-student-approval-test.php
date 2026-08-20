@@ -113,7 +113,7 @@ fputcsv($handle, array_map(
 ));
 fclose($handle);
 
-$studentPassword = 'CorrectPass!2026';
+$studentPassword = 'Ab1!xyza';
 create_student_account(
     $studentId,
     (string) $student['Student Email'],
@@ -127,6 +127,44 @@ filesystem_approval_assert(
     && !hash_equals($studentPassword, $createdHash)
     && password_verify($studentPassword, $createdHash),
     'Registration-created student credentials must be stored only as a usable password hash.'
+);
+
+$resetTokenId = str_repeat('a', 32);
+$resetSecret = str_repeat('b', 64);
+$resetToken = $resetTokenId . '.' . $resetSecret;
+write_password_reset_tokens([
+    $resetTokenId => [
+        'token_hash' => hash('sha256', $resetSecret),
+        'account_type' => 'student',
+        'account_key' => $studentId,
+        'email' => (string) $student['Student Email'],
+        'role' => YUVA_ROLE_STUDENT,
+        'created_at' => gmdate('c'),
+        'expires_at' => gmdate('c', time() + 3600),
+        'used_at' => null,
+    ],
+]);
+filesystem_approval_assert(
+    !complete_password_reset($resetToken, 'Ab1!xyz'),
+    'Student password reset must reject a seven-character password.'
+);
+filesystem_approval_assert(
+    password_reset_token_record($resetToken) !== null,
+    'A rejected student password reset must not consume the token.'
+);
+$studentPassword = 'Cd2@wxyz';
+filesystem_approval_assert(
+    complete_password_reset($resetToken, $studentPassword),
+    'Student password reset must accept an eight-character complex password.'
+);
+$resetAccount = find_student_account_by_identifier((string) $student['Student Email']);
+$resetHash = (string) ($resetAccount['password_hash'] ?? '');
+filesystem_approval_assert(
+    $resetHash !== ''
+    && !hash_equals($studentPassword, $resetHash)
+    && password_verify($studentPassword, $resetHash)
+    && password_reset_token_record($resetToken) === null,
+    'Student reset must store only the new password hash and consume the token once.'
 );
 
 write_json_file(portal_records_file(), []);
