@@ -1,0 +1,8 @@
+.demo-request-page { background: linear-gradient(180deg, #edf4ff 0%, #fff 100%); }
+.demo-request-page .form-shell { max-width: 960px; }
+.demo-request-form { display: grid; gap: 1.1rem; }
+.demo-request-form .two-column { align-items: start; }
+.demo-request-form textarea { resize: vertical; }
+.demo-honeypot { position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
+.demo-request-page .form-status h2 { margin-top: 0; }
+@media (max-width: 720px) { .demo-request-form .two-column { grid-template-columns: 1fr; } }

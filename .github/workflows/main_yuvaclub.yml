@@ -133,6 +133,7 @@ jobs:
           php -l tests/backend/admin-registration-approval-test.php
           php -l tests/backend/registration-validation-test.php
           php -l tests/backend/student-password-policy-test.php
+          php -l tests/backend/demo-request-workflow-test.php
           php -l tests/backend/ai-mentor-media-consent-test.php
           php -l tests/backend/ai-mentor-media-retention-test.php
           php tests/backend/authentication-service-test.php
@@ -146,6 +147,10 @@ jobs:
           php tests/backend/admin-registration-approval-test.php
           php tests/backend/registration-validation-test.php
           php tests/backend/student-password-policy-test.php
+          python3 tools/run-isolated-validation.py \
+            --source . \
+            --suite tests/backend/demo-request-workflow-test.php \
+            --log-directory "$RUNNER_TEMP/demo-request-workflow"
           php tests/backend/staging-readiness-test.php
           php tests/backend/research-submission-foundation-test.php
           php tests/backend/ai-mentor-foundation-test.php
@@ -158,6 +163,7 @@ jobs:
           php tests/migrations/migration-framework-test.php
           node tests/frontend/public-site-contract-test.mjs
           node tests/frontend/password-visibility-contract-test.mjs
+          node tests/frontend/demo-request-contract-test.mjs
           node tests/frontend/student-experience-contract-test.mjs
           node tests/frontend/parent-experience-contract-test.mjs
           node tests/frontend/master-admin-contract-test.mjs

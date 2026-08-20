@@ -181,6 +181,78 @@ function login_attempts_file(): string {
     return portal_path('portal-data') . DIRECTORY_SEPARATOR . 'login-attempts.json';
 }
 
+function demo_requests_file(): string {
+    return portal_path('portal-data') . DIRECTORY_SEPARATOR . 'organization-demo-requests.jsonl';
+}
+
+function demo_request_attempts_file(): string {
+    return portal_path('portal-data') . DIRECTORY_SEPARATOR . 'organization-demo-attempts.json';
+}
+
+function demo_request_notification_email(): string {
+    $configured = normalize_email((string) (getenv('YUVA_DEMO_NOTIFICATION_EMAIL') ?: ''));
+    return filter_var($configured, FILTER_VALIDATE_EMAIL) ? $configured : yuva_email_reply_to_address();
+}
+
+/** @return array<string, string> */
+function demo_request_values(array $source): array {
+    $fields = ['organization_name', 'organization_type', 'contact_name', 'email', 'phone',
+        'city_state', 'student_count', 'student_age_range', 'program_interest',
+        'preferred_contact_time', 'message'];
+    $values = [];
+    foreach ($fields as $field) {
+        $values[$field] = clean_text(is_scalar($source[$field] ?? null) ? (string) $source[$field] : '');
+    }
+    $values['email'] = normalize_email($values['email']);
+    return $values;
+}
+
+function demo_request_validation_error(array $values): string {
+    foreach (['organization_name', 'organization_type', 'contact_name', 'email', 'city_state',
+        'student_count', 'student_age_range', 'program_interest', 'preferred_contact_time'] as $required) {
+        if (trim((string) ($values[$required] ?? '')) === '') {
+            return 'Please complete every required field.';
+        }
+    }
+    if (!filter_var((string) ($values['email'] ?? ''), FILTER_VALIDATE_EMAIL)) {
+        return 'Enter a valid email address.';
+    }
+    foreach ($values as $value) {
+        if (strlen((string) $value) > 2000) {
+            return 'One or more responses are too long.';
+        }
+    }
+    return '';
+}
+
+function demo_request_rate_limited(string $networkCategory, int $now = 0): bool {
+    $now = $now > 0 ? $now : time();
+    $key = hash('sha256', $networkCategory);
+    $attempts = read_json_file(demo_request_attempts_file(), []);
+    $recent = array_values(array_filter(is_array($attempts[$key] ?? null) ? $attempts[$key] : [],
+        static fn($timestamp): bool => is_int($timestamp) && $timestamp >= ($now - 3600)));
+    if (count($recent) >= 5) {
+        return true;
+    }
+    $recent[] = $now;
+    $attempts[$key] = $recent;
+    write_json_file(demo_request_attempts_file(), $attempts);
+    return false;
+}
+
+/** @param array<string, string> $values */
+function persist_demo_request(array $values, string $networkCategory): string {
+    ensure_portal_dirs();
+    $requestId = 'DEMO-' . strtoupper(bin2hex(random_bytes(6)));
+    $record = $values + ['request_id' => $requestId, 'submitted_at' => gmdate('c'),
+        'network_hash' => hash('sha256', $networkCategory), 'status' => 'new'];
+    $encoded = json_encode($record, JSON_UNESCAPED_SLASHES);
+    if ($encoded === false || file_put_contents(demo_requests_file(), $encoded . "\n", FILE_APPEND | LOCK_EX) === false) {
+        throw new RuntimeException('Unable to persist demo request.');
+    }
+    return $requestId;
+}
+
 function safety_reports_file(): string {
     return portal_path('portal-data') . DIRECTORY_SEPARATOR . 'safety-reports.json';
 }
