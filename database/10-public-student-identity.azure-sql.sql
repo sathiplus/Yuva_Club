@@ -12,7 +12,7 @@ IF COL_LENGTH(N'dbo.students', N'handle_changed_at') IS NULL
     ALTER TABLE dbo.students ADD handle_changed_at DATETIME2(3) NULL;
 
 IF NOT EXISTS(SELECT 1 FROM sys.indexes WHERE object_id=OBJECT_ID(N'dbo.students') AND name=N'ux_students_public_handle_normalized')
-    CREATE UNIQUE INDEX ux_students_public_handle_normalized ON dbo.students(public_handle_normalized) WHERE public_handle_normalized IS NOT NULL;
+    EXEC(N'CREATE UNIQUE INDEX ux_students_public_handle_normalized ON dbo.students(public_handle_normalized) WHERE public_handle_normalized IS NOT NULL');
 
 IF OBJECT_ID(N'dbo.student_public_identity_history', N'U') IS NULL
 BEGIN
