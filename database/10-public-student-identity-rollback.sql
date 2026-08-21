@@ -1,0 +1,11 @@
+SET NOCOUNT ON;
+SET XACT_ABORT ON;
+BEGIN TRANSACTION;
+IF OBJECT_ID(N'dbo.student_public_identity_history',N'U') IS NOT NULL DROP TABLE dbo.student_public_identity_history;
+IF EXISTS(SELECT 1 FROM sys.indexes WHERE object_id=OBJECT_ID(N'dbo.students') AND name=N'ux_students_public_handle_normalized') DROP INDEX ux_students_public_handle_normalized ON dbo.students;
+IF OBJECT_ID(N'dbo.df_students_avatar_code',N'D') IS NOT NULL ALTER TABLE dbo.students DROP CONSTRAINT df_students_avatar_code;
+IF COL_LENGTH(N'dbo.students',N'handle_changed_at') IS NOT NULL ALTER TABLE dbo.students DROP COLUMN handle_changed_at;
+IF COL_LENGTH(N'dbo.students',N'avatar_code') IS NOT NULL ALTER TABLE dbo.students DROP COLUMN avatar_code;
+IF COL_LENGTH(N'dbo.students',N'public_handle_normalized') IS NOT NULL ALTER TABLE dbo.students DROP COLUMN public_handle_normalized;
+IF COL_LENGTH(N'dbo.students',N'public_handle') IS NOT NULL ALTER TABLE dbo.students DROP COLUMN public_handle;
+COMMIT TRANSACTION;

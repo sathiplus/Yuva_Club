@@ -801,6 +801,17 @@ body.student-app {
   }
 }
 
+/* Privacy-safe public student identity */
+.student-app .profile-public-identity { margin: 28px 0; padding: 26px; border: 1px solid #cad9f6; border-radius: 26px; background: linear-gradient(135deg,#fff 0%,#edf4ff 70%,#fff7e8 100%); box-shadow: 0 18px 42px rgba(18,53,112,.1); }
+.student-app .identity-editor-grid { display:grid; grid-template-columns:minmax(220px,.7fr) minmax(0,1.8fr); gap:24px; align-items:start; }
+.student-app .identity-preview { display:grid; justify-items:center; gap:7px; padding:25px; border-radius:22px; color:#fff; text-align:center; background:linear-gradient(145deg,#061a3a,#123d82); }
+.student-app .identity-preview-avatar { display:grid; place-items:center; width:96px; height:96px; border:4px solid #ff9f1c; border-radius:50%; background:#fff; font-size:52px; }
+.student-app .identity-preview strong { font-size:24px; overflow-wrap:anywhere; }.student-app .identity-preview small { color:#b9cdf1;font-weight:800; }.student-app .identity-preview p { margin:4px 0 0;color:#dbe7ff;font-size:13px; }
+.student-app .identity-form { display:grid;gap:18px; }.student-app .identity-form .field { display:grid;gap:7px; }.student-app .identity-form input[type=text] { min-height:48px;padding:10px 13px;border:1px solid #b9c9e5;border-radius:13px;font:inherit; }.student-app .identity-form small { color:#5c6e8e; }
+.student-app .avatar-picker { margin:0;padding:0;border:0; }.student-app .avatar-picker legend { margin-bottom:10px;color:#142044;font-weight:900; }.student-app .avatar-options { display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px; }
+.student-app .avatar-options label { position:relative;display:grid;justify-items:center;gap:3px;padding:10px 5px;border:2px solid transparent;border-radius:14px;background:#fff;cursor:pointer;box-shadow:0 4px 12px rgba(18,53,112,.08); }.student-app .avatar-options label:has(input:checked){border-color:#2563eb;background:#eaf1ff}.student-app .avatar-options input{position:absolute;opacity:0}.student-app .avatar-options span{font-size:29px}.student-app .avatar-options small{font-size:11px;text-align:center}.student-app .identity-permanent-note{margin:0;padding:12px;border-radius:12px;background:#e5edff;color:#173b7a}.student-app .identity-error{border-color:#f3b0b0;background:#fff0f0;color:#8c1c1c}
+@media(max-width:760px){.student-app .profile-public-identity{padding:18px}.student-app .identity-editor-grid{grid-template-columns:1fr}.student-app .avatar-options{grid-template-columns:repeat(3,minmax(0,1fr))}}
+
 /* YUVA Club Version 2 — Phase 1 design foundation.
    These semantic tokens and components intentionally coexist with the
    Version 1 aliases until later screens receive separate approval. */

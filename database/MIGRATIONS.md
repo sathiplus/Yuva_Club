@@ -140,6 +140,19 @@ This dual safeguard is not authorization to run production migrations. A
 production migration still requires an approved release, backup, compatibility
 review, staging evidence, and rollback plan.
 
+## Migration 10: public student identity
+
+`10-public-student-identity.azure-sql.sql` adds optional, case-normalized public
+handles, a stable preset-avatar code, a handle-change timestamp, a filtered
+platform-wide uniqueness index, and a narrowly scoped identity-change audit
+table. It does not change permanent YUVA IDs or expose private student fields.
+The rollback removes identity history and the new student columns and is for
+isolated rehearsal only because it destroys saved public identity choices.
+
+The application enforces deterministic handle safety and the 30-day rename
+policy. SQL provides the final case-insensitive uniqueness boundary under the
+database's case-insensitive collation.
+
 ## Validation
 
 Run the filesystem-only test:

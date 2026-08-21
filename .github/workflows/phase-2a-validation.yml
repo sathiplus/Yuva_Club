@@ -48,3 +48,11 @@ jobs:
 
       - name: Phase 2A functional security checks
         run: php tests/phase-2a-functional-security-tests.php
+
+      - name: Public student identity security and policy checks
+        run: php tests/backend/public-student-identity-test.php
+
+      - name: Public student identity frontend contracts
+        run: |
+          node tests/frontend/public-student-identity-contract-test.mjs
+          node tests/frontend/student-profile-contract-test.mjs

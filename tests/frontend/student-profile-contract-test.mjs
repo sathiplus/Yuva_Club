@@ -34,7 +34,8 @@ for (const [needle, label] of [
 }
 
 for (const state of [
-  'Profile photo unavailable',
+  'Your YUVA Identity',
+  'Your YUVA ID is permanent',
   'Your profile is still taking shape.',
   'No school recorded.',
   'No goals recorded.',
@@ -59,7 +60,10 @@ assert.ok(
   'Existing password-help route is preserved'
 );
 assert.ok(profile.includes('href="portal-logout.php"'), 'Existing logout route is preserved');
-assert.ok(!/<form\b|<input\b|<textarea\b|<select\b/i.test(profile), 'Profile remains read-only');
+assert.equal((profile.match(/<form\b/g) || []).length, 1, 'Profile exposes only the scoped public identity form');
+assert.ok(profile.includes('action="student-public-identity.php"'), 'Profile identity form uses the authenticated update handler');
+assert.ok(profile.includes('csrf_field()'), 'Profile identity form includes CSRF protection');
+assert.ok(!/<textarea\b|<select\b|<input[^>]+type="file"/i.test(profile), 'Profile excludes unrelated or uploaded-photo editing');
 assert.ok(!profile.includes('Organization Code'), 'Internal organization code is not exposed');
 assert.ok(!profile.includes('<dt>Parent Email</dt>'), 'Parent email is not rendered');
 assert.ok(!profile.includes('<dt>Parent/Guardian Name</dt>'), 'Parent name is not rendered');

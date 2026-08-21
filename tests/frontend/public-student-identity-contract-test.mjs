@@ -1,0 +1,15 @@
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+const portal=fs.readFileSync(new URL('../../portal.php',import.meta.url),'utf8');
+const css=fs.readFileSync(new URL('../../assets/student-app.css',import.meta.url),'utf8');
+const parent=fs.readFileSync(new URL('../../parent.php',import.meta.url),'utf8');
+assert.match(portal,/Your YUVA Identity/);
+assert.match(portal,/Your YUVA ID is permanent/);
+assert.match(portal,/public_student_identity/);
+assert.match(portal,/avatar_code/);
+assert.match(portal,/csrf_field/);
+assert.doesNotMatch(portal,/name="(?:email|phone|date_of_birth|address)"[^>]*public/i);
+assert.match(parent,/public_student_identity/);
+assert.match(css,/identity-editor-grid/);
+assert.match(css,/@media\(max-width:760px\)/);
+console.log('Public student identity frontend contract: PASS');

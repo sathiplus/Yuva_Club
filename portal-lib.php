@@ -46,6 +46,11 @@ require_once __DIR__ . '/backend/delivery/MediaConsentService.php';
 require_once __DIR__ . '/backend/delivery/SqlMediaConsentRepository.php';
 require_once __DIR__ . '/backend/delivery/PresentationMediaManager.php';
 require_once __DIR__ . '/backend/delivery/MediaRetentionService.php';
+require_once __DIR__ . '/backend/identity/PublicIdentityStore.php';
+require_once __DIR__ . '/backend/identity/PublicIdentityValidator.php';
+require_once __DIR__ . '/backend/identity/PublicStudentIdentity.php';
+require_once __DIR__ . '/backend/identity/PublicIdentityService.php';
+require_once __DIR__ . '/backend/identity/SqlPublicIdentityRepository.php';
 
 $configuredAppUrl = app_url();
 $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
@@ -77,6 +82,25 @@ const YUVA_ADMIN_SESSION_TTL_SECONDS = 7200;
 
 function e(string $value): string {
     return htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
+}
+
+function public_identity_service(): \YuvaClub\Identity\PublicIdentityService {
+    return new \YuvaClub\Identity\PublicIdentityService(
+        new \YuvaClub\Identity\SqlPublicIdentityRepository(Database::connection())
+    );
+}
+
+function public_student_identity(array|string $student): array {
+    $yuvaId = is_array($student)
+        ? (string) ($student['yuva_id'] ?? $student['Yuva Club ID'] ?? '')
+        : $student;
+    $fallback = \YuvaClub\Identity\PublicStudentIdentity::view(['yuva_id' => $yuvaId]);
+    if ($yuvaId === '' || !database_settings_present() || !db_is_sqlsrv()) return $fallback;
+    try { return public_identity_service()->find($yuvaId); }
+    catch (Throwable $error) {
+        error_log('YUVA public identity lookup failed correlation=' . bin2hex(random_bytes(12)) . ' exception_type=' . get_class($error));
+        return $fallback;
+    }
 }
 
 function portal_path(string $name): string {
