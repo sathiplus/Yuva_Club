@@ -1,5 +1,5 @@
-const CACHE_NAME = 'yuva-club-release-1-0-2-v1';
-const STATIC_ASSETS = [
+const CACHE_NAME = 'yuva-club-demo-request-v2';
+const HTML_ASSETS = [
   '/index.html',
   '/programs.html',
   '/resources.html',
@@ -11,10 +11,12 @@ const STATIC_ASSETS = [
   '/terms.html',
   '/contact.html',
   '/offline.html',
+];
+const STATIC_ASSETS = [
   '/manifest.webmanifest',
   '/assets/site.css?v=release-1.0.2-20260802',
   '/assets/public-site.css?v=release-1.0.2-20260802',
-  '/assets/app.js?v=release-1.0.2-20260802',
+  '/assets/app.js?v=demo-request-v2',
   '/assets/website-v3-hero.webp',
   '/assets/logo.png',
   '/assets/app-icon-180.png',
@@ -37,7 +39,19 @@ const STATIC_ASSETS = [
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(STATIC_ASSETS))
+    caches.open(CACHE_NAME).then(async (cache) => {
+      await Promise.all(
+        HTML_ASSETS.map(async (path) => {
+          const request = new Request(new URL(path, self.location.origin), { cache: 'reload' });
+          const response = await fetch(request);
+          if (!response || !response.ok) {
+            throw new Error(`Unable to refresh ${path}`);
+          }
+          await cache.put(path, response);
+        })
+      );
+      await cache.addAll(STATIC_ASSETS);
+    })
   );
   self.skipWaiting();
 });
@@ -76,9 +90,10 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  if (isNavigationRequest) {
+  if (isNavigationRequest || isHtml) {
+    const freshRequest = new Request(request, { cache: 'reload' });
     event.respondWith(
-      fetch(request)
+      fetch(freshRequest)
         .then((response) => {
           if (response && response.ok) {
             const copy = response.clone();

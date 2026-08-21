@@ -36,6 +36,10 @@ $hub = hub_settings();
 $schoolSession = group_session($hub, 'junior');
 $collegeSession = group_session($hub, 'senior');
 $reports = safety_reports();
+$organizationRequests = organization_demo_requests();
+$organizationAdminAccounts = array_map('organization_admin_public_view', organization_admin_accounts());
+$pendingOrganizationRequestCount = count(array_filter($organizationRequests,
+    static fn(array $request): bool => ($request['status'] ?? 'new') === 'new'));
 $status = $_GET['status'] ?? '';
 $scheduledMeetings = [];
 
@@ -115,7 +119,7 @@ portal_header('Master Admin', false, ['assets/master-admin.css?v=1']);
     </a>
     <nav class="master-nav" aria-label="Master Admin sections">
       <a href="#overview"><span aria-hidden="true">O</span> Overview</a>
-      <a href="#organizations"><span aria-hidden="true">OR</span> Organizations</a>
+      <a href="#organization-requests"><span aria-hidden="true">OR</span> Organization Requests</a>
       <a href="#organization-admins"><span aria-hidden="true">OA</span> Organization Admins</a>
       <a href="#students"><span aria-hidden="true">ST</span> Students</a>
       <a href="#parents"><span aria-hidden="true">PA</span> Parents</a>
@@ -149,18 +153,19 @@ portal_header('Master Admin', false, ['assets/master-admin.css?v=1']);
       <article><span>Pending approvals</span><strong><?php echo $pendingApprovalCount; ?></strong><small><?php echo $sqlApprovalEnabled ? 'SQL approval queue' : 'SQL approval is disabled'; ?></small></article>
       <article><span>Scheduled sessions</span><strong><?php echo count($scheduledMeetings); ?></strong><small>Across both programs</small></article>
       <article><span>Open safety reports</span><strong><?php echo $openSafetyReportCount; ?></strong><small>Require responsible review</small></article>
+      <article><span>Organization requests</span><strong><?php echo $pendingOrganizationRequestCount; ?></strong><small>Awaiting Master Admin review</small></article>
     </section>
 
     <section class="master-module-grid" aria-label="Master Admin areas">
       <article id="organizations">
         <span class="master-module-mark organizations" aria-hidden="true">OR</span>
-        <div><p class="master-kicker">Organizations</p><h2>Organization foundation</h2><p>The approved foundation is present. Organization management remains intentionally unavailable until its future implementation phase.</p></div>
-        <span class="master-state neutral">Foundation only</span>
+        <div><p class="master-kicker">Organizations</p><h2>Demo requests</h2><p>Review submitted organization details before approving administrator access.</p></div>
+        <span class="master-state <?php echo $pendingOrganizationRequestCount > 0 ? 'attention' : 'ready'; ?>"><?php echo $pendingOrganizationRequestCount; ?> pending</span>
       </article>
       <article id="organization-admins">
         <span class="master-module-mark admins" aria-hidden="true">OA</span>
-        <div><p class="master-kicker">Organization Admins</p><h2>Role foundation</h2><p>No organization administrators are managed from this Version 2.0 control center.</p></div>
-        <span class="master-state neutral">Not configured</span>
+        <div><p class="master-kicker">Organization Admins</p><h2>Approved administrators</h2><p>Approved contacts activate their own password through a secure email invitation.</p></div>
+        <span class="master-state ready"><?php echo count($organizationAdminAccounts); ?> accounts</span>
       </article>
       <article id="parents">
         <span class="master-module-mark parents" aria-hidden="true">PA</span>
@@ -182,6 +187,14 @@ portal_header('Master Admin', false, ['assets/master-admin.css?v=1']);
 
     <?php if ($status === 'saved'): ?>
       <div class="form-status success">Student record saved.</div>
+    <?php elseif ($status === 'organization-request-approved'): ?>
+      <div class="form-status success">Organization request approved. The administrator activation invitation was created.</div>
+    <?php elseif ($status === 'organization-request-rejected'): ?>
+      <div class="form-status success">Organization request rejected.</div>
+    <?php elseif ($status === 'organization-request-already-reviewed'): ?>
+      <div class="form-status error">That organization request was already reviewed.</div>
+    <?php elseif ($status === 'organization-request-error'): ?>
+      <div class="form-status error">The organization request could not be updated. Check the organization code and ensure the email is not already assigned.</div>
     <?php elseif ($status === 'hub-saved'): ?>
       <div class="form-status success">Portal hub settings saved.</div>
     <?php elseif ($status === 'bulk-saved'): ?>
@@ -225,6 +238,39 @@ portal_header('Master Admin', false, ['assets/master-admin.css?v=1']);
     <?php elseif ($status === 'sql-registration-error'): ?>
       <div class="form-status error">Registration could not be approved.</div>
     <?php endif; ?>
+
+    <section class="form-card master-panel" id="organization-requests">
+      <div class="master-panel-heading"><div><p class="master-kicker">Organizations</p><h2>School and organization requests</h2></div><span class="master-count"><?php echo $pendingOrganizationRequestCount; ?></span></div>
+      <?php if ($organizationRequests === []): ?><p class="form-note">No organization requests have been received.</p>
+      <?php else: ?><div class="portal-table-wrap"><table class="portal-table"><thead><tr><th>Organization</th><th>Contact</th><th>Program details</th><th>Status</th><th>Master Admin action</th></tr></thead><tbody>
+        <?php foreach ($organizationRequests as $request): ?>
+          <tr>
+            <td><strong><?php echo e((string) ($request['organization_name'] ?? '')); ?></strong><br><span><?php echo e((string) ($request['organization_type'] ?? '')); ?> · <?php echo e((string) ($request['city_state'] ?? '')); ?></span><br><small><?php echo e((string) ($request['request_id'] ?? '')); ?></small></td>
+            <td><?php echo e((string) ($request['contact_name'] ?? '')); ?><br><a href="mailto:<?php echo e((string) ($request['email'] ?? '')); ?>"><?php echo e((string) ($request['email'] ?? '')); ?></a><?php if (($request['phone'] ?? '') !== ''): ?><br><?php echo e((string) $request['phone']); ?><?php endif; ?></td>
+            <td><strong><?php echo e((string) ($request['student_count'] ?? '')); ?> students · ages <?php echo e((string) ($request['student_age_range'] ?? '')); ?></strong><br><?php echo e((string) ($request['program_interest'] ?? '')); ?><br><small>Preferred: <?php echo e((string) ($request['preferred_contact_time'] ?? '')); ?></small><?php if (($request['message'] ?? '') !== ''): ?><br><small><?php echo e((string) $request['message']); ?></small><?php endif; ?></td>
+            <td><?php echo e(ucfirst((string) ($request['status'] ?? 'new'))); ?><?php if (($request['organization_id'] ?? '') !== ''): ?><br><small><?php echo e((string) $request['organization_id']); ?></small><?php endif; ?></td>
+            <td>
+              <?php if (($request['status'] ?? 'new') === 'new'): ?>
+                <form action="admin-organization-request-actions.php" method="post">
+                  <?php echo csrf_field(); ?><input type="hidden" name="action" value="approve"><input type="hidden" name="request_id" value="<?php echo e((string) $request['request_id']); ?>">
+                  <label>Organization code<input name="organization_id" value="<?php echo e(suggested_organization_id((string) ($request['organization_name'] ?? ''))); ?>" required pattern="[A-Z0-9][A-Z0-9-]{2,39}" maxlength="40"></label>
+                  <button class="button primary" type="submit">Approve &amp; Send Activation</button>
+                </form>
+                <form action="admin-organization-request-actions.php" method="post">
+                  <?php echo csrf_field(); ?><input type="hidden" name="action" value="reject"><input type="hidden" name="request_id" value="<?php echo e((string) $request['request_id']); ?>"><button class="button ghost" type="submit">Reject</button>
+                </form>
+              <?php else: ?><span class="form-note">Reviewed <?php echo e((string) ($request['reviewed_at'] ?? '')); ?></span><?php endif; ?>
+            </td>
+          </tr>
+        <?php endforeach; ?>
+      </tbody></table></div><?php endif; ?>
+    </section>
+
+    <section class="form-card master-panel" id="organization-admin-list">
+      <div class="master-panel-heading"><div><p class="master-kicker">Organization Admins</p><h2>Approved organization administrators</h2></div><span class="master-count"><?php echo count($organizationAdminAccounts); ?></span></div>
+      <?php if ($organizationAdminAccounts === []): ?><p class="form-note">No organization administrator accounts have been approved.</p>
+      <?php else: ?><div class="portal-table-wrap"><table class="portal-table"><thead><tr><th>Name</th><th>Email</th><th>Organization</th><th>Status</th><th>Invitation</th><th>Last login</th></tr></thead><tbody><?php foreach ($organizationAdminAccounts as $account): ?><tr><td><?php echo e((string) ($account['full_name'] ?? '')); ?></td><td><?php echo e((string) ($account['email'] ?? '')); ?></td><td><?php echo e((string) ($account['organization_id'] ?? '')); ?></td><td><?php echo e((string) ($account['status'] ?? '')); ?></td><td><?php echo e((string) ($account['invitation_status'] ?? '')); ?></td><td><?php echo e((string) ($account['last_login_at'] ?? '')); ?></td></tr><?php endforeach; ?></tbody></table></div><?php endif; ?>
+    </section>
 
     <section class="form-card master-panel" id="sql-registrations">
       <div class="master-panel-heading"><div><p class="master-kicker">Approvals</p><h2>Pending Azure SQL registrations</h2></div><span class="master-count"><?php echo $pendingApprovalCount; ?></span></div>

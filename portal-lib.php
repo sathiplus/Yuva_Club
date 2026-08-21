@@ -181,6 +181,157 @@ function login_attempts_file(): string {
     return portal_path('portal-data') . DIRECTORY_SEPARATOR . 'login-attempts.json';
 }
 
+function demo_requests_file(): string {
+    return portal_path('portal-data') . DIRECTORY_SEPARATOR . 'organization-demo-requests.jsonl';
+}
+
+function demo_request_attempts_file(): string {
+    return portal_path('portal-data') . DIRECTORY_SEPARATOR . 'organization-demo-attempts.json';
+}
+
+function demo_request_decisions_file(): string {
+    return portal_path('portal-data') . DIRECTORY_SEPARATOR . 'organization-demo-request-decisions.json';
+}
+
+function demo_request_notification_email(): string {
+    $configured = normalize_email((string) (getenv('YUVA_DEMO_NOTIFICATION_EMAIL') ?: ''));
+    return filter_var($configured, FILTER_VALIDATE_EMAIL) ? $configured : yuva_email_reply_to_address();
+}
+
+/** @return array<string, string> */
+function demo_request_values(array $source): array {
+    $fields = ['organization_name', 'organization_type', 'contact_name', 'email', 'phone',
+        'city_state', 'student_count', 'student_age_range', 'program_interest',
+        'preferred_contact_time', 'message'];
+    $values = [];
+    foreach ($fields as $field) {
+        $values[$field] = clean_text(is_scalar($source[$field] ?? null) ? (string) $source[$field] : '');
+    }
+    $values['email'] = normalize_email($values['email']);
+    return $values;
+}
+
+function demo_request_validation_error(array $values): string {
+    foreach (['organization_name', 'organization_type', 'contact_name', 'email', 'city_state',
+        'student_count', 'student_age_range', 'program_interest', 'preferred_contact_time'] as $required) {
+        if (trim((string) ($values[$required] ?? '')) === '') {
+            return 'Please complete every required field.';
+        }
+    }
+    if (!filter_var((string) ($values['email'] ?? ''), FILTER_VALIDATE_EMAIL)) {
+        return 'Enter a valid email address.';
+    }
+    foreach ($values as $value) {
+        if (strlen((string) $value) > 2000) {
+            return 'One or more responses are too long.';
+        }
+    }
+    return '';
+}
+
+function demo_request_rate_limited(string $networkCategory, int $now = 0): bool {
+    $now = $now > 0 ? $now : time();
+    $key = hash('sha256', $networkCategory);
+    $attempts = read_json_file(demo_request_attempts_file(), []);
+    $recent = array_values(array_filter(is_array($attempts[$key] ?? null) ? $attempts[$key] : [],
+        static fn($timestamp): bool => is_int($timestamp) && $timestamp >= ($now - 3600)));
+    if (count($recent) >= 5) {
+        return true;
+    }
+    $recent[] = $now;
+    $attempts[$key] = $recent;
+    write_json_file(demo_request_attempts_file(), $attempts);
+    return false;
+}
+
+/** @param array<string, string> $values */
+function persist_demo_request(array $values, string $networkCategory): string {
+    ensure_portal_dirs();
+    $requestId = 'DEMO-' . strtoupper(bin2hex(random_bytes(6)));
+    $record = $values + ['request_id' => $requestId, 'submitted_at' => gmdate('c'),
+        'network_hash' => hash('sha256', $networkCategory), 'status' => 'new'];
+    $encoded = json_encode($record, JSON_UNESCAPED_SLASHES);
+    if ($encoded === false || file_put_contents(demo_requests_file(), $encoded . "\n", FILE_APPEND | LOCK_EX) === false) {
+        throw new RuntimeException('Unable to persist demo request.');
+    }
+    return $requestId;
+}
+
+/** @return array<int, array<string, mixed>> */
+function organization_demo_requests(): array {
+    $requests = [];
+    $file = demo_requests_file();
+    $lines = is_file($file) ? file($file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) : [];
+    foreach (is_array($lines) ? $lines : [] as $line) {
+        $request = json_decode((string) $line, true);
+        if (!is_array($request)) {
+            continue;
+        }
+        $requestId = clean_text((string) ($request['request_id'] ?? ''));
+        if ($requestId === '') {
+            continue;
+        }
+        unset($request['network_hash']);
+        $requests[$requestId] = $request;
+    }
+
+    $decisions = read_json_file(demo_request_decisions_file(), []);
+    foreach ($requests as $requestId => &$request) {
+        $decision = is_array($decisions[$requestId] ?? null) ? $decisions[$requestId] : [];
+        $request['status'] = (string) ($decision['status'] ?? $request['status'] ?? 'new');
+        $request['organization_id'] = (string) ($decision['organization_id'] ?? '');
+        $request['reviewed_at'] = (string) ($decision['reviewed_at'] ?? '');
+        $request['reviewed_by'] = (string) ($decision['reviewed_by'] ?? '');
+    }
+    unset($request);
+
+    uasort($requests, static fn(array $a, array $b): int =>
+        strcmp((string) ($b['submitted_at'] ?? ''), (string) ($a['submitted_at'] ?? '')));
+    return array_values($requests);
+}
+
+function organization_demo_request(string $requestId): ?array {
+    $requestId = strtoupper(clean_text($requestId));
+    foreach (organization_demo_requests() as $request) {
+        if (($request['request_id'] ?? '') === $requestId) {
+            return $request;
+        }
+    }
+    return null;
+}
+
+function suggested_organization_id(string $organizationName): string {
+    $id = strtoupper((string) preg_replace('/[^A-Za-z0-9]+/', '-', clean_text($organizationName)));
+    $id = trim($id, '-');
+    return substr($id !== '' ? $id : 'YUVA-ORG', 0, 40);
+}
+
+function organization_id_is_valid(string $organizationId): bool {
+    return preg_match('/^[A-Z0-9][A-Z0-9-]{2,39}$/', $organizationId) === 1;
+}
+
+function record_demo_request_decision(array $admin, string $requestId, string $status, string $organizationId = ''): bool {
+    $requestId = strtoupper(clean_text($requestId));
+    $status = strtolower(clean_text($status));
+    $organizationId = strtoupper(clean_text($organizationId));
+    if (organization_demo_request($requestId) === null || !in_array($status, ['approved', 'rejected'], true)) {
+        return false;
+    }
+
+    $decisions = read_json_file(demo_request_decisions_file(), []);
+    $decisions[$requestId] = [
+        'status' => $status,
+        'organization_id' => $organizationId,
+        'reviewed_at' => gmdate('c'),
+        'reviewed_by' => normalize_email((string) ($admin['email'] ?? '')),
+    ];
+    write_json_file(demo_request_decisions_file(), $decisions);
+    audit_log_event($admin['id'], $admin['role'], $admin['organization_id'],
+        'organization_demo_request.' . $status, 'organization_demo_request', $requestId, true,
+        ['organization_id' => $organizationId]);
+    return true;
+}
+
 function safety_reports_file(): string {
     return portal_path('portal-data') . DIRECTORY_SEPARATOR . 'safety-reports.json';
 }

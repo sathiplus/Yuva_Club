@@ -35,10 +35,13 @@ assert.ok(topicNames.length > 100, 'Topic page inventory is unexpectedly incompl
 
 for (const name of publicPages) {
   const source = await readFile(new URL(name, root), 'utf8');
+  const appVersion = ['index.html', 'programs.html', 'partners.html', 'contact.html'].includes(name)
+    ? 'demo-request-v2'
+    : releaseVersion;
   auditedSources.push([name, source]);
   assert.ok(source.includes(`assets/site.css?v=${releaseVersion}`), `${name} lacks current base CSS`);
   assert.ok(source.includes(`assets/public-site.css?v=${releaseVersion}`), `${name} lacks current public design system`);
-  assert.ok(source.includes(`assets/app.js?v=${releaseVersion}`), `${name} lacks current public behavior`);
+  assert.ok(source.includes(`assets/app.js?v=${appVersion}`), `${name} lacks current public behavior`);
   assert.ok(source.includes('class="public-skip-link"'), `${name} lacks skip navigation`);
   assert.ok(source.includes('id="main-content"'), `${name} lacks main skip target`);
   assert.ok(source.includes('class="site-header horizon-header"'), `${name} lacks shared public header`);
