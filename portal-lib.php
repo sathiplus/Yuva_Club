@@ -80,6 +80,8 @@ const YUVA_PLATFORM_ORGANIZATION_ID = 'platform';
 const YUVA_PARENT_SESSION_TTL_SECONDS = 7200;
 const YUVA_ADMIN_SESSION_TTL_SECONDS = 7200;
 
+require_once __DIR__ . '/backend/organization-membership.php';
+
 function e(string $value): string {
     return htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
 }

@@ -153,6 +153,19 @@ The application enforces deterministic handle safety and the 30-day rename
 policy. SQL provides the final case-insensitive uniqueness boundary under the
 database's case-insensitive collation.
 
+## Migration 11: organization student memberships
+
+`11-organization-student-memberships.azure-sql.sql` adds the consent-based
+Organization Admin student invitation and linking foundation. It creates
+membership requests, hashed single-use 72-hour tokens, explicit lifecycle
+states, organization-scoped indexes, a one-active-organization-per-student
+constraint, rowversion concurrency data, and an immutable action audit trail.
+It is self-contained and does not depend on the intentionally skipped
+Migration 04 or Migration 05 functional objects.
+
+The rollback is rehearsal-only. It refuses the live `yuva_club` database and
+also refuses to remove the tables while any membership request evidence exists.
+
 ## Validation
 
 Run the filesystem-only test:

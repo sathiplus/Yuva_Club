@@ -25,6 +25,12 @@ $mediaConsent = null;
 if(ai_mentor_feature_enabled('media_analysis_enabled')&&database_settings_present()&&db_is_sqlsrv()){
     try{$mediaConsent=media_consent_service()->status($studentId);}catch(Throwable){$mediaConsent=null;}
 }
+$organizationMemberships = [];
+try {
+    $organizationMemberships = organization_membership_service()->requestsForStudent($studentId);
+} catch (Throwable $error) {
+    error_log('YUVA parent organization membership view unavailable correlation=' . bin2hex(random_bytes(12)) . ' exception_type=' . get_class($error));
+}
 
 portal_header('Parent Dashboard');
 ?>
@@ -33,7 +39,7 @@ portal_header('Parent Dashboard');
 <main class="parent-experience" id="parent-main" tabindex="-1">
   <nav class="parent-local-nav" aria-label="Parent portal sections">
     <a class="parent-local-brand" href="#parent-overview"><img src="assets/yuva-symbol.png" alt=""><span><strong>YUVA</strong> Parent</span></a>
-    <div><a href="#parent-overview">Overview</a><a href="#parent-growth">Growth</a><a href="#parent-presentations">Presentations</a><a href="#parent-mentor">AI Mentor</a><a href="#parent-account">Account</a></div>
+    <div><a href="#parent-overview">Overview</a><a href="#parent-growth">Growth</a><a href="#parent-presentations">Presentations</a><a href="#parent-mentor">AI Mentor</a><a href="#organization-membership">Organizations</a><a href="#parent-account">Account</a></div>
     <a class="parent-nav-logout" href="portal-logout.php">Log Out</a>
   </nav>
 
@@ -89,6 +95,16 @@ portal_header('Parent Dashboard');
   <section class="parent-section" aria-labelledby="parent-announcements-title">
     <div class="parent-section-heading"><div><p class="eyebrow">YUVA Club Updates</p><h2 id="parent-announcements-title">Announcements</h2></div></div>
     <div class="parent-announcements"><?php if (trim($hub['announcements']) !== ''): ?><?php foreach (preg_split('/\R/', trim((string) $hub['announcements'])) ?: [] as $announcement): ?><?php if (trim($announcement) !== ''): ?><article><span aria-hidden="true"></span><p><?php echo e(trim($announcement)); ?></p></article><?php endif; ?><?php endforeach; ?><?php else: ?><div class="parent-empty"><strong>No announcements posted</strong><p>Updates from YUVA Club will appear here.</p></div><?php endif; ?></div>
+  </section>
+
+  <section class="parent-section" id="organization-membership" aria-labelledby="parent-organization-title">
+    <div class="parent-section-heading"><div><p class="eyebrow">Organization permission</p><h2 id="parent-organization-title">Your child's organization connections</h2><p>A minor—or a student whose date of birth is unavailable—cannot activate an organization membership without parent or guardian approval.</p></div></div>
+    <div class="parent-mentor-grid">
+      <?php if ($organizationMemberships === []): ?><article class="parent-card"><p>No organization requests or memberships are currently recorded.</p></article><?php endif; ?>
+      <?php foreach ($organizationMemberships as $membership): ?><article class="parent-card"><p class="eyebrow"><?php echo e((string) $membership['status']); ?></p><h3><?php echo e((string) $membership['organization_code']); ?></h3><p><?php echo e((string) $membership['invitation_purpose']); ?></p>
+        <?php if (($membership['status'] ?? '') === 'ParentApprovalPending'): ?><form action="parent-organization-membership-action.php" method="post"><?php echo csrf_field(); ?><input type="hidden" name="membership_guid" value="<?php echo e((string) $membership['membership_guid']); ?>"><button class="button primary" name="decision" value="approve" type="submit">Approve</button> <button class="button ghost" name="decision" value="decline" type="submit">Decline</button></form><?php elseif (($membership['status'] ?? '') === 'Active'): ?><form action="parent-organization-membership-action.php" method="post"><?php echo csrf_field(); ?><input type="hidden" name="membership_guid" value="<?php echo e((string) $membership['membership_guid']); ?>"><button class="button ghost" name="decision" value="withdraw" type="submit">Withdraw permission</button></form><?php endif; ?>
+      </article><?php endforeach; ?>
+    </div>
   </section>
 
   <section class="parent-section parent-account-section" id="parent-account" aria-labelledby="parent-account-title">

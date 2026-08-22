@@ -5,7 +5,7 @@ import process from 'node:process';
 
 const root = path.resolve(import.meta.dirname, '..', '..');
 const read = (relativePath) => readFile(path.join(root, relativePath), 'utf8');
-const [portal, css, homeFixture, studioFixture, journeyFixture, mentorFixture, achievementsFixture, profileFixture] = await Promise.all([
+const [portal, css, homeFixture, studioFixture, journeyFixture, mentorFixture, achievementsFixture, profileFixture, identityHandler, identityService, publicIdentity] = await Promise.all([
   read('portal.php'),
   read('assets/student-app.css'),
   read('tests/frontend/fixtures/student-home-preview.html'),
@@ -14,6 +14,9 @@ const [portal, css, homeFixture, studioFixture, journeyFixture, mentorFixture, a
   read('tests/frontend/fixtures/ai-mentor-preview.html'),
   read('tests/frontend/fixtures/achievements-preview.html'),
   read('tests/frontend/fixtures/profile-preview.html'),
+  read('student-public-identity.php'),
+  read('backend/identity/PublicIdentityService.php'),
+  read('backend/identity/PublicStudentIdentity.php'),
 ]);
 
 const pass = (message) => process.stdout.write(`PASS ${message}\n`);
@@ -92,7 +95,7 @@ assert.ok(!/<form\b|<input\b|<textarea\b|<select\b/i.test(achievements), 'Achiev
 pass('Achievements preserves verified recognition bindings and routes');
 
 const profileStart = portal.indexOf('<section class="band app-section" id="app-profile"');
-const profileEnd = portal.indexOf('<section class="band">', profileStart);
+const profileEnd = portal.indexOf('<section class="band app-section" id="app-settings"', profileStart);
 assert.ok(profileStart >= 0 && profileEnd > profileStart, 'Profile section boundaries exist');
 const profile = portal.slice(profileStart, profileEnd);
 for (const binding of [
@@ -108,8 +111,24 @@ for (const binding of [
 }
 includes(profile, 'id="app-profile"', 'preserved Profile ID');
 includes(profile, 'href="portal-logout.php"', 'preserved logout route');
-includes(profile, 'My Journey', 'visible My Journey label');
-assert.ok(!/<form\b|<input\b|<textarea\b|<select\b/i.test(profile), 'Profile adds no workflow inputs');
+assert.match(
+  profile,
+  /<a\b[^>]*href="#app-progress"[^>]*>View Leadership Journey<\/a>/,
+  'profile provides the approved Leadership Journey action and destination',
+);
+assert.equal((profile.match(/<form\b/g) ?? []).length, 1, 'Profile contains only the approved public-identity form');
+includes(profile, 'action="student-public-identity.php"', 'approved public-identity form route');
+includes(profile, 'name="public_handle"', 'YUVA Handle control');
+includes(profile, 'name="avatar_code"', 'preset avatar control');
+includes(profile, '<?php echo csrf_field(); ?>', 'public-identity CSRF field');
+includes(profile, '<strong>Your YUVA ID is permanent:</strong>', 'permanent YUVA ID display');
+assert.ok(!profile.includes('student-organization-membership-action.php'), 'Phase 2A membership workflow remains outside Profile');
+includes(identityHandler, '$student = require_student();', 'identity handler requires authenticated student context');
+includes(identityHandler, 'verify_csrf_token', 'identity handler verifies CSRF');
+includes(identityService, 'hash_equals(strtoupper(trim($authenticatedYuvaId)), strtoupper(trim($targetYuvaId)))', 'identity service prevents cross-student edits');
+includes(identityService, 'public const CHANGE_DAYS = 30', '30-day handle-change policy');
+includes(publicIdentity, "return ['yuva_id' => $yuvaId, 'handle' => $handle !== '' ? $handle : null, 'avatar_code' => $avatarCode]", 'privacy-safe public identity projection');
+assert.ok(!/<textarea\b|<select\b/i.test(profile), 'Profile adds no unrelated workflow fields');
 pass('Profile preserves identity, account, and privacy-safe bindings');
 
 for (const forbidden of ['fetch(', 'XMLHttpRequest', 'new WebSocket', 'localStorage', 'sessionStorage']) {

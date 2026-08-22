@@ -153,6 +153,13 @@ $parentEmail = clean_email($_POST['parent_email'] ?? '');
 $parentPhone = clean_text($_POST['parent_phone'] ?? '');
 
 $studentEmail = clean_email($_POST['student_email'] ?? '');
+$organizationInvitationToken = trim((string) ($_POST['organization_invitation_token'] ?? ''));
+$organizationInvitation = $organizationInvitationToken !== ''
+    ? organization_membership_service()->tokenRecord($organizationInvitationToken, 'StudentAccept')
+    : null;
+if ($organizationInvitationToken !== '' && $organizationInvitation === null) {
+    registration_validation_redirect('invalid-organization-invitation');
+}
 $studentPhone = clean_text($_POST['student_phone'] ?? '');
 $whatsappContact = clean_text($_POST['whatsapp_contact'] ?? '');
 $accountPassword = (string) ($_POST['account_password'] ?? '');
@@ -358,6 +365,13 @@ if (database_settings_present()) {
             'parent_permission_granted' => checked_bool('agree_parent_permission'),
             'ip_address' => $ipAddress,
         ]);
+        if ($organizationInvitation !== null && !organization_membership_service()->attachRegistration(
+            $organizationInvitationToken,
+            $registrationId,
+            $studentEmail
+        )) {
+            throw new RuntimeException('Organization invitation could not be attached safely.');
+        }
         $studentId = append_registration_row($csvPath, $headers, $row, $studentIdYear, $idScanPaths);
         if ($studentId === '') {
             throw new RuntimeException('Portal registration sync failed.');
@@ -431,5 +445,6 @@ if ($notificationEmail !== '') {
 $query = $storedInDatabase
     ? 'status=success&id=' . urlencode($studentId) . '&registration=' . urlencode((string) $registrationId)
     : 'status=success&id=' . urlencode($studentId);
+unset($_SESSION['organization_membership_registration_token']);
 header('Location: registration.php?' . $query);
 exit;
