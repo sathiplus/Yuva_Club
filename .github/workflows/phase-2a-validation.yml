@@ -54,5 +54,6 @@ jobs:
 
       - name: Public student identity frontend contracts
         run: |
+          node tests/frontend/public-identity-onboarding-contract-test.mjs
           node tests/frontend/public-student-identity-contract-test.mjs
           node tests/frontend/student-profile-contract-test.mjs

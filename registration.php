@@ -353,6 +353,8 @@ $registrationFlashValues = is_array($registrationFlash['values'] ?? null) ? $reg
             </div>
           </fieldset>
 
+          <p class="form-note identity-onboarding-notice">After registration, you can choose a YUVA Handle and Avatar for challenges and leaderboards.</p>
+
           <button class="button primary" type="submit">Submit Registration</button>
         </form>
       </div>

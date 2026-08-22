@@ -32,10 +32,16 @@ identity_reject(fn()=>$service->updateOwn('YC1','YC1','SafeHandle','uploaded_pho
 $view=PublicStudentIdentity::view(['yuva_id'=>'YC1','public_handle'=>'IdeaSpark','avatar_code'=>'leader_lion','email'=>'private@example.com','date_of_birth'=>'2010-01-01','phone'=>'555']);identity_check(array_keys($view)===['yuva_id','handle','avatar_code'],'public helper must return only safe fields');
 $service->adminOverride('YC1','SafeSpeaker',42,'Impersonation correction');identity_check(count($store->audit)===1,'Master Admin override must be audited');
 $studentHandler=file_get_contents(__DIR__.'/../../student-public-identity.php');$org=file_get_contents(__DIR__.'/../../organization-admin.php');$admin=file_get_contents(__DIR__.'/../../admin-student-public-identity.php');
+$onboarding=file_get_contents(__DIR__.'/../../student-identity-onboarding.php');$portalLogin=file_get_contents(__DIR__.'/../../portal-login.php');$portalLib=file_get_contents(__DIR__.'/../../portal-lib.php');
 $migration=file_get_contents(__DIR__.'/../../database/10-public-student-identity.azure-sql.sql');
 identity_check(str_contains($studentHandler,'require_student()')&&str_contains($studentHandler,'verify_csrf_token'),'student update must require auth and CSRF');
 identity_check(!str_contains($org,'student-public-identity.php'),'Organization Admin must not receive identity mutation controls');
 identity_check(str_contains($admin,'require_admin_post()')&&str_contains($admin,'audit_log_event'),'Master Admin override must be authorized and audited');
 foreach(['public_handle','public_handle_normalized','avatar_code','handle_changed_at','ux_students_public_handle_normalized','student_public_identity_history','ROWVERSION'] as $required){if($required==='ROWVERSION')continue;identity_check(str_contains($migration,$required),'Migration 10 missing '.$required);}
 identity_check(str_contains($migration,'WHERE public_handle_normalized IS NOT NULL'),'handle uniqueness must be filtered for optional handles');
+identity_check(str_contains($onboarding,'public_identity_service()->updateOwn'),'onboarding must reuse the existing identity service');
+identity_check(str_contains($onboarding,"complete_student_identity_onboarding(\$yuvaId, 'skipped')"),'onboarding must preserve an explicit skip/fallback path');
+identity_check(str_contains($portalLogin,'student_identity_onboarding_required($studentId)'),'new marked accounts must enter onboarding after approved login');
+identity_check(str_contains($portalLib,"'identity_onboarding_required' => true"),'new student accounts must be marked for one-time onboarding');
+identity_check(str_contains($portalLib,"(\$account['identity_onboarding_required'] ?? false) === true"),'existing accounts without the marker must remain unaffected');
 echo "Public student identity tests: PASS\n";
