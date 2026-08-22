@@ -33,7 +33,7 @@ $membershipGroupLabel = membership_group_label($student);
 $badges = earned_badges($record);
 $points = student_points($record);
 $tokens = student_tokens($record);
-$publicIdentity = public_student_identity($student);
+$publicIdentity = public_student_identity($studentId);
 $publicAvatar = \YuvaClub\Identity\PublicStudentIdentity::avatar($publicIdentity['avatar_code']);
 $publicIdentityError = (string)($_SESSION['public_identity_error'] ?? '');
 unset($_SESSION['public_identity_error']);

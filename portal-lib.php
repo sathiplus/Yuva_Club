@@ -90,10 +90,8 @@ function public_identity_service(): \YuvaClub\Identity\PublicIdentityService {
     );
 }
 
-function public_student_identity(array|string $student): array {
-    $yuvaId = is_array($student)
-        ? (string) ($student['yuva_id'] ?? $student['Yuva Club ID'] ?? '')
-        : $student;
+function public_student_identity(string $yuvaId): array {
+    $yuvaId = normalize_yuva_id($yuvaId);
     $fallback = \YuvaClub\Identity\PublicStudentIdentity::view(['yuva_id' => $yuvaId]);
     if ($yuvaId === '' || !database_settings_present() || !db_is_sqlsrv()) return $fallback;
     try { return public_identity_service()->find($yuvaId); }

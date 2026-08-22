@@ -788,7 +788,7 @@ portal_header('Master Admin', false, ['assets/master-admin.css?v=1']);
               $aiReview = $aiReviews[$studentId] ?? [];
               $aiDraft = $aiReview['review'] ?? [];
               $studentUpdateFormId = 'admin-form-' . $studentId;
-              $studentPublicIdentity=public_student_identity($student);
+              $studentPublicIdentity=public_student_identity((string)$studentId);
               $studentPublicAvatar=\YuvaClub\Identity\PublicStudentIdentity::avatar($studentPublicIdentity['avatar_code']);
             ?>
             <tr>
