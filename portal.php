@@ -33,6 +33,10 @@ $membershipGroupLabel = membership_group_label($student);
 $badges = earned_badges($record);
 $points = student_points($record);
 $tokens = student_tokens($record);
+$publicIdentity = public_student_identity($studentId);
+$publicAvatar = \YuvaClub\Identity\PublicStudentIdentity::avatar($publicIdentity['avatar_code']);
+$publicIdentityError = (string)($_SESSION['public_identity_error'] ?? '');
+unset($_SESSION['public_identity_error']);
 $rewardLevel = reward_level($record);
 $challengeStage = challenge_stage($record);
 $rubricScore = rubric_score($record);
@@ -229,7 +233,7 @@ portal_header('Student Dashboard', true);
   <section class="band app-section" id="app-home" data-app-section="home">
     <?php
       $nameParts = preg_split('/\s+/', trim($name), -1, PREG_SPLIT_NO_EMPTY) ?: [];
-      $studentInitials = $nameParts ? strtoupper(substr($nameParts[0], 0, 1) . (count($nameParts) > 1 ? substr($nameParts[count($nameParts) - 1], 0, 1) : '')) : '?';
+      $studentInitials = $publicAvatar['icon'];
       $homeSessionTitle = $hasStudentZoom ? ($studentSessionTitle ?: 'Yuva Club Session') : ($session['title'] ?? 'Yuva Club Session');
       $homeSessionDate = $hasStudentZoom ? $studentSessionDate : ($session['date'] ?? '');
       $homeSessionStart = $hasStudentZoom ? $studentSessionStart : ($session['start'] ?? '');
@@ -256,7 +260,7 @@ portal_header('Student Dashboard', true);
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
           <?php if ($studentNotifications): ?><span class="home-notification-dot" aria-hidden="true"></span><?php endif; ?>
         </a>
-        <a class="home-avatar" href="#app-profile" aria-label="Open student profile"><?php echo e($studentInitials); ?></a>
+        <a class="home-avatar" href="#app-profile" aria-label="Open YUVA Identity profile"><?php echo e($studentInitials); ?></a>
       </div>
       <img class="home-welcome-art" src="assets/student-hero-illustration.svg" alt="" aria-hidden="true">
       <span class="home-spark home-spark-one" aria-hidden="true"></span>
@@ -817,13 +821,13 @@ portal_header('Student Dashboard', true);
     ?>
     <header class="profile-identity-header ds-story-hero profile-story-hero">
       <div class="profile-avatar-state">
-        <div class="profile-initials" aria-label="Profile avatar showing the initials <?php echo e($profileInitials); ?>"><?php echo e($profileInitials); ?></div>
-        <span>Profile photo unavailable</span>
+        <div class="profile-initials yuva-public-avatar" aria-label="YUVA avatar: <?php echo e($publicAvatar['label']); ?>"><?php echo e($publicAvatar['icon']); ?></div>
+        <span><?php echo e($publicAvatar['label']); ?></span>
       </div>
       <div class="profile-identity-copy">
         <p class="eyebrow">My Profile</p>
         <h1><?php echo e($name); ?></h1>
-        <p>Your private YUVA identity and a truthful snapshot of how you are growing through My Journey.</p>
+        <p>Your private profile and privacy-safe YUVA community identity.</p>
         <p>YUVA ID: <strong><?php echo e($studentId); ?></strong></p>
         <div class="profile-identity-badges"><span><?php echo e($level); ?></span><span><?php echo e($membershipGroupLabel); ?></span></div>
       </div>
@@ -836,6 +840,22 @@ portal_header('Student Dashboard', true);
         <span>Some registered details are not available yet. The YUVA Club team can help correct identity information safely.</span>
       </div>
     <?php endif; ?>
+
+    <section class="profile-public-identity" aria-labelledby="public-identity-title">
+      <div class="profile-section-heading ds-section-heading"><p class="eyebrow">Your YUVA Identity</p><h2 id="public-identity-title">Choose how the YUVA community recognizes you</h2><p>This identity may appear in future challenges and leaderboards. Your real name and contact details are not included.</p></div>
+      <?php if ($status === 'identity-saved'): ?><div class="profile-state-banner" role="status"><strong>Your YUVA Identity was saved.</strong></div><?php endif; ?>
+      <?php if ($publicIdentityError !== ''): ?><div class="profile-state-banner identity-error" role="alert"><strong><?php echo e($publicIdentityError); ?></strong></div><?php endif; ?>
+      <div class="identity-editor-grid">
+        <div class="identity-preview" aria-label="Public identity preview"><span class="identity-preview-avatar"><?php echo e($publicAvatar['icon']); ?></span><strong><?php echo e($publicIdentity['handle'] ?: $studentId); ?></strong><?php if ($publicIdentity['handle']): ?><small><?php echo e($studentId); ?></small><?php endif; ?><p>Public identity preview</p></div>
+        <form class="identity-form" action="student-public-identity.php" method="post">
+          <?php echo csrf_field(); ?><input type="hidden" name="yuva_id" value="<?php echo e($studentId); ?>">
+          <div class="field"><label for="public-handle">YUVA Handle <small>(optional)</small></label><input id="public-handle" name="public_handle" type="text" minlength="3" maxlength="24" pattern="[A-Za-z0-9][A-Za-z0-9._-]*[A-Za-z0-9]" value="<?php echo e((string)($publicIdentity['handle']??'')); ?>" aria-describedby="handle-help"><small id="handle-help">3–24 letters or numbers; single dots, underscores, or hyphens are allowed. Handles can change once every 30 days.</small></div>
+          <fieldset class="avatar-picker"><legend>Choose a preset avatar</legend><div class="avatar-options"><?php foreach(\YuvaClub\Identity\PublicStudentIdentity::AVATARS as $avatarCode=>$avatar): ?><label><input type="radio" name="avatar_code" value="<?php echo e($avatarCode); ?>" <?php echo $publicIdentity['avatar_code']===$avatarCode?'checked':''; ?> required><span aria-hidden="true"><?php echo e($avatar['icon']); ?></span><small><?php echo e($avatar['label']); ?></small></label><?php endforeach; ?></div></fieldset>
+          <p class="identity-permanent-note"><strong>Your YUVA ID is permanent:</strong> <?php echo e($studentId); ?></p>
+          <button class="button primary" type="submit">Save YUVA Identity</button>
+        </form>
+      </div>
+    </section>
 
     <section class="profile-overview" aria-labelledby="profile-overview-title">
       <div class="profile-section-heading ds-section-heading"><p class="eyebrow">Growth Snapshot</p><h2 id="profile-overview-title">Your journey at a glance</h2><p>These summaries use only your current approved YUVA records.</p></div>

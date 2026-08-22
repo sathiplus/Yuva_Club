@@ -788,6 +788,8 @@ portal_header('Master Admin', false, ['assets/master-admin.css?v=1']);
               $aiReview = $aiReviews[$studentId] ?? [];
               $aiDraft = $aiReview['review'] ?? [];
               $studentUpdateFormId = 'admin-form-' . $studentId;
+              $studentPublicIdentity=public_student_identity((string)$studentId);
+              $studentPublicAvatar=\YuvaClub\Identity\PublicStudentIdentity::avatar($studentPublicIdentity['avatar_code']);
             ?>
             <tr>
               <td>
@@ -796,6 +798,7 @@ portal_header('Master Admin', false, ['assets/master-admin.css?v=1']);
                 <span><?php echo e($student['Grade'] ?? ''); ?></span><br>
                 <span><?php echo e($student['Parent Email'] ?? ''); ?></span>
                 <p><a class="button ghost" href="admin-student-edit.php?id=<?php echo e($studentId); ?>">Edit Signup</a></p>
+                <details><summary>Moderate YUVA Handle</summary><p><?php echo e($studentPublicAvatar['icon'].' '.($studentPublicIdentity['handle']?:$studentId)); ?></p><form action="admin-student-public-identity.php" method="post"><?php echo csrf_field(); ?><input type="hidden" name="yuva_id" value="<?php echo e($studentId); ?>"><div class="field"><label>Replacement handle (leave blank to remove)</label><input name="public_handle" maxlength="24" value="<?php echo e((string)($studentPublicIdentity['handle']??'')); ?>"></div><div class="field"><label>Moderation reason</label><input name="reason" maxlength="500" required></div><button class="button ghost" type="submit">Apply audited override</button></form></details>
               </td>
               <td>
                   <div class="field">

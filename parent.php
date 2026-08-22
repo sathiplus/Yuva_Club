@@ -14,6 +14,8 @@ $hub = hub_settings();
 $badges = earned_badges($record);
 $points = student_points($record);
 $tokens = student_tokens($record);
+$publicIdentity=public_student_identity($studentId);
+$publicAvatar=\YuvaClub\Identity\PublicStudentIdentity::avatar($publicIdentity['avatar_code']);
 $rewardLevel = reward_level($record);
 $rank = approved_rank($record);
 $eligibleRank = rank_eligibility($record);
@@ -36,7 +38,7 @@ portal_header('Parent Dashboard');
   </nav>
 
   <section class="parent-hero" id="parent-overview" aria-labelledby="parent-overview-title">
-    <div class="parent-hero-copy"><p class="eyebrow">Parent Experience</p><h1 id="parent-overview-title">How is <?php echo e(student_display_name($student)); ?> growing?</h1><p>A clear view of your child's verified leadership activity, preparation, and recognition.</p><div class="parent-identity"><span>YUVA ID<strong><?php echo e($studentId); ?></strong></span><span>Membership<strong><?php echo e(membership_group_label($student)); ?></strong></span><span>Approval<strong><?php echo e($approvalStatus); ?></strong></span></div></div>
+    <div class="parent-hero-copy"><p class="eyebrow">Parent Experience</p><h1 id="parent-overview-title">How is <?php echo e(student_display_name($student)); ?> growing?</h1><p>A clear view of your child's verified leadership activity, preparation, and recognition.</p><div class="parent-identity"><span>YUVA Identity<strong><?php echo e($publicAvatar['icon'].' '.($publicIdentity['handle']?:$studentId)); ?></strong></span><span>YUVA ID<strong><?php echo e($studentId); ?></strong></span><span>Membership<strong><?php echo e(membership_group_label($student)); ?></strong></span><span>Approval<strong><?php echo e($approvalStatus); ?></strong></span></div></div>
     <div class="parent-hero-mark" aria-hidden="true"><span></span><i></i><b></b></div>
   </section>
 
