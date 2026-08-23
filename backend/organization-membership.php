@@ -147,14 +147,14 @@ final class OrganizationMembershipService
              FROM dbo.organization_membership_tokens AS token
              INNER JOIN dbo.organization_student_membership_requests AS request
                 ON request.id = token.membership_id
-             WHERE token.token_hash = :token_hash
+             WHERE token.token_hash = CONVERT(BINARY(32), :token_hash, 2)
                AND token.token_type = :token_type
                AND token.used_at IS NULL
                AND token.revoked_at IS NULL
                AND token.expires_at > SYSUTCDATETIME()
                AND request.expires_at > SYSUTCDATETIME()"
         );
-        $stmt->bindValue(':token_hash', hash('sha256', $rawToken, true), PDO::PARAM_LOB);
+        $stmt->bindValue(':token_hash', hash('sha256', $rawToken), PDO::PARAM_STR);
         $stmt->bindValue(':token_type', $tokenType);
         $stmt->execute();
         $row = $stmt->fetch();
@@ -415,11 +415,11 @@ final class OrganizationMembershipService
         $stmt = $this->pdo->prepare(
             "INSERT INTO dbo.organization_membership_tokens(
                 membership_id, token_hash, token_type, expires_at
-             ) VALUES(:membership_id, :token_hash, :token_type,
+             ) VALUES(:membership_id, CONVERT(BINARY(32), :token_hash, 2), :token_type,
                       DATEADD(HOUR, " . self::TOKEN_TTL_HOURS . ", SYSUTCDATETIME()))"
         );
         $stmt->bindValue(':membership_id', $membershipId, PDO::PARAM_INT);
-        $stmt->bindValue(':token_hash', hash('sha256', $raw, true), PDO::PARAM_LOB);
+        $stmt->bindValue(':token_hash', hash('sha256', $raw), PDO::PARAM_STR);
         $stmt->bindValue(':token_type', $type);
         $stmt->execute();
         return $raw;

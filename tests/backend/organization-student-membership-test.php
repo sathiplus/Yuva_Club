@@ -36,7 +36,11 @@ membership_check(str_contains($rollback, "DB_NAME() = N'yuva_club'"), 'Rollback 
 membership_check(!str_contains($migration, 'dbo.organizations'), 'Migration 11 must not depend on skipped Migration 05 organization tables.');
 
 membership_check(str_contains($service, 'random_bytes(32)'), 'Membership tokens must be cryptographically random.');
-membership_check(str_contains($service, "hash('sha256', \$rawToken, true)"), 'Only hashed membership tokens may be queried.');
+membership_check(str_contains($service, "hash('sha256', \$rawToken)"), 'Only hexadecimal SHA-256 membership token hashes may be queried.');
+membership_check(str_contains($service, "hash('sha256', \$raw)"), 'Only hexadecimal SHA-256 membership token hashes may be persisted.');
+membership_check(substr_count($service, 'CONVERT(BINARY(32), :token_hash, 2)') === 2, 'Token insert and lookup must use the same SQLSRV-safe hexadecimal conversion.');
+membership_check(substr_count($service, "bindValue(':token_hash'") === 2 && substr_count($service, 'PDO::PARAM_STR') >= 2, 'Token hashes must be bound as strings, not raw binary LOB values.');
+membership_check(!str_contains($service, "hash('sha256', \$rawToken, true)") && !str_contains($service, "hash('sha256', \$raw, true)"), 'Raw binary token hashes must not cross the PDO SQLSRV boundary.');
 membership_check(str_contains($service, 'used_at IS NULL') && str_contains($service, 'expires_at > SYSUTCDATETIME()'), 'Tokens must be single-use and expiring.');
 membership_check(str_contains($service, "if (\$dateOfBirth === '')") && str_contains($service, 'catch (Throwable)'), 'Missing or invalid DOB must fail closed to parent approval.');
 membership_check(str_contains($service, 'hasConflictingActiveMembership'), 'Cross-organization active membership conflicts must be rejected.');
