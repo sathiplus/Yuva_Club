@@ -58,11 +58,13 @@ includes(journey, 'href="leaderboard.php"', 'leaderboard route');
 includes(journey, 'href="#app-achievements"', 'Achievements route');
 includes(journey, 'action="student-leadership-reflection.php"', 'approved reflection workflow');
 includes(journey, 'action="student-leadership-contribution.php"', 'approved contribution workflow');
-assert.equal((journey.match(/<form\b/gi) ?? []).length, 2, 'Leadership Journey contains only the two approved Phase 2B student workflows');
-assert.equal((journey.match(/csrf_field\(\)/g) ?? []).length, 2, 'each leadership workflow is CSRF protected');
+includes(journey, 'action="student-presentation-complete.php"', 'approved completed-presentation verification submission workflow');
+assert.equal((journey.match(/<form\b/gi) ?? []).length, 3, 'Leadership Journey contains only the three approved Phase 2B student workflows');
+assert.equal((journey.match(/csrf_field\(\)/g) ?? []).length, 3, 'each leadership workflow is CSRF protected');
 assert.ok(portal.includes('$student = require_student();'), 'Leadership Journey requires authenticated student context');
 assert.ok(!journey.includes('admin-leadership-decision.php'), 'student cannot approve leadership levels');
 assert.ok(!journey.includes('admin-leadership-evidence.php'), 'student cannot approve leadership evidence');
+assert.ok(!journey.includes('admin-presentation-verification.php'), 'student cannot verify presentations');
 pass('preserved routes and approved authenticated Phase 2B workflows');
 
 for (const component of [

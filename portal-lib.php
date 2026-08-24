@@ -82,6 +82,7 @@ const YUVA_ADMIN_SESSION_TTL_SECONDS = 7200;
 
 require_once __DIR__ . '/backend/organization-membership.php';
 require_once __DIR__ . '/backend/leadership.php';
+require_once __DIR__ . '/backend/presentation-verification.php';
 
 function e(string $value): string {
     return htmlspecialchars($value, ENT_QUOTES, 'UTF-8');

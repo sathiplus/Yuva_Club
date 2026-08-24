@@ -37,9 +37,11 @@ $publicIdentity = public_student_identity($studentId);
 $publicAvatar = \YuvaClub\Identity\PublicStudentIdentity::avatar($publicIdentity['avatar_code']);
 $leadershipProgress = null;
 $leadershipHistory = [];
+$completedPresentationSubmissions = [];
 try {
     $leadershipProgress = leadership_eligibility_service()->latestByYuvaId($studentId);
     $leadershipHistory = leadership_eligibility_service()->history($studentId);
+    $completedPresentationSubmissions = presentation_verification_service()->submissionsForStudent($studentId);
 } catch (Throwable $error) {
     error_log('YUVA leadership student view unavailable correlation=' . bin2hex(random_bytes(12)) . ' exception_type=' . get_class($error));
 }
@@ -477,6 +479,7 @@ portal_header('Student Dashboard', true);
       <p><strong><?php echo e((string)$leadershipProgress['status']); ?></strong> · <?php echo e((string)$leadershipProgress['completed']); ?> of <?php echo e((string)$leadershipProgress['required']); ?> requirements complete</p>
       <?php if($leadershipProgress['status']==='Eligible for Review'): ?><p>You’ve completed the current requirements for <?php echo e((string)$leadershipProgress['target_level']); ?>. Your progress is ready for human review.</p><?php endif; ?>
       <ul><?php foreach($leadershipProgress['requirements'] as $requirement): ?><li><?php echo !empty($requirement['complete'])?'✓':'○'; ?> <?php echo e((string)$requirement['label']); ?> (<?php echo e((string)$requirement['actual']); ?>/<?php echo e((string)$requirement['required']); ?>)</li><?php endforeach; ?></ul>
+      <article class="form-card"><h3>Completed presentation verification</h3><p>Submit your current completed research presentation for review by an authorized human. This does not verify the presentation or change your level by itself.</p><?php if(is_array($research)&&$research!==[]): ?><form action="student-presentation-complete.php" method="post"><?php echo csrf_field(); ?><button class="button ghost" type="submit">Submit Completed Presentation for Verification</button></form><?php else: ?><p>Complete your research workspace before submitting a presentation.</p><?php endif; ?><?php if($completedPresentationSubmissions!==[]): ?><ul><?php foreach($completedPresentationSubmissions as $submission): ?><li>Presentation <?php echo e((string)$submission['id']); ?> · <?php echo e((string)($submission['verification_status']??'Awaiting Human Verification')); ?></li><?php endforeach; ?></ul><?php endif; ?></article>
       <?php if($leadershipNotice!==''): ?><div class="form-status success"><?php echo e($leadershipNotice); ?></div><?php endif; ?><?php if($leadershipError!==''): ?><div class="form-status error"><?php echo e($leadershipError); ?></div><?php endif; ?>
       <div class="dashboard-grid">
         <form action="student-leadership-reflection.php" method="post" class="form-card"><?php echo csrf_field(); ?><h3>Complete a reflection</h3><label>What went well?<textarea name="went_well" required maxlength="1500"></textarea></label><label>What would you improve next time?<textarea name="improve_next" required maxlength="1500"></textarea></label><label>What did you learn?<textarea name="learned" required maxlength="1500"></textarea></label><label>What is your next goal?<textarea name="next_goal" required maxlength="1500"></textarea></label><button class="button primary" type="submit">Save Reflection</button></form>
