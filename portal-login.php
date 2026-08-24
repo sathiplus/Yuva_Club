@@ -14,6 +14,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     );
 
     if ($result['authenticated'] === true) {
+        $studentId = normalize_yuva_id((string) ($_SESSION['student_id'] ?? ''));
+        if (student_identity_onboarding_required($studentId)) {
+            redirect_to('student-identity-onboarding.php');
+        }
         redirect_to('portal.php');
     }
 

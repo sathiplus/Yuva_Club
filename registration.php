@@ -19,9 +19,18 @@ $validationMessages = [
     'empty-generated-student-id' => 'We could not generate the student ID. Please try again or contact support.',
     'weak-password' => 'Password must be at least 8 characters and include uppercase, lowercase, number, and special character.',
     'password-mismatch' => 'Password and confirmation must match.',
+    'invalid-organization-invitation' => 'This organization invitation is invalid or expired. Request a new invitation from the organization.',
 ];
 $validationMessage = $validationMessages[$validationReason] ?? '';
 $registrationFlashValues = is_array($registrationFlash['values'] ?? null) ? $registrationFlash['values'] : [];
+$organizationInvitationToken = (string) ($_SESSION['organization_membership_registration_token'] ?? '');
+$organizationInvitation = $organizationInvitationToken !== ''
+    ? organization_membership_service()->tokenRecord($organizationInvitationToken, 'StudentAccept')
+    : null;
+if ($organizationInvitation === null) {
+    unset($_SESSION['organization_membership_registration_token']);
+    $organizationInvitationToken = '';
+}
 ?>
 <!doctype html>
 <html lang="en">
@@ -104,10 +113,12 @@ $registrationFlashValues = is_array($registrationFlash['values'] ?? null) ? $reg
         <?php elseif ($status === 'security-error'): ?>
           <div class="form-status error">This form expired. Please try again.</div>
         <?php endif; ?>
+        <?php if ($organizationInvitation !== null): ?><div class="form-status success"><strong>Secure organization invitation:</strong> Complete registration to create your student account. Membership will remain pending until you accept after approval and, when required, your parent or guardian approves.</div><?php endif; ?>
 
         <form class="form-card" action="submit-registration.php" method="post">
           <?php echo csrf_field(); ?>
           <input type="hidden" name="form_name" value="Yuva Club Registration">
+          <?php if ($organizationInvitationToken !== ''): ?><input type="hidden" name="organization_invitation_token" value="<?php echo e($organizationInvitationToken); ?>"><?php endif; ?>
 
           <h2>Student Information & Contact</h2>
           <div class="field-grid">
@@ -168,7 +179,7 @@ $registrationFlashValues = is_array($registrationFlash['values'] ?? null) ? $reg
             </div>
             <div class="field">
               <label for="student_email">Student Email</label>
-              <input id="student_email" name="student_email" type="email" autocomplete="email">
+              <input id="student_email" name="student_email" type="email" autocomplete="email" value="<?php echo e((string) ($registrationFlashValues['student_email'] ?? $organizationInvitation['student_email_snapshot'] ?? '')); ?>"<?php echo $organizationInvitation !== null ? ' readonly required' : ''; ?>>
             </div>
 
             <div class="field">
@@ -214,7 +225,7 @@ $registrationFlashValues = is_array($registrationFlash['values'] ?? null) ? $reg
 
             <div class="field">
               <label for="parent_email">Parent Email *</label>
-              <input id="parent_email" name="parent_email" type="email" required autocomplete="email">
+              <input id="parent_email" name="parent_email" type="email" required autocomplete="email" value="<?php echo e((string) ($registrationFlashValues['parent_email'] ?? $organizationInvitation['parent_email_snapshot'] ?? '')); ?>">
             </div>
 
             <div class="field">
@@ -352,6 +363,8 @@ $registrationFlashValues = is_array($registrationFlash['values'] ?? null) ? $reg
               <label><input type="checkbox" name="agree_parent_permission" value="Yes" required> I have my parent/guardian's permission to participate.</label>
             </div>
           </fieldset>
+
+          <p class="form-note identity-onboarding-notice">After registration, you can choose a YUVA Handle and Avatar for challenges and leaderboards.</p>
 
           <button class="button primary" type="submit">Submit Registration</button>
         </form>

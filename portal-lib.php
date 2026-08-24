@@ -80,6 +80,8 @@ const YUVA_PLATFORM_ORGANIZATION_ID = 'platform';
 const YUVA_PARENT_SESSION_TTL_SECONDS = 7200;
 const YUVA_ADMIN_SESSION_TTL_SECONDS = 7200;
 
+require_once __DIR__ . '/backend/organization-membership.php';
+
 function e(string $value): string {
     return htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
 }
@@ -2034,9 +2036,37 @@ function create_student_account(string $yuvaId, string $studentEmail, string $pa
         'password_hash' => password_hash($password, PASSWORD_DEFAULT),
         'status' => 'active',
         'email_verified' => false,
+        'identity_onboarding_required' => true,
+        'identity_onboarding_completed_at' => '',
         'created_at' => gmdate('c'),
         'updated_at' => gmdate('c'),
     ];
+    write_student_accounts($accounts);
+}
+
+function student_identity_onboarding_required(string $yuvaId): bool {
+    $yuvaId = normalize_yuva_id($yuvaId);
+    if ($yuvaId === '') {
+        return false;
+    }
+    $account = student_accounts()[$yuvaId] ?? null;
+    return is_array($account) && ($account['identity_onboarding_required'] ?? false) === true;
+}
+
+function complete_student_identity_onboarding(string $yuvaId, string $outcome): void {
+    $yuvaId = normalize_yuva_id($yuvaId);
+    $outcome = in_array($outcome, ['saved', 'skipped'], true) ? $outcome : '';
+    if ($yuvaId === '' || $outcome === '') {
+        throw new InvalidArgumentException('A valid YUVA ID and onboarding outcome are required.');
+    }
+    $accounts = student_accounts();
+    if (!is_array($accounts[$yuvaId] ?? null)) {
+        throw new RuntimeException('Student account is unavailable.');
+    }
+    $accounts[$yuvaId]['identity_onboarding_required'] = false;
+    $accounts[$yuvaId]['identity_onboarding_outcome'] = $outcome;
+    $accounts[$yuvaId]['identity_onboarding_completed_at'] = gmdate('c');
+    $accounts[$yuvaId]['updated_at'] = gmdate('c');
     write_student_accounts($accounts);
 }
 

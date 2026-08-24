@@ -37,6 +37,12 @@ $publicIdentity = public_student_identity($studentId);
 $publicAvatar = \YuvaClub\Identity\PublicStudentIdentity::avatar($publicIdentity['avatar_code']);
 $publicIdentityError = (string)($_SESSION['public_identity_error'] ?? '');
 unset($_SESSION['public_identity_error']);
+$organizationMemberships = [];
+try {
+    $organizationMemberships = organization_membership_service()->requestsForStudent($studentId);
+} catch (Throwable $error) {
+    error_log('YUVA student organization membership view unavailable correlation=' . bin2hex(random_bytes(12)) . ' exception_type=' . get_class($error));
+}
 $rewardLevel = reward_level($record);
 $challengeStage = challenge_stage($record);
 $rubricScore = rubric_score($record);
@@ -1236,6 +1242,19 @@ portal_header('Student Dashboard', true);
       </div>
       <button class="button primary" type="submit">Send Report</button>
     </form>
+  </section>
+
+  <section class="band" id="organization-membership">
+    <div class="section-head"><p class="eyebrow">Organization membership</p><h2>Your school or organization connections</h2><p>You decide whether to accept a request. If you are under 18—or your date of birth is unavailable—a linked parent or guardian must also approve before access becomes active.</p></div>
+    <?php if ($organizationMemberships === []): ?><div class="form-card"><p>No organization invitations or memberships are waiting for you.</p></div><?php endif; ?>
+    <div class="three-grid">
+    <?php foreach ($organizationMemberships as $membership): ?><article class="form-card">
+      <p class="eyebrow"><?php echo e((string) $membership['status']); ?></p><h3><?php echo e((string) $membership['organization_code']); ?></h3>
+      <p><?php echo e((string) $membership['invitation_purpose']); ?></p>
+      <?php if (!empty($membership['invitation_message'])): ?><p><?php echo e((string) $membership['invitation_message']); ?></p><?php endif; ?>
+      <?php if (($membership['status'] ?? '') === 'Invited'): ?><form action="student-organization-membership-action.php" method="post"><?php echo csrf_field(); ?><input type="hidden" name="membership_guid" value="<?php echo e((string) $membership['membership_guid']); ?>"><button class="button primary" name="decision" value="accept" type="submit">Accept</button> <button class="button ghost" name="decision" value="decline" type="submit">Decline</button></form><?php elseif (($membership['status'] ?? '') === 'ParentApprovalPending'): ?><p><strong>Waiting for parent/guardian approval.</strong></p><?php endif; ?>
+    </article><?php endforeach; ?>
+    </div>
   </section>
 
   <section class="band">

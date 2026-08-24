@@ -5,11 +5,12 @@ import process from 'node:process';
 
 const root = path.resolve(import.meta.dirname, '..', '..');
 const read = (relativePath) => readFile(path.join(root, relativePath), 'utf8');
-const [parent, css, fixture, portalLib] = await Promise.all([
+const [parent, css, fixture, portalLib, membershipAction] = await Promise.all([
   read('parent.php'),
   read('assets/parent-experience.css'),
   read('tests/frontend/fixtures/parent-experience-preview.html'),
   read('portal-lib.php'),
+  read('parent-organization-membership-action.php'),
 ]);
 const pass = (message) => process.stdout.write(`PASS ${message}\n`);
 const includes = (source, text, message) =>
@@ -55,10 +56,23 @@ for (const route of [
 ]) includes(parent, route, `${route} route`);
 includes(parent, 'parse_link_lines($hub[\'recordings\'])', 'recording link parser');
 includes(parent, 'rel="noopener"', 'external-link protection');
-assert.equal((parent.match(/<form\b/g)||[]).length,1,'only the approved media-consent form is added');
 includes(parent,'action="parent-media-consent.php"','media consent route');
+includes(parent, '<?php echo csrf_field(); ?>', 'media consent and membership CSRF fields');
+assert.equal((parent.match(/action="parent-media-consent\.php"/g) || []).length, 1, 'one scoped media-consent form');
+assert.equal((parent.match(/action="parent-organization-membership-action\.php"/g) || []).length, 2, 'approval and withdrawal use only the membership handler');
+includes(parent, 'name="membership_guid"', 'membership decisions carry only an opaque membership identity');
+for (const decision of ['approve', 'decline', 'withdraw']) {
+  includes(parent, `value="${decision}"`, `parent ${decision} decision`);
+}
+includes(parent, 'requestsForStudent($studentId)', 'membership view is limited to the authenticated child');
+includes(membershipAction, '$student = require_parent_student();', 'membership action requires authenticated parent-child context');
+includes(membershipAction, 'verify_csrf_token', 'membership action verifies CSRF');
+includes(membershipAction, "$_SESSION['parent_student_id']", 'membership action uses the authenticated child identifier');
+includes(membershipAction, 'parent_can_access_student($parentEmail, $yuvaId)', 'membership action rejects another child');
+includes(membershipAction, 'parentDecision($parentEmail, $yuvaId, $guid, $decision)', 'membership mutation remains child and parent scoped');
+assert.ok(!parent.includes('student_email_snapshot') && !parent.includes('parent_email_snapshot'), 'parent UI does not expose membership contact snapshots');
 assert.ok(!/<select\b|<textarea\b/i.test(parent),'parent consent adds no unrelated fields');
-pass('preserved routes and scoped media-consent workflow');
+pass('preserved routes and scoped media-consent and organization-membership workflows');
 
 for (const landmark of [
   'id="parent-main"',

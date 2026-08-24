@@ -54,5 +54,12 @@ jobs:
 
       - name: Public student identity frontend contracts
         run: |
+          node tests/frontend/public-identity-onboarding-contract-test.mjs
           node tests/frontend/public-student-identity-contract-test.mjs
           node tests/frontend/student-profile-contract-test.mjs
+
+      - name: Organization student membership contracts
+        run: |
+          php tests/backend/organization-student-membership-test.php
+          node tests/frontend/organization-student-membership-contract-test.mjs
+          php tests/migrations/migration-framework-test.php
