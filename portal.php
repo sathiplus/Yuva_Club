@@ -35,6 +35,15 @@ $points = student_points($record);
 $tokens = student_tokens($record);
 $publicIdentity = public_student_identity($studentId);
 $publicAvatar = \YuvaClub\Identity\PublicStudentIdentity::avatar($publicIdentity['avatar_code']);
+$leadershipProgress = null;
+$leadershipHistory = [];
+try {
+    $leadershipProgress = leadership_eligibility_service()->latestByYuvaId($studentId);
+    $leadershipHistory = leadership_eligibility_service()->history($studentId);
+} catch (Throwable $error) {
+    error_log('YUVA leadership student view unavailable correlation=' . bin2hex(random_bytes(12)) . ' exception_type=' . get_class($error));
+}
+$leadershipNotice=(string)($_SESSION['leadership_notice']??'');$leadershipError=(string)($_SESSION['leadership_error']??'');unset($_SESSION['leadership_notice'],$_SESSION['leadership_error']);
 $publicIdentityError = (string)($_SESSION['public_identity_error'] ?? '');
 unset($_SESSION['public_identity_error']);
 $organizationMemberships = [];
@@ -461,6 +470,21 @@ portal_header('Student Dashboard', true);
         <div class="journey-card-actions"><a class="button primary" href="#app-achievements">Explore Achievements</a><?php if ($certificateReady): ?><a class="button ghost" href="certificate.php?id=<?php echo e($studentId); ?>">View Certificate</a><?php else: ?><span class="certificate-unavailable" role="status">Certificate available after approval</span><?php endif; ?></div>
       </article>
     </div>
+
+    <?php if (is_array($leadershipProgress)): ?>
+    <section class="journey-card" aria-labelledby="leadership-progress-title">
+      <p class="eyebrow">Your Leadership Journey</p><h2 id="leadership-progress-title"><?php echo e((string)$leadershipProgress['current_level']); ?> → <?php echo e((string)($leadershipProgress['target_level']??'Continued mentorship')); ?></h2>
+      <p><strong><?php echo e((string)$leadershipProgress['status']); ?></strong> · <?php echo e((string)$leadershipProgress['completed']); ?> of <?php echo e((string)$leadershipProgress['required']); ?> requirements complete</p>
+      <?php if($leadershipProgress['status']==='Eligible for Review'): ?><p>You’ve completed the current requirements for <?php echo e((string)$leadershipProgress['target_level']); ?>. Your progress is ready for human review.</p><?php endif; ?>
+      <ul><?php foreach($leadershipProgress['requirements'] as $requirement): ?><li><?php echo !empty($requirement['complete'])?'✓':'○'; ?> <?php echo e((string)$requirement['label']); ?> (<?php echo e((string)$requirement['actual']); ?>/<?php echo e((string)$requirement['required']); ?>)</li><?php endforeach; ?></ul>
+      <?php if($leadershipNotice!==''): ?><div class="form-status success"><?php echo e($leadershipNotice); ?></div><?php endif; ?><?php if($leadershipError!==''): ?><div class="form-status error"><?php echo e($leadershipError); ?></div><?php endif; ?>
+      <div class="dashboard-grid">
+        <form action="student-leadership-reflection.php" method="post" class="form-card"><?php echo csrf_field(); ?><h3>Complete a reflection</h3><label>What went well?<textarea name="went_well" required maxlength="1500"></textarea></label><label>What would you improve next time?<textarea name="improve_next" required maxlength="1500"></textarea></label><label>What did you learn?<textarea name="learned" required maxlength="1500"></textarea></label><label>What is your next goal?<textarea name="next_goal" required maxlength="1500"></textarea></label><button class="button primary" type="submit">Save Reflection</button></form>
+        <form action="student-leadership-contribution.php" method="post" class="form-card"><?php echo csrf_field(); ?><h3>Submit a contribution</h3><label>Contribution type<select name="evidence_type"><option value="leadership_service">Leadership or service</option><option value="peer_support">Peer support or mentoring</option></select></label><label>Activity title<input name="title" required maxlength="180"></label><label>Date<input type="date" name="evidence_date" required></label><label>Optional hours<input type="number" name="hours" min="0" max="1000" step="0.25"></label><label>What did you contribute or learn?<textarea name="description" required maxlength="1500"></textarea></label><button class="button primary" type="submit">Submit for Human Review</button></form>
+      </div>
+      <?php if($leadershipHistory!==[]): ?><h3>Approved level history</h3><ul><?php foreach($leadershipHistory as $history): ?><li><?php echo e((string)$history['previous_level']); ?> → <?php echo e((string)$history['new_level']); ?> · <?php echo e(display_eastern_time((string)$history['promoted_at'])); ?></li><?php endforeach; ?></ul><?php endif; ?>
+    </section>
+    <?php endif; ?>
 
     <div class="journey-section-heading journey-story-heading journey-challenge-heading"><span class="journey-chapter-index" aria-hidden="true">02</span><div><p class="eyebrow">Your Current Chapter</p><h2>Follow the challenge path</h2><p>Your approved challenge stage anchors this part of your journey.</p></div></div>
     <article class="journey-card journey-challenge-card">
