@@ -45,6 +45,10 @@ membership_check(str_contains($service, 'used_at IS NULL') && str_contains($serv
 membership_check(str_contains($service, "if (\$dateOfBirth === '')") && str_contains($service, 'catch (Throwable)'), 'Missing or invalid DOB must fail closed to parent approval.');
 membership_check(str_contains($service, 'hasConflictingActiveMembership'), 'Cross-organization active membership conflicts must be rejected.');
 membership_check(str_contains($service, "'neutral' => true"), 'Unresolved existing-student requests must return a neutral result.');
+membership_check(str_contains($service, 'function (PDO $pdo) use ($parentEmail, $yuvaId, $membershipGuid, $decision): array'), 'Parent membership decisions must return their structured array result through the transaction callback.');
+foreach (['ParentApproved', 'ParentDeclined', 'ParentWithdrew'] as $parentAction) {
+    membership_check(str_contains($service, "'{$parentAction}'"), "Parent membership audit contract is missing {$parentAction}.");
+}
 
 membership_check(str_contains($organizationHandler, 'require_admin_post([YUVA_ROLE_ORGANIZATION_ADMIN])'), 'Organization request handler must enforce role and CSRF.');
 membership_check(str_contains($organizationHandler, 'If the student can be contacted'), 'Existing-student result must be anti-enumeration neutral.');

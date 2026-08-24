@@ -288,7 +288,7 @@ final class OrganizationMembershipService
         if ($parentEmail === '') {
             throw new RuntimeException('Parent identity is unavailable.');
         }
-        return Database::transaction(function (PDO $pdo) use ($parentEmail, $yuvaId, $membershipGuid, $decision): string {
+        return Database::transaction(function (PDO $pdo) use ($parentEmail, $yuvaId, $membershipGuid, $decision): array {
             $request = $this->lockRequestForStudent($yuvaId, $membershipGuid);
             if ($request === null) {
                 throw new RuntimeException('Membership request is unavailable.');
