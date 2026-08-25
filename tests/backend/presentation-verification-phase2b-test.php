@@ -11,6 +11,7 @@ $org=file_get_contents($root.'/organization-admin.php');
 $admin=file_get_contents($root.'/admin.php');
 foreach([$service,$leadership,$migration,$studentRoute,$adminRoute,$org,$admin] as $source)if($source===false)throw new RuntimeException('Required presentation verification source is missing.');
 $assert=static function(bool $ok,string $message):void{if(!$ok)throw new RuntimeException($message);};
+$assert(str_contains($service,'normalize_sqlsrv_rowversion_token')&&str_contains($service,"bindValue(':version',\$rowVersion,PDO::PARAM_STR)"),'Presentation rowversions must normalize and bind as canonical text.');
 
 $assert(str_contains($migration,'presentation_verifications'),'Migration creates verification storage.');
 $assert(str_contains($migration,'presentation_verification_audit'),'Migration preserves verification audit history.');

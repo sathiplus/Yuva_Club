@@ -47,13 +47,13 @@ final class LeadershipEligibilityService
         if ($persist) {
             $stmt = $this->pdo->prepare(
                 "INSERT dbo.leadership_eligibility_snapshots(student_id,current_level_id,target_level_id,rule_version,[status],evidence_snapshot,source_revision)
-                 OUTPUT INSERTED.id, CONVERT(VARCHAR(16), INSERTED.row_version, 2) AS row_version
+                 OUTPUT INSERTED.id, INSERTED.row_version AS row_version
                  VALUES(:student,:current,:target,:version,:status,:evidence,:revision)"
             );
             $stmt->execute(['student'=>(int)$student['id'],'current'=>(int)$student['current_level_id'],'target'=>(int)$rule['level_to_id'],'version'=>self::RULE_VERSION,'status'=>$status,'evidence'=>$json,'revision'=>$revision]);
             $saved = $stmt->fetch();
             $snapshot['snapshot_id'] = (int) $saved['id'];
-            $snapshot['row_version'] = (string) $saved['row_version'];
+            $snapshot['row_version'] = normalize_sqlsrv_rowversion_token($saved['row_version'] ?? null);
         }
         return $snapshot;
     }
@@ -63,7 +63,7 @@ final class LeadershipEligibilityService
         $student = $this->student($yuvaId);
         $stmt = $this->pdo->prepare(
             "SELECT TOP (1) snapshot.*, current_level.name current_level, target_level.name target_level,
-                    CONVERT(VARCHAR(16),snapshot.row_version,2) row_version
+                    snapshot.row_version
              FROM dbo.leadership_eligibility_snapshots snapshot
              JOIN dbo.levels current_level ON current_level.id=snapshot.current_level_id
              LEFT JOIN dbo.levels target_level ON target_level.id=snapshot.target_level_id
@@ -73,7 +73,7 @@ final class LeadershipEligibilityService
         $row=$stmt->fetch();
         if (!is_array($row)) return $this->evaluateByYuvaId($yuvaId);
         $evidence=json_decode((string)$row['evidence_snapshot'],true) ?: [];
-        return array_merge($evidence,['snapshot_id'=>(int)$row['id'],'status'=>(string)$row['status'],'row_version'=>(string)$row['row_version']]);
+        return array_merge($evidence,['snapshot_id'=>(int)$row['id'],'status'=>(string)$row['status'],'row_version'=>normalize_sqlsrv_rowversion_token($row['row_version'] ?? null)]);
     }
 
     public function addReflection(string $yuvaId, array $input): string
@@ -118,8 +118,8 @@ final class LeadershipEligibilityService
     public function evidence(string $yuvaId): array
     {
         $student=$this->student($yuvaId);
-        $stmt=$this->pdo->prepare("SELECT evidence_guid,evidence_type,source_type,source_id,organization_code,[status],evidence_date,notes,metadata_json,approved_by_email,approved_by_role,created_at,CONVERT(VARCHAR(16),row_version,2) row_version FROM dbo.leadership_evidence WHERE student_id=:student ORDER BY evidence_date DESC,id DESC");
-        $stmt->execute(['student'=>(int)$student['id']]); return $stmt->fetchAll()?:[];
+        $stmt=$this->pdo->prepare("SELECT evidence_guid,evidence_type,source_type,source_id,organization_code,[status],evidence_date,notes,metadata_json,approved_by_email,approved_by_role,created_at,row_version FROM dbo.leadership_evidence WHERE student_id=:student ORDER BY evidence_date DESC,id DESC");
+        $stmt->execute(['student'=>(int)$student['id']]);$rows=$stmt->fetchAll()?:[];foreach($rows as &$row){$row['row_version']=normalize_sqlsrv_rowversion_token($row['row_version']??null);}unset($row);return$rows;
     }
 
     public function reviewEvidence(string $yuvaId,string $evidenceGuid,array $actor,string $decision,string $note=''): void
@@ -199,9 +199,9 @@ final class LeadershipApprovalService
         return $this->transaction(function()use($yuvaId,$actor,$input,$role,$email,$isMaster,$isOrg,$decision,$reason,$override):array{
             $studentStmt=$this->pdo->prepare("SELECT student.id,student.current_level_id,student.yuva_id,current_level.display_order,current_level.name current_level FROM dbo.students student WITH(UPDLOCK,HOLDLOCK) JOIN dbo.levels current_level ON current_level.id=student.current_level_id WHERE student.yuva_id=:yuva_id");
             $studentStmt->execute(['yuva_id'=>strtoupper(trim($yuvaId))]);$student=$studentStmt->fetch();if(!is_array($student))throw new RuntimeException('Student was not found.');
-            $snapshotId=(int)($input['snapshot_id']??0);$rowVersion=strtoupper(trim((string)($input['row_version']??'')));
-            if($snapshotId<1||!preg_match('/^[0-9A-F]{16}$/',$rowVersion))throw new RuntimeException('Leadership review version is missing. Refresh before deciding.');
-            $stale=$this->pdo->prepare("SELECT TOP(1) id FROM dbo.leadership_eligibility_snapshots WHERE id=:id AND student_id=:student AND row_version=CONVERT(BINARY(8),:row_version,2)");$stale->execute(['id'=>$snapshotId,'student'=>(int)$student['id'],'row_version'=>$rowVersion]);if($stale->fetchColumn()===false)throw new RuntimeException('Stale leadership review was rejected.');
+            $snapshotId=(int)($input['snapshot_id']??0);try{$rowVersion=normalize_sqlsrv_rowversion_token($input['row_version']??null);}catch(InvalidArgumentException){throw new RuntimeException('Leadership review version is missing. Refresh before deciding.');}
+            if($snapshotId<1)throw new RuntimeException('Leadership review version is missing. Refresh before deciding.');
+            $stale=$this->pdo->prepare("SELECT TOP(1) id FROM dbo.leadership_eligibility_snapshots WHERE id=:id AND student_id=:student AND row_version=CONVERT(BINARY(8),:row_version,2)");$stale->bindValue(':id',$snapshotId,PDO::PARAM_INT);$stale->bindValue(':student',(int)$student['id'],PDO::PARAM_INT);$stale->bindValue(':row_version',$rowVersion,PDO::PARAM_STR);$stale->execute();if($stale->fetchColumn()===false)throw new RuntimeException('Stale leadership review was rejected.');
             $organization=null;
             if($isOrg){$organization=strtoupper(trim((string)($actor['organization_id']??'')));if($organization===''||!$this->activeMembership((int)$student['id'],$organization))throw new RuntimeException('Active same-organization membership is required.');}
             $snapshot=$this->eligibility->evaluateByYuvaId($yuvaId,true);

@@ -31,7 +31,12 @@ $mentor=LeadershipEligibilityService::calculateRequirements(['presentations'=>6,
 leadership_check(count(array_filter($mentor,fn(array $r):bool=>$r['complete']))===6,'Leader to Mentor rules failed.');
 
 foreach(["[status]=N'Applied'","[status]=N'Approved'",'current_level_id=:target','Active same-organization membership is required','Leadership promotion must advance exactly one level','Only Master Admin may override eligibility','source_revision','Concurrent leadership promotion was rejected','already-approved'] as $contract){leadership_check(str_contains($service,$contract),'Service security contract missing: '.$contract);}
-leadership_check(str_contains($service,'CONVERT(VARCHAR(16), INSERTED.row_version, 2) AS row_version'),'Eligibility persistence must return the inserted rowversion under the expected key.');
+leadership_check(normalize_sqlsrv_rowversion_token("\x00\x00\x00\x00\x00\x00\x07\xAF")==='00000000000007AF','Native SQLSRV rowversion must normalize to canonical hex.');
+leadership_check(normalize_sqlsrv_rowversion_token('00000000000007af')==='00000000000007AF','Text rowversion must normalize consistently.');
+foreach([null,'','1234','0000000000000XYZ'] as $invalid){try{normalize_sqlsrv_rowversion_token($invalid);leadership_check(false,'Malformed rowversion must be rejected.');}catch(InvalidArgumentException){}}
+leadership_check(str_contains($service,'INSERTED.row_version AS row_version')&&str_contains($service,"normalize_sqlsrv_rowversion_token(\$saved['row_version'] ?? null)"),'Eligibility INSERT must normalize native SQLSRV rowversion output.');
+leadership_check(str_contains($service,"normalize_sqlsrv_rowversion_token(\$row['row_version'] ?? null)"),'Eligibility SELECT must normalize SQLSRV rowversion output.');
+leadership_check(str_contains($service,"bindValue(':row_version',\$rowVersion,PDO::PARAM_STR)"),'Eligibility concurrency token must bind as text.');
 leadership_check(!preg_match('/AiMentorService.{0,500}LeadershipApprovalService/s',$service),'AI Mentor must not invoke approval service.');
 leadership_check(str_contains($student,'student-leadership-reflection.php')&&str_contains($student,'student-leadership-contribution.php'),'Student evidence workflows missing.');
 leadership_check(str_contains($parent,'leadershipProgress')&&!str_contains($parent,'admin-leadership-decision.php'),'Parent must remain read-only.');
