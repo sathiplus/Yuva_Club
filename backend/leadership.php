@@ -47,7 +47,7 @@ final class LeadershipEligibilityService
         if ($persist) {
             $stmt = $this->pdo->prepare(
                 "INSERT dbo.leadership_eligibility_snapshots(student_id,current_level_id,target_level_id,rule_version,[status],evidence_snapshot,source_revision)
-                 OUTPUT INSERTED.id, CONVERT(VARCHAR(16), INSERTED.row_version, 2)
+                 OUTPUT INSERTED.id, CONVERT(VARCHAR(16), INSERTED.row_version, 2) AS row_version
                  VALUES(:student,:current,:target,:version,:status,:evidence,:revision)"
             );
             $stmt->execute(['student'=>(int)$student['id'],'current'=>(int)$student['current_level_id'],'target'=>(int)$rule['level_to_id'],'version'=>self::RULE_VERSION,'status'=>$status,'evidence'=>$json,'revision'=>$revision]);

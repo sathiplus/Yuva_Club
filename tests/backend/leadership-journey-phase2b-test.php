@@ -31,6 +31,7 @@ $mentor=LeadershipEligibilityService::calculateRequirements(['presentations'=>6,
 leadership_check(count(array_filter($mentor,fn(array $r):bool=>$r['complete']))===6,'Leader to Mentor rules failed.');
 
 foreach(["[status]=N'Applied'","[status]=N'Approved'",'current_level_id=:target','Active same-organization membership is required','Leadership promotion must advance exactly one level','Only Master Admin may override eligibility','source_revision','Concurrent leadership promotion was rejected','already-approved'] as $contract){leadership_check(str_contains($service,$contract),'Service security contract missing: '.$contract);}
+leadership_check(str_contains($service,'CONVERT(VARCHAR(16), INSERTED.row_version, 2) AS row_version'),'Eligibility persistence must return the inserted rowversion under the expected key.');
 leadership_check(!preg_match('/AiMentorService.{0,500}LeadershipApprovalService/s',$service),'AI Mentor must not invoke approval service.');
 leadership_check(str_contains($student,'student-leadership-reflection.php')&&str_contains($student,'student-leadership-contribution.php'),'Student evidence workflows missing.');
 leadership_check(str_contains($parent,'leadershipProgress')&&!str_contains($parent,'admin-leadership-decision.php'),'Parent must remain read-only.');
