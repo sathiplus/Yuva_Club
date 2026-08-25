@@ -27,6 +27,9 @@ $assert(
 );
 $assert(str_contains($service,"[status] IN(N'submitted',N'completed',N'reviewed')"),'Only completed/submitted presentations may be verified.');
 $assert(str_contains($service,"[status]=N'Active'"),'Organization verification requires Active membership.');
+$assert(str_contains($service,"role=N'admin' AND [status]=N'active'"),'Reviewer lookup must use the active SQL Admin users-table contract.');
+$assert(!str_contains($service,'is_active=1'),'Reviewer lookup must not reference the nonexistent users.is_active column.');
+$assert(str_contains($service,"\$role==='MasterAdmin'&&\$id===false"),'Unknown, inactive, or wrong-role Master Admin reviewers must be rejected.');
 $assert(str_contains($service,"Only Master Admin may revoke"),'Revocation authority is restricted.');
 $assert(str_contains($service,"'presentation','human_review'"),'Verified presentation supplies one presentation and one human review source.');
 $assert(str_contains($service,"already-verified"),'Duplicate verification is idempotent.');
