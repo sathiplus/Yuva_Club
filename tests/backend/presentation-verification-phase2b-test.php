@@ -15,7 +15,15 @@ $assert=static function(bool $ok,string $message):void{if(!$ok)throw new Runtime
 $assert(str_contains($migration,'presentation_verifications'),'Migration creates verification storage.');
 $assert(str_contains($migration,'presentation_verification_audit'),'Migration preserves verification audit history.');
 $assert(str_contains($migration,'ROWVERSION'),'Verification has optimistic concurrency.');
-$assert(str_contains($migration,"WHERE [status]=N'Verified'"),'Only one active verification is allowed per submission.');
+$assert(str_contains($migration,"WHERE [status]=N''Verified''"),'Only one active verification is allowed per submission.');
+$assert(
+    substr_count($migration, "EXEC(N'CREATE") === 4,
+    'Indexes that reference newly added columns or tables use SQL Server-safe dynamic SQL.'
+);
+$assert(
+    str_contains($migration, "EXEC(N'CREATE UNIQUE INDEX ux_presentation_submissions_student_revision"),
+    'The source-revision index is compiled only after its guarded column addition executes.'
+);
 $assert(str_contains($service,"[status] IN(N'submitted',N'completed',N'reviewed')"),'Only completed/submitted presentations may be verified.');
 $assert(str_contains($service,"[status]=N'Active'"),'Organization verification requires Active membership.');
 $assert(str_contains($service,"Only Master Admin may revoke"),'Revocation authority is restricted.');

@@ -6,9 +6,9 @@ IF COL_LENGTH(N'dbo.presentation_submissions', N'completed_at') IS NULL
     ALTER TABLE dbo.presentation_submissions ADD completed_at DATETIME2 NULL;
 
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id=OBJECT_ID(N'dbo.presentation_submissions') AND name=N'ux_presentation_submissions_student_revision')
-    CREATE UNIQUE INDEX ux_presentation_submissions_student_revision
+    EXEC(N'CREATE UNIQUE INDEX ux_presentation_submissions_student_revision
         ON dbo.presentation_submissions(student_id, source_revision_hash)
-        WHERE source_revision_hash IS NOT NULL;
+        WHERE source_revision_hash IS NOT NULL;');
 
 IF OBJECT_ID(N'dbo.presentation_verifications', N'U') IS NULL
 BEGIN
@@ -38,14 +38,14 @@ BEGIN
     );
 END
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id=OBJECT_ID(N'dbo.presentation_verifications') AND name=N'ux_presentation_verifications_active_submission')
-    CREATE UNIQUE INDEX ux_presentation_verifications_active_submission
-        ON dbo.presentation_verifications(submission_id) WHERE [status]=N'Verified';
+    EXEC(N'CREATE UNIQUE INDEX ux_presentation_verifications_active_submission
+        ON dbo.presentation_verifications(submission_id) WHERE [status]=N''Verified'';');
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id=OBJECT_ID(N'dbo.presentation_verifications') AND name=N'idx_presentation_verifications_student_status')
-    CREATE INDEX idx_presentation_verifications_student_status
-        ON dbo.presentation_verifications(student_id,[status],verified_at DESC);
+    EXEC(N'CREATE INDEX idx_presentation_verifications_student_status
+        ON dbo.presentation_verifications(student_id,[status],verified_at DESC);');
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id=OBJECT_ID(N'dbo.presentation_verifications') AND name=N'idx_presentation_verifications_organization_status')
-    CREATE INDEX idx_presentation_verifications_organization_status
-        ON dbo.presentation_verifications(organization_code,[status],verified_at DESC);
+    EXEC(N'CREATE INDEX idx_presentation_verifications_organization_status
+        ON dbo.presentation_verifications(organization_code,[status],verified_at DESC);');
 
 IF OBJECT_ID(N'dbo.presentation_verification_audit', N'U') IS NULL
 BEGIN
