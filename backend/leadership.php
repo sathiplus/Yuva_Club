@@ -65,6 +65,7 @@ final class LeadershipEligibilityService
             "SELECT TOP (1) snapshot.*, current_level.name current_level, target_level.name target_level,
                     snapshot.row_version
              FROM dbo.leadership_eligibility_snapshots snapshot
+             JOIN dbo.students student ON student.id=snapshot.student_id AND student.current_level_id=snapshot.current_level_id
              JOIN dbo.levels current_level ON current_level.id=snapshot.current_level_id
              LEFT JOIN dbo.levels target_level ON target_level.id=snapshot.target_level_id
              WHERE snapshot.student_id=:student ORDER BY snapshot.id DESC"
@@ -217,6 +218,7 @@ final class LeadershipApprovalService
             $this->pdo->prepare("INSERT dbo.leadership_level_history(student_id,previous_level_id,new_level_id,decision_id,approved_by_email,approver_role,organization_code) VALUES(:student,:previous,:target,:decision,:email,:role,:organization)")->execute(['student'=>(int)$student['id'],'previous'=>(int)$student['current_level_id'],'target'=>$target,'decision'=>(int)$created['id'],'email'=>$email,'role'=>$role,'organization'=>$organization]);
             $promotion=$this->pdo->prepare("UPDATE dbo.students SET current_level_id=:target,updated_at=SYSUTCDATETIME() WHERE id=:student AND current_level_id=:previous");$promotion->execute(['target'=>$target,'student'=>(int)$student['id'],'previous'=>(int)$student['current_level_id']]);if($promotion->rowCount()!==1)throw new RuntimeException('Concurrent leadership promotion was rejected.');
             $this->pdo->prepare("UPDATE dbo.leadership_eligibility_snapshots SET [status]=N'Approved' WHERE id=:id")->execute(['id'=>(int)$snapshot['snapshot_id']]);
+            $this->eligibility->evaluateByYuvaId($yuvaId,true);
             return['status'=>'approved','decision_guid'=>(string)$created['decision_guid']];
         });
     }
