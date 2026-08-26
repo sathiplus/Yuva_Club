@@ -1,0 +1,6 @@
+<?php
+declare(strict_types=1);
+require __DIR__.'/portal-lib.php';
+$admin=require_admin_post([YUVA_ROLE_MASTER_ADMIN,YUVA_ROLE_ORGANIZATION_ADMIN]);$yuvaId=normalize_yuva_id((string)($_POST['yuva_id']??''));
+try{if(($_POST['action']??'verify')==='revoke'){presentation_verification_service()->revoke((string)($_POST['verification_guid']??''),(string)($_POST['row_version']??''),$admin,(string)($_POST['reason']??''));$_SESSION['leadership_admin_notice']='Presentation verification revoked with audit history preserved.';}else{$result=presentation_verification_service()->verify($yuvaId,(int)($_POST['submission_id']??0),$admin,(string)($_POST['note']??''));leadership_eligibility_service()->evaluateByYuvaId($yuvaId);$_SESSION['leadership_admin_notice']=$result['status']==='already-verified'?'Presentation was already verified.':'Presentation verified and leadership evidence updated.';}}catch(Throwable $e){$_SESSION['leadership_admin_error']=$e instanceof InvalidArgumentException?$e->getMessage():'The presentation verification was rejected safely.';error_log('YUVA presentation verification failed correlation='.bin2hex(random_bytes(12)).' exception_type='.get_class($e));}
+$target=$admin['role']===YUVA_ROLE_ORGANIZATION_ADMIN?'organization-admin.php#leadership-reviews':'admin.php#leadership-reviews';header('Location: '.$target,true,303);exit;

@@ -1,0 +1,17 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import assert from 'node:assert/strict';
+const root=path.resolve(import.meta.dirname,'../..');
+const read=(name)=>fs.readFileSync(path.join(root,name),'utf8');
+const portal=read('portal.php');
+const organization=read('organization-admin.php');
+const admin=read('admin.php');
+assert.match(portal,/Submit Completed Presentation for Verification/);
+assert.match(portal,/student-presentation-complete\.php/);
+assert.match(organization,/admin-presentation-verification\.php/);
+assert.match(organization,/Verify Presentation/);
+assert.doesNotMatch(organization,/Revoke Verification/);
+assert.match(admin,/Verify Presentation/);
+assert.match(admin,/Revoke Verification/);
+assert.match(admin,/row_version/);
+console.log('Presentation verification Phase 2B frontend contract PASS');

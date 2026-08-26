@@ -16,6 +16,8 @@ $points = student_points($record);
 $tokens = student_tokens($record);
 $publicIdentity=public_student_identity($studentId);
 $publicAvatar=\YuvaClub\Identity\PublicStudentIdentity::avatar($publicIdentity['avatar_code']);
+$leadershipProgress=null;$leadershipHistory=[];
+try{$leadershipProgress=leadership_eligibility_service()->latestByYuvaId($studentId);$leadershipHistory=leadership_eligibility_service()->history($studentId);}catch(Throwable $error){error_log('YUVA leadership parent view unavailable correlation='.bin2hex(random_bytes(12)).' exception_type='.get_class($error));}
 $rewardLevel = reward_level($record);
 $rank = approved_rank($record);
 $eligibleRank = rank_eligibility($record);
@@ -57,6 +59,7 @@ portal_header('Parent Dashboard');
       <article class="parent-metric parent-metric-hours"><span class="parent-card-icon" aria-hidden="true"></span><p>Volunteer Hours</p><strong><?php echo e($record['service_hours'] ?? '0'); ?></strong><small>approved</small></article>
       <article class="parent-metric parent-metric-rubric"><span class="parent-card-icon" aria-hidden="true"></span><p>Rubric Score</p><strong><?php echo e((string) $rubricScore); ?><small>/100</small></strong><small>official evaluation</small></article>
     </div>
+    <?php if(is_array($leadershipProgress)): ?><article class="parent-progress-card"><div class="parent-card-heading"><div><p class="eyebrow">Leadership Journey</p><h2><?php echo e((string)$leadershipProgress['current_level']); ?> → <?php echo e((string)($leadershipProgress['target_level']??'Continued mentorship')); ?></h2><p><?php echo e((string)$leadershipProgress['status']); ?> · <?php echo e((string)$leadershipProgress['completed']); ?> of <?php echo e((string)$leadershipProgress['required']); ?> requirements complete</p></div></div><ul><?php foreach($leadershipProgress['requirements'] as $requirement): ?><li><?php echo !empty($requirement['complete'])?'✓':'○'; ?> <?php echo e((string)$requirement['label']); ?></li><?php endforeach; ?></ul><?php if($leadershipHistory!==[]): ?><h3>Approved level history</h3><ul><?php foreach($leadershipHistory as $history): ?><li><?php echo e((string)$history['previous_level']); ?> → <?php echo e((string)$history['new_level']); ?></li><?php endforeach; ?></ul><?php endif; ?></article><?php endif; ?>
 
     <article class="parent-progress-card">
       <div class="parent-card-heading"><span class="parent-card-icon" aria-hidden="true"></span><div><p class="eyebrow">Leadership Challenge</p><h2><?php echo e($challengeStage); ?></h2><p>Current approved challenge stage</p></div></div>

@@ -1,0 +1,10 @@
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+const read=(name)=>fs.readFileSync(new URL(`../../${name}`,import.meta.url),'utf8');
+const student=read('portal.php'),parent=read('parent.php'),org=read('organization-admin.php'),admin=read('admin.php');
+for(const text of ['Your Leadership Journey','Eligible for Review','ready for human review','Save Reflection','Submit for Human Review'])assert.ok(student.includes(text),`student leadership UI missing ${text}`);
+assert.ok(!student.includes('You are now Speaker'),'eligibility must not claim promotion');
+assert.ok(parent.includes('Approved level history')&& !parent.includes('admin-leadership-decision.php'),'parent leadership experience must be read-only');
+for(const text of ['Leadership Reviews','Approve Evidence','More Evidence Needed'])assert.ok(org.includes(text),`Organization Admin leadership UI missing ${text}`);
+for(const text of ['Global Leadership Review Queue','Audited Master Admin override',"$progress['rule_version']"])assert.ok(admin.includes(text),`Master Admin leadership UI missing ${text}`);
+console.log('Leadership Phase 2B frontend contract PASS');

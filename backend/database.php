@@ -128,6 +128,20 @@ function db_is_sqlsrv(?PDO $pdo = null): bool {
     return db_driver_name($pdo) === 'sqlsrv';
 }
 
+function normalize_sqlsrv_rowversion_token(mixed $value): string {
+    if (!is_string($value) || $value === '') {
+        throw new InvalidArgumentException('A valid rowversion token is required.');
+    }
+    if (strlen($value) === 8) {
+        return strtoupper(bin2hex($value));
+    }
+    $token = trim($value);
+    if (strlen($token) !== 16 || !ctype_xdigit($token)) {
+        throw new InvalidArgumentException('A valid rowversion token is required.');
+    }
+    return strtoupper($token);
+}
+
 function db_now_sql(): string {
     return db_driver() === 'sqlsrv' ? 'SYSUTCDATETIME()' : 'UTC_TIMESTAMP()';
 }
