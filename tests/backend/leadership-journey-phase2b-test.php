@@ -37,6 +37,7 @@ foreach([null,'','1234','0000000000000XYZ'] as $invalid){try{normalize_sqlsrv_ro
 leadership_check(str_contains($service,'INSERTED.row_version AS row_version')&&str_contains($service,"normalize_sqlsrv_rowversion_token(\$saved['row_version'] ?? null)"),'Eligibility INSERT must normalize native SQLSRV rowversion output.');
 leadership_check(str_contains($service,"normalize_sqlsrv_rowversion_token(\$row['row_version'] ?? null)"),'Eligibility SELECT must normalize SQLSRV rowversion output.');
 leadership_check(str_contains($service,"bindValue(':row_version',\$rowVersion,PDO::PARAM_STR)"),'Eligibility concurrency token must bind as text.');
+leadership_check(str_contains($service,'CONVERT(NVARCHAR(36),INSERTED.decision_guid) AS decision_guid'),'Leadership decision OUTPUT must expose the decision GUID under its associative result key.');
 leadership_check(!preg_match('/AiMentorService.{0,500}LeadershipApprovalService/s',$service),'AI Mentor must not invoke approval service.');
 leadership_check(str_contains($student,'student-leadership-reflection.php')&&str_contains($student,'student-leadership-contribution.php'),'Student evidence workflows missing.');
 leadership_check(str_contains($parent,'leadershipProgress')&&!str_contains($parent,'admin-leadership-decision.php'),'Parent must remain read-only.');
