@@ -46,6 +46,9 @@ try {
     error_log('YUVA leadership student view unavailable correlation=' . bin2hex(random_bytes(12)) . ' exception_type=' . get_class($error));
 }
 $leadershipNotice=(string)($_SESSION['leadership_notice']??'');$leadershipError=(string)($_SESSION['leadership_error']??'');unset($_SESSION['leadership_notice'],$_SESSION['leadership_error']);
+$availableChallenges=[];$challengeEntries=[];
+try{$availableChallenges=competition_foundation_service()->availableForStudent($studentId);$challengeEntries=competition_foundation_service()->entriesForStudent($studentId);}catch(Throwable $error){error_log('YUVA student challenges unavailable correlation='.bin2hex(random_bytes(12)).' exception_type='.get_class($error));}
+$competitionStudentNotice=(string)($_SESSION['competition_student_notice']??'');$competitionStudentError=(string)($_SESSION['competition_student_error']??'');unset($_SESSION['competition_student_notice'],$_SESSION['competition_student_error']);
 $publicIdentityError = (string)($_SESSION['public_identity_error'] ?? '');
 unset($_SESSION['public_identity_error']);
 $organizationMemberships = [];
@@ -1244,6 +1247,20 @@ portal_header('Student Dashboard', true);
       <article class="practice-future-card practice-future-video"><span class="practice-tool-icon" aria-hidden="true"></span><div><h3>Record Video</h3><p>Record and review your presentation practice.</p></div><strong>Coming Soon</strong></article>
       <article class="practice-future-card practice-future-timer"><span class="practice-tool-icon" aria-hidden="true"></span><div><h3>Speech Timer</h3><p>Practice pacing and timing for your presentation.</p></div><strong>Coming Soon</strong></article>
       <article class="practice-future-card practice-future-history"><span class="practice-tool-icon" aria-hidden="true"></span><div><h3>Practice History</h3><p>Review earlier practice sessions and growth.</p></div><strong>Coming Soon</strong></article>
+    </div>
+  </section>
+
+  <section class="band" id="app-challenges">
+    <div class="section-head"><p class="eyebrow">Challenges</p><h2>Available Challenges</h2><p>Join an eligible challenge and lock a copy of your current research as the official competition entry.</p></div>
+    <?php if($competitionStudentNotice!==''): ?><div class="form-status success"><?php echo e($competitionStudentNotice); ?></div><?php endif; ?>
+    <?php if($competitionStudentError!==''): ?><div class="form-status error" role="alert"><?php echo e($competitionStudentError); ?></div><?php endif; ?>
+    <div class="three-grid">
+    <?php foreach($availableChallenges as $challenge): ?><article class="form-card"><p class="eyebrow"><?php echo e((string)$challenge['scope_type']); ?> · <?php echo e((string)$challenge['status']); ?></p><h3><?php echo e((string)$challenge['title']); ?></h3><p><?php echo e((string)$challenge['description']); ?></p><p><strong><?php echo e((string)$challenge['division_name']); ?></strong><br><?php echo e((string)$challenge['rubric_name']); ?> · max <?php echo e((string)$challenge['maximum_score']); ?><br>Deadline: <?php echo e((string)$challenge['submission_deadline']); ?> UTC</p><?php if(empty($challenge['entry_guid'])&&$challenge['status']==='Open'): ?><form action="student-competition-entry.php" method="post"><?php echo csrf_field(); ?><input type="hidden" name="competition_guid" value="<?php echo e((string)$challenge['competition_guid']); ?>"><input type="hidden" name="competition_division_id" value="<?php echo e((string)$challenge['competition_division_id']); ?>"><button class="button primary" type="submit">Join Challenge</button></form><?php elseif(!empty($challenge['entry_guid'])): ?><p><strong>Joined</strong></p><?php endif; ?></article><?php endforeach; ?>
+    <?php if($availableChallenges===[]): ?><div class="form-card"><p>No eligible challenges are available right now.</p></div><?php endif; ?>
+    </div>
+    <div class="section-head"><h2>My Entries</h2></div><div class="three-grid">
+    <?php foreach($challengeEntries as $entry): ?><article class="form-card"><h3><?php echo e((string)$entry['title']); ?></h3><p><?php echo e((string)$entry['division_name']); ?> · <strong><?php echo e((string)$entry['entry_status']); ?></strong></p><?php if(!empty($entry['submission_guid'])): ?><p><strong>Submission Locked</strong></p><p>You can continue practicing in YUVA Club, but your official competition submission will not change.</p><?php elseif($entry['status']==='Open'): ?><form action="student-competition-submit.php" method="post"><?php echo csrf_field(); ?><input type="hidden" name="entry_guid" value="<?php echo e((string)$entry['entry_guid']); ?>"><button class="button primary" type="submit">Submit Competition Entry</button></form><?php endif; ?></article><?php endforeach; ?>
+    <?php if($challengeEntries===[]): ?><div class="form-card"><p>You have not joined a challenge yet.</p></div><?php endif; ?>
     </div>
   </section>
 
