@@ -11,7 +11,7 @@ assert.ok(panel.includes('Practice')&&panel.includes('Organization'),'Phase 2C.1
 assert.ok(panel.includes('PublicStudentIdentity::view'),'Admin entries use public identity projection');
 assert.ok(panel.includes('name="row_version"')&&panel.includes("(string)$challenge['row_version']"),'Lifecycle form uses the canonical managed-challenge rowversion field');
 assert.ok(!service.includes('SELECT competition.*'),'Raw competition rowversion must not reach lifecycle forms through a wildcard projection');
-assert.ok(service.includes('CONVERT(VARCHAR(16),competition.row_version,2) AS row_version')&&service.includes("normalize_sqlsrv_rowversion_token($row['row_version']??null)"),'Master and Organization Admin lifecycle paths share a canonical hexadecimal rowversion token');
+assert.ok(service.includes('competition.row_version AS row_version_binary')&&service.includes("normalize_sqlsrv_rowversion_token($row['row_version_binary']??null)")&&service.includes("unset($row['row_version_binary'])"),'Master and Organization Admin lifecycle paths normalize SQLSRV bytes and expose only a canonical hexadecimal rowversion token');
 for(const forbidden of ['student_email','parent_email','date_of_birth','phone','address'])assert.ok(!panel.includes(forbidden),`Admin competition panel leaks ${forbidden}`);
 assert.ok(adminHandler.includes('require_admin_post([YUVA_ROLE_MASTER_ADMIN,YUVA_ROLE_ORGANIZATION_ADMIN])'),'Admin role and CSRF contract missing');
 assert.ok(joinHandler.includes('require_student()')&&joinHandler.includes('verify_csrf_token'),'Student join security missing');
