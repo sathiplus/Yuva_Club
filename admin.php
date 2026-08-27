@@ -1,7 +1,7 @@
 <?php
 require __DIR__ . '/portal-lib.php';
 require_once __DIR__ . '/backend/repositories.php';
-require_admin();
+$admin=require_admin();
 
 $sqlApprovalEnabled = sql_approval_enabled();
 $sqlPendingRegistrations = [];
@@ -45,6 +45,8 @@ $scheduledMeetings = [];
 $leadershipRows=[];
 foreach($students as $leadershipStudentId=>$leadershipStudent){try{$leadershipRows[$leadershipStudentId]=['progress'=>leadership_eligibility_service()->latestByYuvaId((string)$leadershipStudentId),'evidence'=>leadership_eligibility_service()->evidence((string)$leadershipStudentId),'submissions'=>presentation_verification_service()->submissionsForStudent((string)$leadershipStudentId)];}catch(Throwable $error){error_log('YUVA master leadership view unavailable correlation='.bin2hex(random_bytes(12)).' exception_type='.get_class($error));}}
 $leadershipAdminNotice=(string)($_SESSION['leadership_admin_notice']??'');$leadershipAdminError=(string)($_SESSION['leadership_admin_error']??'');unset($_SESSION['leadership_admin_notice'],$_SESSION['leadership_admin_error']);
+$managedChallenges=[];$managedChallengeEntries=[];try{$competitionActor=current_admin_identity()??[];$managedChallenges=competition_foundation_service()->managedBy($competitionActor);$managedChallengeEntries=competition_foundation_service()->managedEntries($competitionActor);}catch(Throwable $error){error_log('YUVA master challenges unavailable correlation='.bin2hex(random_bytes(12)).' exception_type='.get_class($error));}
+$competitionAdminNotice=(string)($_SESSION['competition_admin_notice']??'');$competitionAdminError=(string)($_SESSION['competition_admin_error']??'');unset($_SESSION['competition_admin_notice'],$_SESSION['competition_admin_error']);
 
 foreach ($records as $recordStudentId => $record) {
     $recordStudentId = normalize_yuva_id((string) $recordStudentId);
@@ -1081,6 +1083,7 @@ portal_header('Master Admin', false, ['assets/master-admin.css?v=1']);
       </table>
     </div>
     </section>
+    <?php require __DIR__.'/competition-admin-panel.php'; ?>
     </section>
   </main>
   <nav class="master-bottom-nav" aria-label="Master Admin mobile navigation">
