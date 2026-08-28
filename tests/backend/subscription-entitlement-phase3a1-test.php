@@ -15,6 +15,10 @@ scheck(str_contains($service,"['yuva_id'=>\$student['yuva_id'],'plan_code'=>'fre
 scheck(str_contains($service,"!==YUVA_ROLE_MASTER_ADMIN"),'Master Admin boundary missing.');
 scheck(str_contains($service,'intended_student_id=:student'),'Redemption is not student-bound.');
 scheck(str_contains($service,'promo_redemption_block'),'Revoke-and-block contract missing.');
+scheck(str_contains($service,'DATEADD(day,CONVERT(INT,:duration),SYSUTCDATETIME())'),'SQLSRV redemption duration must be explicitly converted to INT.');
+scheck(str_contains($service,"max(1,min(730,(int)(\$input['entitlement_duration_days']??90)))"),'Campaign duration must remain constrained to the validated integer range.');
+scheck(str_contains($service,'INSERT dbo.student_entitlements')&&str_contains($service,'INSERT dbo.promo_campaign_participants')&&str_contains($service,"UPDATE dbo.promo_invitations SET used_at=SYSUTCDATETIME()"),'Redemption lifecycle persistence is incomplete.');
+scheck(str_contains($service,'if($this->db->inTransaction())$this->db->rollBack()'),'Redemption must roll back partial persistence on failure.');
 scheck(!str_contains($service,'AI_MENTOR_PREMIUM_ENTITLEMENT_ENABLED'),'Foundation must not gate AI Mentor.');
 scheck(str_contains($portal,'new SubscriptionEntitlementService(Database::connection())'),'Subscription service factory must use the canonical database connection.');
 scheck(!str_contains($portal,'database_connection()'),'Subscription service factory must not reference an undefined database helper.');
