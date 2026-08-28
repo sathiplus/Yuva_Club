@@ -1,0 +1,12 @@
+import assert from 'node:assert/strict';import{readFile}from'node:fs/promises';import path from'node:path';
+const root=path.resolve(import.meta.dirname,'..','..'),read=p=>readFile(path.join(root,p),'utf8');
+const [portal,parent,admin,panel,redeem,action]=await Promise.all(['portal.php','parent.php','admin.php','subscription-admin-panel.php','student-promo-redeem.php','admin-subscription-action.php'].map(read));
+assert.ok(admin.includes('subscription-admin-panel.php')&&admin.includes('#subscriptions'),'Master Admin subscription area missing');
+for(const copy of ['Create beta campaign','Create Single-use Code','Manual Premium grant','block future beta redemption'])assert.ok(panel.includes(copy),`Admin workflow missing ${copy}`);
+assert.ok(action.includes('require_admin_post([YUVA_ROLE_MASTER_ADMIN])'),'Subscription mutations must be Master Admin-only and CSRF protected');
+assert.ok(redeem.includes('require_student_post()'),'Redemption must require authenticated student and CSRF');
+assert.ok(portal.includes('subscriptionStatus')&&portal.includes('student-promo-redeem.php'),'Student status/redeem UI missing');
+assert.ok(parent.includes('subscriptionStatus')&&parent.includes('Read-only subscription status'),'Parent read-only status missing');
+assert.ok(!parent.includes('student-promo-redeem.php')&&!parent.includes('admin-subscription-action.php'),'Parent must not mutate entitlements');
+for(const forbidden of ['card_number','billing_address','invoice','Stripe'])assert.ok(!panel.includes(forbidden)&&!portal.includes(forbidden),`Deferred billing surface exposed: ${forbidden}`);
+process.stdout.write('PASS Subscription entitlement Phase 3A.1 frontend/security contracts\n');

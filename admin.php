@@ -47,6 +47,8 @@ foreach($students as $leadershipStudentId=>$leadershipStudent){try{$leadershipRo
 $leadershipAdminNotice=(string)($_SESSION['leadership_admin_notice']??'');$leadershipAdminError=(string)($_SESSION['leadership_admin_error']??'');unset($_SESSION['leadership_admin_notice'],$_SESSION['leadership_admin_error']);
 $managedChallenges=[];$managedChallengeEntries=[];try{$competitionActor=current_admin_identity()??[];$managedChallenges=competition_foundation_service()->managedBy($competitionActor);$managedChallengeEntries=competition_foundation_service()->managedEntries($competitionActor);}catch(Throwable $error){error_log('YUVA master challenges unavailable correlation='.bin2hex(random_bytes(12)).' exception_type='.get_class($error));}
 $competitionAdminNotice=(string)($_SESSION['competition_admin_notice']??'');$competitionAdminError=(string)($_SESSION['competition_admin_error']??'');unset($_SESSION['competition_admin_notice'],$_SESSION['competition_admin_error']);
+$subscriptionCampaigns=[];$subscriptionInvitations=[];$subscriptionEntitlements=[];$subscriptionAudit=[];try{$subscriptionCampaigns=subscription_entitlement_service()->campaigns();$subscriptionInvitations=subscription_entitlement_service()->invitations();$subscriptionEntitlements=subscription_entitlement_service()->activeEntitlements();$subscriptionAudit=subscription_entitlement_service()->auditHistory();}catch(Throwable $error){error_log('YUVA subscription view unavailable correlation='.bin2hex(random_bytes(12)).' exception_type='.get_class($error));}
+$subscriptionNotice=(string)($_SESSION['subscription_notice']??'');$subscriptionError=(string)($_SESSION['subscription_error']??'');$subscriptionInvitationCode=(string)($_SESSION['subscription_invitation_code']??'');unset($_SESSION['subscription_notice'],$_SESSION['subscription_error'],$_SESSION['subscription_invitation_code']);
 
 foreach ($records as $recordStudentId => $record) {
     $recordStudentId = normalize_yuva_id((string) $recordStudentId);
@@ -131,6 +133,7 @@ portal_header('Master Admin', false, ['assets/master-admin.css?v=1']);
       <a href="#sql-registrations"><span aria-hidden="true">AP</span> Approvals</a>
       <a href="#certificates"><span aria-hidden="true">CE</span> Certificates</a>
       <a href="#reports"><span aria-hidden="true">!</span> Reports</a>
+      <a href="#subscriptions"><span aria-hidden="true">SU</span> Subscriptions</a>
       <a href="#settings"><span aria-hidden="true">SE</span> Settings</a>
       <a href="#system-health"><span aria-hidden="true">SH</span> System Health</a>
     </nav>
@@ -1084,6 +1087,7 @@ portal_header('Master Admin', false, ['assets/master-admin.css?v=1']);
     </div>
     </section>
     <?php require __DIR__.'/competition-admin-panel.php'; ?>
+    <?php require __DIR__.'/subscription-admin-panel.php'; ?>
     </section>
   </main>
   <nav class="master-bottom-nav" aria-label="Master Admin mobile navigation">
