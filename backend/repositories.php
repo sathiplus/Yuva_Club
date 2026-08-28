@@ -61,8 +61,50 @@ function next_yuva_id(PDO $pdo, string $year): string {
     return sprintf('YC%s%03d', $year, $next);
 }
 
-function create_registration(array $input): int {
-    return Database::transaction(function (PDO $pdo) use ($input): int {
+function reserve_registration_yuva_id(PDO $pdo, int $registrationId, string $year): string {
+    if (!db_is_sqlsrv($pdo)) {
+        throw new RuntimeException('SQL-backed YUVA ID reservation requires SQL Server.');
+    }
+
+    for ($attempt = 0; $attempt < 1000; $attempt++) {
+        $yuvaId = next_yuva_id($pdo, $year);
+        $collision = $pdo->prepare(
+            'SELECT
+                (SELECT COUNT(*) FROM dbo.students WITH (UPDLOCK, HOLDLOCK)
+                 WHERE yuva_id = :student_yuva_id)
+              + (SELECT COUNT(*) FROM dbo.registrations WITH (UPDLOCK, HOLDLOCK)
+                 WHERE reserved_yuva_id = :registration_yuva_id
+                   AND id <> :registration_id)'
+        );
+        $collision->execute([
+            'student_yuva_id' => $yuvaId,
+            'registration_yuva_id' => $yuvaId,
+            'registration_id' => $registrationId,
+        ]);
+        if ((int) $collision->fetchColumn() !== 0) {
+            continue;
+        }
+
+        $reserve = $pdo->prepare(
+            'UPDATE dbo.registrations
+             SET reserved_yuva_id = :yuva_id,
+                 updated_at = SYSUTCDATETIME()
+             WHERE id = :id
+               AND reserved_yuva_id IS NULL'
+        );
+        $reserve->execute(['yuva_id' => $yuvaId, 'id' => $registrationId]);
+        if ($reserve->rowCount() === 1) {
+            return $yuvaId;
+        }
+        throw new RuntimeException('Registration YUVA ID reservation changed unexpectedly.');
+    }
+
+    throw new RuntimeException('A unique YUVA ID could not be reserved safely.');
+}
+
+/** @return array{registration_id:int,reserved_yuva_id:string} */
+function create_registration_with_reserved_yuva_id(array $input): array {
+    return Database::transaction(function (PDO $pdo) use ($input): array {
         $programCode = (int) ($input['age'] ?? 0) >= 18 ? 'college_yuva' : 'school_yuva';
         $programLimit = db_driver() === 'sqlsrv' ? 'SELECT TOP 1 id FROM programs WHERE code = :code AND is_active = 1' : 'SELECT id FROM programs WHERE code = :code AND is_active = 1 LIMIT 1';
         $programStmt = $pdo->prepare($programLimit);
@@ -117,15 +159,26 @@ function create_registration(array $input): int {
         ]);
 
         $registrationId = db_inserted_id($pdo, $stmt);
+        $reservedYuvaId = db_is_sqlsrv($pdo)
+            ? reserve_registration_yuva_id($pdo, $registrationId, gmdate('Y'))
+            : '';
         log_activity_with_pdo(
             $pdo,
             null,
             'registration.created',
             'registration',
-            $registrationId
+            $registrationId,
+            $reservedYuvaId !== '' ? ['reserved_yuva_id' => $reservedYuvaId] : []
         );
-        return $registrationId;
+        return [
+            'registration_id' => $registrationId,
+            'reserved_yuva_id' => $reservedYuvaId,
+        ];
     });
+}
+
+function create_registration(array $input): int {
+    return create_registration_with_reserved_yuva_id($input)['registration_id'];
 }
 
 function pending_sql_registrations(int $limit = 50): array {

@@ -2042,6 +2042,14 @@ function create_student_account(string $yuvaId, string $studentEmail, string $pa
     }
 
     $accounts = student_accounts();
+    $existing = $accounts[$yuvaId] ?? null;
+    if (is_array($existing)) {
+        $existingEmail = strtolower(trim((string) ($existing['student_email'] ?? '')));
+        $requestedEmail = strtolower(trim($studentEmail));
+        if ($existingEmail !== '' && $existingEmail !== $requestedEmail) {
+            throw new RuntimeException('YUVA ID is already assigned to another student account.');
+        }
+    }
     $accounts[$yuvaId] = [
         'yuva_id' => $yuvaId,
         'student_email' => strtolower(trim($studentEmail)),
