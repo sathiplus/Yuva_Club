@@ -88,7 +88,7 @@ require_once __DIR__ . '/backend/subscription-entitlement.php';
 
 function subscription_entitlement_service(): SubscriptionEntitlementService {
     static $service=null;
-    return $service ??= new SubscriptionEntitlementService(database_connection());
+    return $service ??= new SubscriptionEntitlementService(Database::connection());
 }
 
 function competition_foundation_service(): CompetitionFoundationService {
