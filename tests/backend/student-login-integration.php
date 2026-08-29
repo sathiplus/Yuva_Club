@@ -7,6 +7,8 @@ use YuvaClub\Authentication\PortalCompatibilityAdapter;
 use YuvaClub\Authentication\PortalRepository;
 use YuvaClub\Authentication\StudentAuthentication;
 
+require_once __DIR__ . '/sqlsrv-integration-environment.php';
+$sqlIntegrationConfig = yuva_configure_sqlsrv_integration_environment();
 require_once __DIR__ . '/../../backend/database.php';
 require_once __DIR__ . '/../../backend/authentication/PortalRepository.php';
 require_once __DIR__ . '/../../backend/authentication/PortalCompatibilityAdapter.php';
@@ -23,14 +25,7 @@ if (db_driver() !== 'sqlsrv') {
 }
 
 $pdo = Database::connection();
-$databaseName = (string) $pdo->query('SELECT DB_NAME()')->fetchColumn();
-if ($databaseName !== 'yuva_club_phasea_test') {
-    throw new RuntimeException('Integration test must use yuva_club_phasea_test.');
-}
-$databaseUser = (string) $pdo->query('SELECT USER_NAME()')->fetchColumn();
-if ($databaseUser !== 'yuva_phasea_test_runner') {
-    throw new RuntimeException('Integration test must use yuva_phasea_test_runner.');
-}
+yuva_assert_sqlsrv_integration_identity($pdo, $sqlIntegrationConfig);
 
 $suffix = strtolower(bin2hex(random_bytes(6)));
 $email = 'synthetic.auth.' . $suffix . '@example.test';
