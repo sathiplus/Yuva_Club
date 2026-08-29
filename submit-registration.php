@@ -338,7 +338,7 @@ $storedInDatabase = false;
 
 if (database_settings_present()) {
     try {
-        $registrationId = create_registration([
+        $registrationInput = [
             'student_first_name' => $studentFirstName,
             'student_last_name' => $studentLastName,
             'preferred_name' => $preferredName,
@@ -364,13 +364,23 @@ if (database_settings_present()) {
             'recording_agreed' => checked_bool('agree_recording'),
             'parent_permission_granted' => checked_bool('agree_parent_permission'),
             'ip_address' => $ipAddress,
-        ]);
+        ];
+        if (db_is_sqlsrv()) {
+            $registration = create_registration_with_reserved_yuva_id($registrationInput);
+            $registrationId = $registration['registration_id'];
+            $studentId = $registration['reserved_yuva_id'];
+        } else {
+            $registrationId = create_registration($registrationInput);
+        }
         if ($organizationInvitation !== null && !organization_membership_service()->attachRegistration(
             $organizationInvitationToken,
             $registrationId,
             $studentEmail
         )) {
             throw new RuntimeException('Organization invitation could not be attached safely.');
+        }
+        if ($studentId !== '') {
+            $row[1] = $studentId;
         }
         $studentId = append_registration_row($csvPath, $headers, $row, $studentIdYear, $idScanPaths);
         if ($studentId === '') {

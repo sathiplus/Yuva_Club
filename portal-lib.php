@@ -84,6 +84,12 @@ require_once __DIR__ . '/backend/organization-membership.php';
 require_once __DIR__ . '/backend/leadership.php';
 require_once __DIR__ . '/backend/presentation-verification.php';
 require_once __DIR__ . '/backend/competition.php';
+require_once __DIR__ . '/backend/subscription-entitlement.php';
+
+function subscription_entitlement_service(): SubscriptionEntitlementService {
+    static $service=null;
+    return $service ??= new SubscriptionEntitlementService(Database::connection());
+}
 
 function competition_foundation_service(): CompetitionFoundationService {
     return new CompetitionFoundationService(Database::connection());
@@ -2036,6 +2042,14 @@ function create_student_account(string $yuvaId, string $studentEmail, string $pa
     }
 
     $accounts = student_accounts();
+    $existing = $accounts[$yuvaId] ?? null;
+    if (is_array($existing)) {
+        $existingEmail = strtolower(trim((string) ($existing['student_email'] ?? '')));
+        $requestedEmail = strtolower(trim($studentEmail));
+        if ($existingEmail !== '' && $existingEmail !== $requestedEmail) {
+            throw new RuntimeException('YUVA ID is already assigned to another student account.');
+        }
+    }
     $accounts[$yuvaId] = [
         'yuva_id' => $yuvaId,
         'student_email' => strtolower(trim($studentEmail)),
@@ -2897,6 +2911,15 @@ function require_student(): array {
         redirect_to('portal-login.php?status=error');
     }
 
+    return $student;
+}
+
+function require_student_post(): array {
+    $student=require_student();
+    if(($_SERVER['REQUEST_METHOD']??'')!=='POST'||!verify_csrf_token($_POST['csrf_token']??null)){
+        audit_log_event(normalize_yuva_id((string)($student['Yuva Club ID']??'')),YUVA_ROLE_STUDENT,null,'student.post.rejected',basename((string)($_SERVER['SCRIPT_NAME']??'student')),null,false,['reason'=>'csrf_or_method']);
+        redirect_to('portal.php?status=security-error');
+    }
     return $student;
 }
 

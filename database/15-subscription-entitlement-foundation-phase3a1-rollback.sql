@@ -1,0 +1,13 @@
+SET XACT_ABORT ON;
+IF DB_NAME() NOT LIKE N'%rehearsal%' THROW 51015, 'Migration 15 rollback is rehearsal-only.', 1;
+BEGIN TRANSACTION;
+IF OBJECT_ID(N'dbo.subscription_audit',N'U') IS NOT NULL DROP TABLE dbo.subscription_audit;
+IF OBJECT_ID(N'dbo.subscription_access_restrictions',N'U') IS NOT NULL DROP TABLE dbo.subscription_access_restrictions;
+IF OBJECT_ID(N'dbo.promo_campaign_participants',N'U') IS NOT NULL DROP TABLE dbo.promo_campaign_participants;
+IF OBJECT_ID(N'dbo.promo_invitations',N'U') IS NOT NULL DROP TABLE dbo.promo_invitations;
+IF OBJECT_ID(N'dbo.promo_campaigns',N'U') IS NOT NULL DROP TABLE dbo.promo_campaigns;
+IF OBJECT_ID(N'dbo.student_entitlements',N'U') IS NOT NULL DROP TABLE dbo.student_entitlements;
+IF OBJECT_ID(N'dbo.plan_feature_rules',N'U') IS NOT NULL DROP TABLE dbo.plan_feature_rules;
+IF OBJECT_ID(N'dbo.plan_feature_versions',N'U') IS NOT NULL DROP TABLE dbo.plan_feature_versions;
+IF OBJECT_ID(N'dbo.subscription_plans',N'U') IS NOT NULL DROP TABLE dbo.subscription_plans;
+COMMIT TRANSACTION;

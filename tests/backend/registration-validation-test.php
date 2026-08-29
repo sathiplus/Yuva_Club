@@ -32,7 +32,7 @@ registration_assert(str_contains($submit, 'unset($_SESSION[\'csrf_token\'])'), '
 registration_assert(str_contains($form, 'registration_flash_take()'), 'form consumes server-side flash values');
 registration_assert(str_contains($form, 'preferred_time_1') && str_contains($form, 'schedule_error_1'), 'client schedule feedback is inline');
 registration_assert(str_contains($form, 'registrationFlash'), 'non-sensitive values are restored client-side');
-registration_assert(str_contains($submit, "create_registration(["), 'SQL persistence call remains present');
+registration_assert(str_contains($submit, 'create_registration_with_reserved_yuva_id($registrationInput)'), 'SQL persistence and reservation call remains present');
 registration_assert(str_contains($submit, 'append_registration_row($csvPath'), 'filesystem persistence call remains present');
 registration_assert(str_contains($submit, 'isset($_GET[\'health\'])'), 'health endpoint remains present');
 

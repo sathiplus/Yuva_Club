@@ -49,6 +49,8 @@ $leadershipNotice=(string)($_SESSION['leadership_notice']??'');$leadershipError=
 $availableChallenges=[];$challengeEntries=[];
 try{$availableChallenges=competition_foundation_service()->availableForStudent($studentId);$challengeEntries=competition_foundation_service()->entriesForStudent($studentId);}catch(Throwable $error){error_log('YUVA student challenges unavailable correlation='.bin2hex(random_bytes(12)).' exception_type='.get_class($error));}
 $competitionStudentNotice=(string)($_SESSION['competition_student_notice']??'');$competitionStudentError=(string)($_SESSION['competition_student_error']??'');unset($_SESSION['competition_student_notice'],$_SESSION['competition_student_error']);
+$subscriptionStatus=['plan_code'=>'free','display_name'=>'Free','source_type'=>'default','ends_at'=>null];try{$subscriptionStatus=subscription_entitlement_service()->resolve($studentId);}catch(Throwable $error){error_log('YUVA student subscription view unavailable correlation='.bin2hex(random_bytes(12)).' exception_type='.get_class($error));}
+$subscriptionStudentNotice=(string)($_SESSION['subscription_student_notice']??'');$subscriptionStudentError=(string)($_SESSION['subscription_student_error']??'');unset($_SESSION['subscription_student_notice'],$_SESSION['subscription_student_error']);
 $publicIdentityError = (string)($_SESSION['public_identity_error'] ?? '');
 unset($_SESSION['public_identity_error']);
 $organizationMemberships = [];
@@ -1324,6 +1326,10 @@ portal_header('Student Dashboard', true);
         <?php endforeach; ?>
       </div>
     </div>
+  </section>
+
+  <section class="band app-section" id="app-subscription" data-app-section="profile" aria-labelledby="subscription-status-title">
+    <div class="form-card" id="subscription-status"><p class="eyebrow">Membership plan</p><h2 id="subscription-status-title"><?php echo e((string)$subscriptionStatus['display_name']); ?></h2><?php if($subscriptionStatus['source_type']==='PREMIUM_BETA_PROMO'): ?><p>YUVA Beta Program<?php if($subscriptionStatus['ends_at']!==null): ?><br>Valid until: <?php echo e((string)$subscriptionStatus['ends_at']); ?> UTC<?php endif; ?></p><?php endif; ?><p>Your plan status is private account information. Current YUVA learning and AI Mentor behavior is unchanged in this foundation release.</p><?php if($subscriptionStudentNotice!==''): ?><div class="form-status success"><?php echo e($subscriptionStudentNotice); ?></div><?php endif; ?><?php if($subscriptionStudentError!==''): ?><div class="form-status error"><?php echo e($subscriptionStudentError); ?></div><?php endif; ?><form action="student-promo-redeem.php" method="post"><?php echo csrf_field(); ?><label>Premium beta invitation code<input name="invitation_code" autocomplete="off" maxlength="64" required></label><button class="button primary">Redeem invitation</button></form></div>
   </section>
 </main>
 <script>

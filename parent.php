@@ -28,6 +28,7 @@ if(ai_mentor_feature_enabled('media_analysis_enabled')&&database_settings_presen
     try{$mediaConsent=media_consent_service()->status($studentId);}catch(Throwable){$mediaConsent=null;}
 }
 $organizationMemberships = [];
+$subscriptionStatus=['display_name'=>'Free','source_type'=>'default','ends_at'=>null];try{$subscriptionStatus=subscription_entitlement_service()->resolve($studentId);}catch(Throwable $error){error_log('YUVA parent subscription view unavailable correlation='.bin2hex(random_bytes(12)).' exception_type='.get_class($error));}
 try {
     $organizationMemberships = organization_membership_service()->requestsForStudent($studentId);
 } catch (Throwable $error) {
@@ -111,6 +112,7 @@ portal_header('Parent Dashboard');
   </section>
 
   <section class="parent-section parent-account-section" id="parent-account" aria-labelledby="parent-account-title">
+    <article class="parent-card"><p class="eyebrow">Child plan</p><h2><?php echo e((string)$subscriptionStatus['display_name']); ?></h2><p><strong><?php echo e($studentId); ?></strong><?php if($subscriptionStatus['source_type']==='PREMIUM_BETA_PROMO'): ?><br>Source: YUVA Beta Program<?php if($subscriptionStatus['ends_at']!==null): ?><br>Valid until: <?php echo e((string)$subscriptionStatus['ends_at']); ?> UTC<?php endif; ?><?php endif; ?></p><p>Read-only subscription status. Plan management and payment are not available in this release.</p></article>
     <div><p class="eyebrow">Parent Account</p><h2 id="parent-account-title">Account and access</h2><p>Your access remains protected by the existing parent authentication and child-link authorization.</p></div>
     <a class="button ghost" href="portal-logout.php">Log Out</a>
   </section>
