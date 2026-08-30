@@ -57,6 +57,15 @@ jobs:
           php-version: "8.3"
           extensions: sqlsrv, pdo_sqlsrv
           coverage: none
+      - name: Install Microsoft ODBC Driver 18
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSLO "https://packages.microsoft.com/config/ubuntu/$(lsb_release -rs)/packages-microsoft-prod.deb"
+          sudo dpkg -i packages-microsoft-prod.deb
+          rm packages-microsoft-prod.deb
+          sudo apt-get update
+          sudo ACCEPT_EULA=Y apt-get install -y msodbcsql18
       - name: Wait for disposable SQL Server and create isolated database
         shell: bash
         run: |

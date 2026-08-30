@@ -5,6 +5,7 @@ $workflow = file_get_contents(__DIR__ . '/../../.github/workflows/sqlsrv-auth-in
 if (!is_string($workflow)) throw new RuntimeException('SQL integration workflow is missing.');
 $required = [
     'mcr.microsoft.com/mssql/server:2022-latest',
+    'msodbcsql18',
     'YUVA_TEST_DB_EPHEMERAL: "YES"',
     'php tests/backend/student-login-integration.php',
     'php tests/backend/parent-login-integration.php',
