@@ -76,6 +76,7 @@ jobs:
             [[ "$attempt" -lt 30 ]]
             sleep 2
           done
+          docker exec "${{ job.services.sqlserver.id }}" "$SQLCMD" -C -S localhost -U sa -P "$YUVA_TEST_DB_ADMIN_PASSWORD" -Q "EXEC sp_configure 'contained database authentication', 1; RECONFIGURE"
           docker exec "${{ job.services.sqlserver.id }}" "$SQLCMD" -C -S localhost -U sa -P "$YUVA_TEST_DB_ADMIN_PASSWORD" -Q "CREATE DATABASE [$YUVA_TEST_DB_DATABASE]; ALTER DATABASE [$YUVA_TEST_DB_DATABASE] SET CONTAINMENT = PARTIAL"
       - name: Apply supported schema excluding intentionally skipped 04/05
         run: php tools/bootstrap-sqlsrv-integration.php

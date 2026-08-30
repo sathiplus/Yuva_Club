@@ -6,6 +6,7 @@ if (!is_string($workflow)) throw new RuntimeException('SQL integration workflow 
 $required = [
     'mcr.microsoft.com/mssql/server:2022-latest',
     'msodbcsql18',
+    "sp_configure 'contained database authentication', 1",
     'YUVA_TEST_DB_EPHEMERAL: "YES"',
     'php tests/backend/student-login-integration.php',
     'php tests/backend/parent-login-integration.php',
