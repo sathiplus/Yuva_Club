@@ -1,0 +1,17 @@
+import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+import path from 'node:path';
+const root=path.resolve(import.meta.dirname,'..','..');const read=p=>readFile(path.join(root,p),'utf8');
+const [portal,panel,admin,start,submit,service]=await Promise.all(['portal.php','quick-challenge-admin-panel.php','admin-quick-challenge-action.php','student-quick-challenge-start.php','student-quick-challenge-submit.php','backend/quick-challenge.php'].map(read));
+for(const copy of ["Today’s &amp; Weekly Challenges",'Start Challenge','Personal best','Formal &amp; Organization Available Challenges'])assert.ok(portal.includes(copy),`Student UI missing ${copy}`);
+assert.ok(service.includes('Prompt revealed when you start.'),'Deferred prompt must be masked until the server starts an attempt');
+assert.ok(portal.includes('action="student-quick-challenge-start.php"')&&portal.includes('action="student-quick-challenge-submit.php"'),'Supported student routes are required');
+for(const field of ['challenge_type','difficulty','preparation_seconds','response_seconds','maximum_attempts','attempt_policy','prompt_reveal_mode','skills[]'])assert.ok(panel.includes(`name="${field}"`),`Template control missing ${field}`);
+assert.ok(panel.includes('action="admin-quick-challenge-action.php"'),'Admin action route missing');
+assert.ok(admin.includes('known active organization')&&admin.includes("$input['organization_code']=$admin['organization_id']"),'Organization scope must be fixed to a known authorized organization');
+assert.ok(start.includes('require_student()')&&start.includes('verify_csrf_token')&&submit.includes('require_student()')&&submit.includes('verify_csrf_token'),'Student authentication and CSRF are required');
+assert.ok(service.includes('response_deadline_at')&&service.includes('Attempt limit reached')&&service.includes('CONVERT(BINARY(8),:version,2)'),'Server timing, attempt limits, and concurrency are required');
+for(const forbidden of ['student_email','parent_email','date_of_birth','phone','address'])assert.ok(!panel.includes(forbidden)&&!portal.includes(forbidden),`Private field exposed: ${forbidden}`);
+assert.ok(!panel.includes('Competition Score')&&!panel.includes('Leaderboard')&&!panel.includes('Winner'),'Deferred Phase 2C.2B/2C.3 Quick Challenge management UI must remain absent');
+assert.ok(!portal.includes('name="practice_score"'),'Students must never submit their own score');
+process.stdout.write('PASS Quick Challenges Phase 2C.2A frontend/security contracts\n');
