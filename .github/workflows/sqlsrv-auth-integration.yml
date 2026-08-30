@@ -1,0 +1,136 @@
+name: Disposable SQL Server authentication integration
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/sqlsrv-auth-integration.yml"
+      - "backend/authentication/**"
+      - "backend/database.php"
+      - "backend/repositories.php"
+      - "database/**"
+      - "tests/backend/*login-integration.php"
+      - "tests/backend/sqlsrv-integration-*.php"
+      - "tools/bootstrap-sqlsrv-integration.php"
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/sqlsrv-auth-integration.yml"
+      - "backend/authentication/**"
+      - "backend/database.php"
+      - "backend/repositories.php"
+      - "database/**"
+      - "tests/backend/*login-integration.php"
+      - "tests/backend/sqlsrv-integration-*.php"
+      - "tools/bootstrap-sqlsrv-integration.php"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sqlsrv-authentication:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: "Y"
+          MSSQL_PID: Developer
+          MSSQL_SA_PASSWORD: "YuvaCi!${{ github.run_id }}-${{ github.run_attempt }}"
+        ports:
+          - 1433:1433
+    env:
+      YUVA_TEST_DB_SERVER: 127.0.0.1
+      YUVA_TEST_DB_DATABASE: yuva_club_ci_${{ github.run_id }}_${{ github.run_attempt }}
+      YUVA_TEST_DB_USER: yuva_ci_runner_${{ github.run_id }}_${{ github.run_attempt }}
+      YUVA_TEST_DB_PASSWORD: "YuvaRunner!${{ github.run_id }}-${{ github.run_attempt }}"
+      YUVA_TEST_DB_EPHEMERAL: "YES"
+      YUVA_TEST_DB_ADMIN_USER: sa
+      YUVA_TEST_DB_ADMIN_PASSWORD: "YuvaCi!${{ github.run_id }}-${{ github.run_attempt }}"
+      YUVA_RUN_SQL_INTEGRATION: "YES"
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          extensions: sqlsrv, pdo_sqlsrv
+          coverage: none
+      - name: Install Microsoft ODBC Driver 18
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSLO "https://packages.microsoft.com/config/ubuntu/$(lsb_release -rs)/packages-microsoft-prod.deb"
+          sudo dpkg -i packages-microsoft-prod.deb
+          rm packages-microsoft-prod.deb
+          sudo apt-get update
+          sudo ACCEPT_EULA=Y apt-get install -y msodbcsql18
+      - name: Wait for disposable SQL Server and create isolated database
+        shell: bash
+        run: |
+          set -euo pipefail
+          SQLCMD=/opt/mssql-tools18/bin/sqlcmd
+          for attempt in {1..30}; do
+            docker exec "${{ job.services.sqlserver.id }}" "$SQLCMD" -C -S localhost -U sa -P "$YUVA_TEST_DB_ADMIN_PASSWORD" -Q "SELECT 1" && break
+            [[ "$attempt" -lt 30 ]]
+            sleep 2
+          done
+          docker exec "${{ job.services.sqlserver.id }}" "$SQLCMD" -C -S localhost -U sa -P "$YUVA_TEST_DB_ADMIN_PASSWORD" -Q "EXEC sp_configure 'contained database authentication', 1; RECONFIGURE"
+          docker exec "${{ job.services.sqlserver.id }}" "$SQLCMD" -C -S localhost -U sa -P "$YUVA_TEST_DB_ADMIN_PASSWORD" -Q "CREATE DATABASE [$YUVA_TEST_DB_DATABASE]; ALTER DATABASE [$YUVA_TEST_DB_DATABASE] SET CONTAINMENT = PARTIAL"
+      - name: Apply supported schema excluding intentionally skipped 04/05
+        run: php tools/bootstrap-sqlsrv-integration.php
+      - name: Create least-privilege contained integration user
+        shell: bash
+        run: |
+          set -euo pipefail
+          SQLCMD=/opt/mssql-tools18/bin/sqlcmd
+          docker exec "${{ job.services.sqlserver.id }}" "$SQLCMD" -C -S localhost -U sa -P "$YUVA_TEST_DB_ADMIN_PASSWORD" -d "$YUVA_TEST_DB_DATABASE" -Q "CREATE USER [$YUVA_TEST_DB_USER] WITH PASSWORD=N'$YUVA_TEST_DB_PASSWORD'; GRANT SELECT, INSERT, UPDATE, DELETE ON SCHEMA::dbo TO [$YUVA_TEST_DB_USER];"
+      - name: Run real SQLSRV authentication integration
+        run: |
+          set -euo pipefail
+          php tests/backend/sqlsrv-integration-safety-test.php
+          php tests/backend/student-login-integration.php
+          php tests/backend/parent-login-integration.php
+          php tests/backend/sqlsrv-integration-residue.php
+      - name: Run isolated backend regression suite
+        shell: bash
+        run: |
+          set -euo pipefail
+          suites=()
+          while IFS= read -r test_file; do
+            suites+=(--suite "$test_file")
+          done < <(find tests/backend -maxdepth 1 -type f -name '*-test.php' | sort)
+          python3 tools/run-isolated-validation.py \
+            --source . \
+            --php "$(command -v php)" \
+            --log-directory "$RUNNER_TEMP/yuva-isolated-validation-logs" \
+            "${suites[@]}"
+      - name: Run complete frontend and security contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          while IFS= read -r test_file; do
+            node "$test_file"
+          done < <(find tests/frontend -maxdepth 1 -type f -name '*.mjs' | sort)
+          git diff --check
+      - name: Prove cleanup executes after a failing test command
+        shell: bash
+        run: |
+          set +e
+          (
+            cleanup_database() {
+              docker exec "${{ job.services.sqlserver.id }}" /opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P "$YUVA_TEST_DB_ADMIN_PASSWORD" -Q "IF DB_ID(N'$YUVA_TEST_DB_DATABASE') IS NOT NULL BEGIN ALTER DATABASE [$YUVA_TEST_DB_DATABASE] SET SINGLE_USER WITH ROLLBACK IMMEDIATE; DROP DATABASE [$YUVA_TEST_DB_DATABASE]; END" >/dev/null
+            }
+            trap cleanup_database EXIT
+            false # intentional failure-path probe
+          )
+          probe_status=$?
+          [[ "$probe_status" -ne 0 ]]
+          docker exec "${{ job.services.sqlserver.id }}" /opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P "$YUVA_TEST_DB_ADMIN_PASSWORD" -h -1 -W -Q "SELECT CASE WHEN DB_ID(N'$YUVA_TEST_DB_DATABASE') IS NULL THEN 'ABSENT' ELSE 'PRESENT' END" | grep -qx ABSENT
+      - name: Destroy disposable database even after failure
+        if: always()
+        shell: bash
+        run: |
+          SQLCMD=/opt/mssql-tools18/bin/sqlcmd
+          docker exec "${{ job.services.sqlserver.id }}" "$SQLCMD" -C -S localhost -U sa -P "$YUVA_TEST_DB_ADMIN_PASSWORD" -Q "IF DB_ID(N'$YUVA_TEST_DB_DATABASE') IS NOT NULL BEGIN ALTER DATABASE [$YUVA_TEST_DB_DATABASE] SET SINGLE_USER WITH ROLLBACK IMMEDIATE; DROP DATABASE [$YUVA_TEST_DB_DATABASE]; END"
