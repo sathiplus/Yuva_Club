@@ -3,6 +3,14 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/config.php';
 
+function db_sqlsrv_trust_server_certificate(string $environment, string $host): string {
+    $normalizedHost = strtolower(trim($host));
+    return strtolower(trim($environment)) === 'test'
+        && in_array($normalizedHost, ['127.0.0.1', 'localhost'], true)
+        ? 'yes'
+        : 'no';
+}
+
 function database_settings_present(): bool {
     $config = app_config()['database'];
     return ($config['host'] ?? '') !== ''
@@ -28,10 +36,11 @@ final class Database {
         $driver = $config['driver'] ?? 'mysql';
         if ($driver === 'sqlsrv') {
             $dsn = sprintf(
-                'sqlsrv:Server=tcp:%s,%s;Database=%s;Encrypt=yes;TrustServerCertificate=no;ConnectionPooling=0',
+                'sqlsrv:Server=tcp:%s,%s;Database=%s;Encrypt=yes;TrustServerCertificate=%s;ConnectionPooling=0',
                 $config['host'],
                 $config['port'] ?: '1433',
-                $config['name']
+                $config['name'],
+                db_sqlsrv_trust_server_certificate(app_environment(), (string)$config['host'])
             );
         } elseif ($driver === 'mysql') {
             $dsn = sprintf(

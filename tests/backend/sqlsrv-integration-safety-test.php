@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/sqlsrv-integration-environment.php';
+require_once __DIR__ . '/../../backend/database.php';
 
 function safety_assert_throws(array $environment, string $message): void
 {
@@ -31,5 +32,18 @@ safety_assert_throws(array_replace($valid, ['YUVA_TEST_DB_EPHEMERAL' => 'NO']), 
 $missing = $valid;
 unset($missing['YUVA_TEST_DB_PASSWORD']);
 safety_assert_throws($missing, 'Missing protected configuration was accepted.');
+if (db_sqlsrv_trust_server_certificate('test', '127.0.0.1') !== 'yes') {
+    throw new RuntimeException('Disposable loopback SQL certificate was not trusted in test mode.');
+}
+foreach ([
+    ['production', '127.0.0.1'],
+    ['test', 'yuvaclub-sql-central.database.windows.net'],
+    ['production', 'yuvaclub-sql-central.database.windows.net'],
+] as [$environment, $host]) {
+    if (db_sqlsrv_trust_server_certificate($environment, $host) !== 'no') {
+        throw new RuntimeException('SQL certificate verification was weakened outside disposable loopback tests.');
+    }
+}
 fwrite(STDOUT, "PASS production database and remote server refusal\n");
 fwrite(STDOUT, "PASS test naming, contained-user, and ephemeral guards\n");
+fwrite(STDOUT, "PASS certificate trust remains restricted to loopback test SQL\n");
