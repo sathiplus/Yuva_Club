@@ -19,5 +19,6 @@ quick_check(str_contains($rollback,'DROP INDEX idx_competitions_quick_template O
 foreach([$admin,$start,$submit]as$handler)quick_check(str_contains($handler,'require_admin_post')||str_contains($handler,'verify_csrf_token'),'Every mutation must enforce CSRF.');
 quick_check(str_contains($start,'require_student()')&&str_contains($submit,'require_student()'),'Student mutations require authenticated student context.');
 quick_check(str_contains($service,'MasterAdmin')&&str_contains($service,'OrganizationAdmin')&&str_contains($service,"Prompt revealed when you start."),'Required management and deferred prompt contract missing.');
+quick_check(str_contains($service,'template.row_version,template.created_at,version.id')&&str_contains($service,'ORDER BY template.created_at DESC'),'Template listing must group by its created timestamp before ordering newest-first.');
 quick_check(!preg_match('/student_email|parent_email|date_of_birth|phone|address/i',$panel.$portal),'Quick Challenge surfaces must not expose private identity fields.');
 echo "Quick Challenges Phase 2C.2A contracts PASS\n";
