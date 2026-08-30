@@ -93,6 +93,27 @@ jobs:
           php tests/backend/student-login-integration.php
           php tests/backend/parent-login-integration.php
           php tests/backend/sqlsrv-integration-residue.php
+      - name: Run isolated backend regression suite
+        shell: bash
+        run: |
+          set -euo pipefail
+          suites=()
+          while IFS= read -r test_file; do
+            suites+=(--suite "$test_file")
+          done < <(find tests/backend -maxdepth 1 -type f -name '*-test.php' | sort)
+          python3 tools/run-isolated-validation.py \
+            --source . \
+            --php "$(command -v php)" \
+            --log-directory "$RUNNER_TEMP/yuva-isolated-validation-logs" \
+            "${suites[@]}"
+      - name: Run complete frontend and security contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          while IFS= read -r test_file; do
+            node "$test_file"
+          done < <(find tests/frontend -maxdepth 1 -type f -name '*.mjs' | sort)
+          git diff --check
       - name: Prove cleanup executes after a failing test command
         shell: bash
         run: |
