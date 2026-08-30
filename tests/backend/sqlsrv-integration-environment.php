@@ -58,7 +58,7 @@ function yuva_configure_sqlsrv_integration_environment(): array
     putenv('DB_HOST=' . $config['server']);
     putenv('DB_PORT=1433');
     putenv('DB_DATABASE=' . $config['database']);
-    putenv('DB_USER=' . $config['user']);
+    putenv('DB_USERNAME=' . $config['user']);
     putenv('DB_PASSWORD=' . $config['password']);
     return $config;
 }

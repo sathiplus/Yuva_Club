@@ -19,4 +19,19 @@ foreach ($required as $literal) {
     if (!str_contains($workflow, $literal)) throw new RuntimeException('Workflow safety contract missing: ' . $literal);
 }
 if (str_contains($workflow, 'yuva_club_phasea_test')) throw new RuntimeException('Workflow retains permanent test database dependency.');
+
+$environmentHelper = file_get_contents(__DIR__ . '/sqlsrv-integration-environment.php');
+$bootstrap = file_get_contents(__DIR__ . '/../../tools/bootstrap-sqlsrv-integration.php');
+if (!is_string($environmentHelper) || !is_string($bootstrap)) {
+    throw new RuntimeException('SQL integration environment/bootstrap source is missing.');
+}
+foreach ([$environmentHelper, $bootstrap] as $source) {
+    if (!str_contains($source, "putenv('DB_USERNAME='")) {
+        throw new RuntimeException('SQL integration must map credentials to the canonical DB_USERNAME setting.');
+    }
+    if (str_contains($source, "putenv('DB_USER='")) {
+        throw new RuntimeException('Obsolete DB_USER mapping remains in SQL integration setup.');
+    }
+}
 fwrite(STDOUT, "PASS disposable SQL Server workflow and unconditional cleanup contract\n");
+fwrite(STDOUT, "PASS canonical database configuration mapping contract\n");

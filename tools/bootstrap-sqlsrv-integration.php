@@ -21,7 +21,7 @@ putenv('DB_DRIVER=sqlsrv');
 putenv('DB_HOST=' . $server);
 putenv('DB_PORT=1433');
 putenv('DB_DATABASE=' . $database);
-putenv('DB_USER=' . $adminUser);
+putenv('DB_USERNAME=' . $adminUser);
 putenv('DB_PASSWORD=' . $adminPassword);
 
 $migrations = array_values(array_filter(
