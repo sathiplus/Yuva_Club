@@ -10,7 +10,12 @@ BEGIN
     SELECT @credentials_default = dc.name FROM sys.default_constraints dc
     JOIN sys.columns c ON c.default_object_id = dc.object_id
     WHERE dc.parent_object_id = OBJECT_ID(N'dbo.users') AND c.name = N'credentials_version';
-    IF @credentials_default IS NOT NULL EXEC(N'ALTER TABLE dbo.users DROP CONSTRAINT ' + QUOTENAME(@credentials_default));
+    IF @credentials_default IS NOT NULL
+    BEGIN
+        DECLARE @drop_credentials_default_sql NVARCHAR(MAX);
+        SET @drop_credentials_default_sql = N'ALTER TABLE dbo.users DROP CONSTRAINT ' + QUOTENAME(@credentials_default);
+        EXEC sys.sp_executesql @drop_credentials_default_sql;
+    END;
     EXEC(N'ALTER TABLE dbo.users DROP COLUMN credentials_version');
 END;
 IF COL_LENGTH(N'dbo.users', N'password_changed_at') IS NOT NULL EXEC(N'ALTER TABLE dbo.users DROP COLUMN password_changed_at');
