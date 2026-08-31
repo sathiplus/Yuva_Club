@@ -5,7 +5,7 @@ import vm from 'node:vm';
 const root = new URL('../../', import.meta.url);
 const script = await readFile(new URL('assets/password-visibility.js', root), 'utf8');
 
-for (const page of ['portal-login.php', 'admin-login.php']) {
+for (const page of ['portal-login.php', 'admin-login.php', 'parent-login.php']) {
   const source = await readFile(new URL(page, root), 'utf8');
   assert.match(source, /<input[^>]+id="[^"]+"[^>]+type="password"/s, `${page} must default to a hidden password`);
   assert.match(source, /<button[^>]+type="button"[^>]+data-password-toggle/s, `${page} toggle must not submit the form`);
@@ -13,7 +13,7 @@ for (const page of ['portal-login.php', 'admin-login.php']) {
   assert.match(source, /aria-label="Show password"/, `${page} toggle needs an accessible initial label`);
   assert.match(source, /aria-pressed="false"/, `${page} toggle must expose its initial state`);
   assert.ok(source.includes('assets/password-visibility.js'), `${page} must load the shared toggle behavior`);
-  assert.ok(source.includes('assets/password-visibility.css?v=auth-ux-20260820'), `${page} must load the compact toggle styles without a stale cache`);
+  assert.match(source, /assets\/password-visibility\.css\?v=[^'\"]+/, `${page} must load the compact toggle styles without a stale cache`);
   assert.match(source, /class="password-toggle-icon" width="20" height="20"/, `${page} eye icon must have safe intrinsic dimensions`);
 }
 

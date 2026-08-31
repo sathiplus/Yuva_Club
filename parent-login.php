@@ -47,7 +47,10 @@ if ($step === 'children') {
     }
 }
 
-portal_header('Parent Dashboard Login', false, ['assets/public-site.css?v=release-1.0.2-20260802'], true);
+portal_header('Parent Dashboard Login', false, [
+    'assets/public-site.css?v=release-1.0.2-20260802',
+    'assets/password-visibility.css?v=parent-auth-20260831',
+], true);
 ?>
 <a class="public-skip-link" href="#main-content">Skip to main content</a>
 <main id="main-content">
@@ -109,8 +112,12 @@ portal_header('Parent Dashboard Login', false, ['assets/public-site.css?v=releas
           </div>
             <div class="field">
               <label for="credential">Password *</label>
-              <input id="credential" name="credential" type="password" required autocomplete="current-password">
-              <button class="password-visibility-toggle" type="button" data-password-toggle="credential" aria-controls="credential" aria-pressed="false">Show Password</button>
+              <div class="password-input-wrap">
+                <input id="credential" name="credential" type="password" required autocomplete="current-password">
+                <button class="password-toggle" type="button" data-password-toggle="credential" aria-controls="credential" aria-label="Show password" aria-pressed="false">
+                  <svg class="password-toggle-icon" width="20" height="20" aria-hidden="true" viewBox="0 0 24 24" focusable="false"><path d="M2.2 12s3.4-6 9.8-6 9.8 6 9.8 6-3.4 6-9.8 6-9.8-6-9.8-6Zm9.8 3.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"/></svg>
+                </button>
+              </div>
             </div>
           <button class="button primary" type="submit">View Dashboard</button>
             <p><a href="forgot-password.php?account=parent">Forgot password?</a></p>
