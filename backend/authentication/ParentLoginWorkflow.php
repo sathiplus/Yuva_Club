@@ -19,6 +19,9 @@ final class ParentLoginWorkflow
     /** @var callable(): void */
     private $sessionRegenerator;
 
+    /** @var callable(array<string, mixed>&): void */
+    private $csrfRotator;
+
     /** @var callable(string): void */
     private $auditLogger;
 
@@ -27,13 +30,17 @@ final class ParentLoginWorkflow
         LoginThrottle $throttle,
         callable $csrfVerifier,
         callable $sessionRegenerator,
-        ?callable $auditLogger = null
+        ?callable $auditLogger = null,
+        ?callable $csrfRotator = null
     ) {
         $this->authentication = $authentication;
         $this->throttle = $throttle;
         $this->csrfVerifier = $csrfVerifier;
         $this->sessionRegenerator = $sessionRegenerator;
         $this->auditLogger = $auditLogger ?? static function (string $category): void {
+        };
+        $this->csrfRotator = $csrfRotator ?? static function (array &$session): void {
+            $session['csrf_token'] = bin2hex(random_bytes(32));
         };
     }
 
@@ -91,6 +98,7 @@ final class ParentLoginWorkflow
             );
             ($this->sessionRegenerator)();
             $this->clearRoleSessions($session);
+            ($this->csrfRotator)($session);
 
             if (($result['source'] ?? null) === 'sql') {
                 $session['parent_auth_source'] = 'sql';

@@ -358,6 +358,89 @@ parent_login_assert(
     'Authorized SQL parent-child protected access must revalidate.'
 );
 
+$preLoginCsrf = str_repeat('a', 64);
+$postLoginCsrf = str_repeat('b', 64);
+$activeCsrf = $preLoginCsrf;
+$boundaryRegenerations = 0;
+$boundaryPath = parent_login_temp_path('csrf-boundary');
+$boundaryWorkflow = new ParentLoginWorkflow(
+    $sqlService,
+    new LoginThrottle($boundaryPath),
+    static function (?string $token) use (&$activeCsrf): bool {
+        return is_string($token) && hash_equals($activeCsrf, $token);
+    },
+    static function () use (&$boundaryRegenerations): void {
+        $boundaryRegenerations++;
+    },
+    null,
+    static function (array &$session) use (&$activeCsrf, $postLoginCsrf): void {
+        $activeCsrf = $postLoginCsrf;
+        $session['csrf_token'] = $postLoginCsrf;
+    }
+);
+$boundarySession = ['csrf_token' => $preLoginCsrf];
+$boundaryResult = $boundaryWorkflow->attempt(
+    $boundarySession,
+    'parent@example.test',
+    'parent-password',
+    null,
+    $preLoginCsrf,
+    '20010db800000000/64'
+);
+parent_login_assert(
+    $boundaryResult['authenticated'] === true
+    && ($boundarySession['csrf_token'] ?? null) === $postLoginCsrf
+    && $postLoginCsrf !== $preLoginCsrf
+    && $boundaryRegenerations === 1,
+    'Successful Parent login must regenerate the session and rotate the pre-login CSRF token.'
+);
+
+foreach ([null, 'malformed', $preLoginCsrf, str_repeat('c', 64)] as $rejectedToken) {
+    $rejectedSession = $boundarySession;
+    parent_login_assert(
+        !$boundaryWorkflow->selectChild(
+            $rejectedSession,
+            'YC2026001',
+            $rejectedToken,
+            '20010db800000000/64'
+        )
+        && !isset($rejectedSession['parent_user_id']),
+        'Missing, malformed, stale, or another-session CSRF token must reject child selection.'
+    );
+}
+
+$validBoundarySession = $boundarySession;
+parent_login_assert(
+    $boundaryWorkflow->selectChild(
+        $validBoundarySession,
+        'YC2026001',
+        $postLoginCsrf,
+        '20010db800000000/64'
+    )
+    && ($validBoundarySession['parent_student_id'] ?? null) === 'YC2026001'
+    && $boundaryWorkflow->selectChild(
+        $validBoundarySession,
+        'YC2026002',
+        $postLoginCsrf,
+        '20010db800000000/64'
+    )
+    && ($validBoundarySession['parent_student_id'] ?? null) === 'YC2026002'
+    && $boundaryRegenerations === 3,
+    'Fresh post-login CSRF token must permit authorized child selection and switching.'
+);
+
+$unrelatedSession = $boundarySession;
+parent_login_assert(
+    !$boundaryWorkflow->selectChild(
+        $unrelatedSession,
+        'YC2026999',
+        $postLoginCsrf,
+        '20010db800000000/64'
+    ),
+    'A valid CSRF token must not authorize an unrelated child.'
+);
+parent_login_cleanup($boundaryPath);
+
 $wrongPasswordSession = [];
 parent_login_assert(
     $sqlWorkflow->attempt(

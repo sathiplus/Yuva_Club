@@ -1827,6 +1827,11 @@ function csrf_token(): string {
     return $_SESSION['csrf_token'];
 }
 
+function rotate_csrf_token(): string {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+    return $_SESSION['csrf_token'];
+}
+
 function csrf_field(): string {
     return '<input type="hidden" name="csrf_token" value="' . e(csrf_token()) . '">';
 }
@@ -1971,6 +1976,9 @@ function portal_parent_login_workflow(): \YuvaClub\Authentication\ParentLoginWor
         },
         static function (string $category): void {
             error_log('[portal-auth] ' . $category);
+        },
+        static function (array &$session): void {
+            $session['csrf_token'] = rotate_csrf_token();
         }
     );
     return $workflow;
