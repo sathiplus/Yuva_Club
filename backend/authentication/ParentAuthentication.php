@@ -56,49 +56,13 @@ final class ParentAuthentication
         string $credential,
         ?string $legacyChildYuvaId = null
     ): array {
-        $mode = strtolower(trim($mode));
-        if (!in_array($mode, ['filesystem', 'sql', 'hybrid'], true)) {
-            throw new InvalidArgumentException('Unsupported portal authentication mode.');
-        }
-
         $email = strtolower(trim($email));
         if ($email === '' || $credential === '') {
             return $this->failure('invalid_credentials');
         }
 
-        if ($mode === 'filesystem') {
-            return $this->authenticateFilesystem($email, $credential, $legacyChildYuvaId);
-        }
-
         $parent = $this->repository->findParentByEmail($email);
-        if ($mode === 'sql') {
-            return $this->authenticateSql($parent, $credential);
-        }
-
-        $filesystemIdentities = ($this->filesystemParentIdentityFinder)($email);
-        if (!$this->hybridIdentitiesAreCompatible($parent, $filesystemIdentities, $email)) {
-            return $this->rejectSqlCredential($credential, 'hybrid_conflict');
-        }
-
-        $legacyYuvaId = $this->normalizeYuvaId((string) $legacyChildYuvaId);
-
-        if ($parent !== null && $this->isActivatedParent($parent)) {
-            return $this->authenticateSql($parent, $credential);
-        }
-
-        if ($parent !== null && !$this->mayUseLegacyWhileUnactivated($parent)) {
-            return $this->rejectSqlCredential($credential, 'account_unavailable');
-        }
-
-        $result = $this->authenticateFilesystem(
-            $email,
-            $credential,
-            $legacyYuvaId
-        );
-        if ($parent === null && $result['authenticated'] !== true) {
-            ($this->passwordVerifier)($credential, self::DUMMY_PASSWORD_HASH);
-        }
-        return $result;
+        return $this->authenticateSql($parent, $credential);
     }
 
     /** @return array<int, array<string, mixed>> */
@@ -136,7 +100,7 @@ final class ParentAuthentication
             : null;
     }
 
-    public function revalidateSqlSession(int $parentUserId, int $parentId): bool
+    public function revalidateSqlSession(int $parentUserId, int $parentId, int $credentialsVersion): bool
     {
         if ($parentUserId <= 0 || $parentId <= 0) {
             return false;
@@ -146,7 +110,8 @@ final class ParentAuthentication
         return $parent !== null
             && $this->isActivatedParent($parent)
             && (int) ($parent['parent_user_id'] ?? 0) === $parentUserId
-            && (int) ($parent['parent_id'] ?? 0) === $parentId;
+            && (int) ($parent['parent_id'] ?? 0) === $parentId
+            && (int) ($parent['credentials_version'] ?? 0) === $credentialsVersion;
     }
 
     /** @param array<string, mixed>|null $parent */
@@ -170,6 +135,7 @@ final class ParentAuthentication
             'parent_student_id' => null,
             'children' => $this->listAuthorizedChildren($parentUserId),
             'password_rehash_required' => ($this->passwordNeedsRehash)($hash),
+            'credentials_version' => (int) ($parent['credentials_version'] ?? 1),
             'failure_category' => null,
         ];
     }
@@ -212,6 +178,7 @@ final class ParentAuthentication
         return strtolower((string) ($parent['user_role'] ?? '')) === 'parent'
             && strtolower((string) ($parent['user_status'] ?? '')) === 'active'
             && ($parent['email_verified_at'] ?? null) !== null
+            && ($parent['activated_at'] ?? null) !== null
             && (string) ($parent['password_hash'] ?? '') !== '';
     }
 
@@ -230,6 +197,7 @@ final class ParentAuthentication
             && strtolower((string) ($row['parent_user_status'] ?? '')) === 'active'
             && ($row['parent_email_verified_at'] ?? null) !== null
             && (string) ($row['parent_password_hash'] ?? '') !== ''
+            && ($row['parent_activated_at'] ?? null) !== null
             && strtolower((string) ($row['consent_status'] ?? '')) === 'granted'
             && strtolower((string) ($row['student_approval_status'] ?? '')) === 'approved'
             && ($row['approved_at'] ?? null) !== null
@@ -298,7 +266,9 @@ final class ParentAuthentication
             $row['parent_user_role'],
             $row['parent_user_status'],
             $row['parent_email_verified_at'],
-            $row['parent_password_hash']
+            $row['parent_password_hash'],
+            $row['parent_activated_at'],
+            $row['parent_credentials_version']
         );
         return $row;
     }

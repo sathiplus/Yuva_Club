@@ -2,7 +2,11 @@
 require __DIR__ . '/portal-lib.php';
 $studentId = normalize_yuva_id($_GET['id'] ?? '');
 $studentSessionId = normalize_yuva_id(logged_in_student_id() ?? '');
-$parentStudentId = normalize_yuva_id($_SESSION['parent_student_id'] ?? '');
+$parentStudentId = '';
+if (($_SESSION['parent_auth_source'] ?? null) === 'sql') {
+    $authorizedParentStudent = portal_parent_login_workflow()->revalidateSqlChildAccess($_SESSION);
+    if (is_array($authorizedParentStudent)) $parentStudentId = normalize_yuva_id((string)($_SESSION['parent_student_id'] ?? ''));
+}
 $isAdmin = ($_SESSION['admin_logged_in'] ?? false) === true;
 if (!$isAdmin && $studentSessionId !== $studentId && $parentStudentId !== $studentId) {
     redirect_to('portal-login.php');

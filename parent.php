@@ -1,7 +1,9 @@
 <?php
 require __DIR__ . '/portal-lib.php';
 
-$student = require_parent_student();
+$parentContext = require_authenticated_parent();
+$student = $parentContext['student'];
+$parentChildren = portal_parent_login_workflow()->authorizedChildren($_SESSION) ?? [];
 $studentId = normalize_yuva_id(
     (string) ($_SESSION['parent_student_id'] ?? '')
 );
@@ -45,6 +47,11 @@ portal_header('Parent Dashboard');
     <div><a href="#parent-overview">Overview</a><a href="#parent-growth">Growth</a><a href="#parent-presentations">Presentations</a><a href="#parent-mentor">AI Mentor</a><a href="#organization-membership">Organizations</a><a href="#parent-account">Account</a></div>
     <a class="parent-nav-logout" href="portal-logout.php">Log Out</a>
   </nav>
+
+  <section class="parent-section" id="my-children" aria-labelledby="my-children-title">
+    <div class="parent-section-heading"><div><p class="eyebrow">Parent Dashboard</p><h2 id="my-children-title">My Children</h2><p>Switch between students linked to your authenticated Parent account.</p></div></div>
+    <div class="parent-mentor-grid"><?php foreach($parentChildren as $child): $childId=normalize_yuva_id((string)($child['yuva_id']??'')); ?><article class="parent-card"><h3><?php echo e(trim((string)($child['student_first_name']??'').' '.(string)($child['student_last_name']??''))); ?></h3><p><?php echo e($childId); ?></p><?php if($childId===$studentId): ?><strong>Currently viewing</strong><?php else: ?><form action="parent-select-child.php" method="post"><?php echo csrf_field(); ?><input type="hidden" name="student_id" value="<?php echo e($childId); ?>"><button class="button ghost" type="submit">View this child</button></form><?php endif; ?></article><?php endforeach; ?></div>
+  </section>
 
   <section class="parent-hero" id="parent-overview" aria-labelledby="parent-overview-title">
     <div class="parent-hero-copy"><p class="eyebrow">Parent Experience</p><h1 id="parent-overview-title">How is <?php echo e(student_display_name($student)); ?> growing?</h1><p>A clear view of your child's verified leadership activity, preparation, and recognition.</p><div class="parent-identity"><span>YUVA Identity<strong><?php echo e($publicAvatar['icon'].' '.($publicIdentity['handle']?:$studentId)); ?></strong></span><span>YUVA ID<strong><?php echo e($studentId); ?></strong></span><span>Membership<strong><?php echo e(membership_group_label($student)); ?></strong></span><span>Approval<strong><?php echo e($approvalStatus); ?></strong></span></div></div>

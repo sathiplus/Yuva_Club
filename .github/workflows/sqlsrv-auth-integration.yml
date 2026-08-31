@@ -92,6 +92,7 @@ jobs:
           php tests/backend/sqlsrv-integration-safety-test.php
           php tests/backend/student-login-integration.php
           php tests/backend/parent-login-integration.php
+          php tests/backend/parent-credential-integration.php
           php tests/backend/sqlsrv-integration-residue.php
       - name: Run isolated backend regression suite
         shell: bash

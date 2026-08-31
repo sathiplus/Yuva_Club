@@ -15,10 +15,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email = normalize_email($_POST['email'] ?? '');
     if ($email !== '' && filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $rateKey = 'reset:' . $accountType . ':' . $email;
-        if (!login_rate_limited($rateKey)) {
-            request_password_reset($email, $accountType);
+        $parentThrottle=$accountType==='parent'?parent_authentication_throttle():null;$network=portal_network_category($_SERVER['REMOTE_ADDR']??null);
+        if (($parentThrottle!==null&&!$parentThrottle->isBlocked('parent-password-reset',$email,$network)) || ($parentThrottle===null&&!login_rate_limited($rateKey))) {
+            if ($accountType === 'parent') {
+                try { $resetToken = parent_credential_service()->issueToken($email, 'password_reset'); } catch(Throwable $error) { $resetToken=null; error_log('YUVA Parent reset request failed exception_type='.get_class($error)); }
+                if ($resetToken !== null) {
+                    send_password_reset_email($email, public_base_url() . '/reset-password.php?account=parent&token=' . rawurlencode($resetToken), 'parent account');
+                }
+            } else {
+                request_password_reset($email, $accountType);
+            }
         }
-        record_login_attempt($rateKey, false);
+        if($parentThrottle!==null)$parentThrottle->recordFailure('parent-password-reset',$email,$network);else record_login_attempt($rateKey, false);
     }
 
     redirect_to('forgot-password.php?status=sent&account=' . rawurlencode($accountType));

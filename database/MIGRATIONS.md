@@ -178,6 +178,19 @@ The migration is additive and does not add judging, official Competition Score,
 leaderboards, winners, or leadership promotion. The matching rollback is
 rehearsal-only and removes only Migration 16 objects and columns.
 
+## Migration 17: Parent password authentication
+
+`17-parent-password-authentication.azure-sql.sql` adds SQL-backed, hashed,
+single-use Parent activation/reset tokens, durable multi-instance authentication
+throttling, and minimal user credential lifecycle fields. Existing `parents` and
+`student_parents` relationships remain authoritative and unchanged. Parent
+accounts that already have a verified password receive reconciled lifecycle
+timestamps; no password is invented for an unactivated Parent.
+
+The matching rollback is for isolated rehearsal only. It removes Migration 17
+objects and credential lifecycle columns but never removes Parent, student, or
+relationship rows.
+
 ## Validation
 
 Run the filesystem-only test:

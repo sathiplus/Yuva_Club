@@ -53,7 +53,7 @@ foreach (['ParentApproved', 'ParentDeclined', 'ParentWithdrew'] as $parentAction
 membership_check(str_contains($organizationHandler, 'require_admin_post([YUVA_ROLE_ORGANIZATION_ADMIN])'), 'Organization request handler must enforce role and CSRF.');
 membership_check(str_contains($organizationHandler, 'If the student can be contacted'), 'Existing-student result must be anti-enumeration neutral.');
 membership_check(str_contains($studentHandler, 'require_student()') && str_contains($studentHandler, 'verify_csrf_token'), 'Student decisions must require student auth and CSRF.');
-membership_check(str_contains($parentHandler, 'require_parent_student()') && str_contains($parentHandler, 'parent_can_access_student'), 'Parent decisions must require the linked parent.');
+membership_check(str_contains($parentHandler, 'require_authenticated_parent()') && str_contains($parentHandler, '$parentContext[\'student_id\']'), 'Parent decisions must require the authenticated SQL Parent and revalidated linked child.');
 membership_check(str_contains($organizationPage, 'requestsForOrganization($organizationId)'), 'Organization Admin membership lists must be organization-scoped.');
 membership_check(!str_contains($organizationPage, 'password_hash'), 'Organization Admin UI must not expose password hashes.');
 membership_check(str_contains($studentPage, 'student-organization-membership-action.php'), 'Student portal must expose accept/decline controls.');

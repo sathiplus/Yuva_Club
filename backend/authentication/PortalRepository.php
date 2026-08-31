@@ -228,6 +228,8 @@ SELECT TOP (1)
     parent_user.role AS user_role,
     parent_user.status AS user_status,
     parent_user.email_verified_at
+    ,parent_user.activated_at
+    ,parent_user.credentials_version
 FROM dbo.parents AS parent
 INNER JOIN dbo.users AS parent_user
     ON parent_user.id = parent.user_id
@@ -254,6 +256,8 @@ SELECT TOP (1)
     parent_user.role AS user_role,
     parent_user.status AS user_status,
     parent_user.email_verified_at
+    ,parent_user.activated_at
+    ,parent_user.credentials_version
 FROM dbo.parents AS parent
 INNER JOIN dbo.users AS parent_user
     ON parent_user.id = parent.user_id
@@ -277,6 +281,8 @@ SELECT
     parent_user.status AS parent_user_status,
     parent_user.email_verified_at AS parent_email_verified_at,
     parent_user.password_hash AS parent_password_hash,
+    parent_user.activated_at AS parent_activated_at,
+    parent_user.credentials_version AS parent_credentials_version,
     student.id,
     student.user_id AS student_user_id,
     student.yuva_id,
@@ -318,6 +324,8 @@ SELECT TOP (1)
     parent_user.status AS parent_user_status,
     parent_user.email_verified_at AS parent_email_verified_at,
     parent_user.password_hash AS parent_password_hash,
+    parent_user.activated_at AS parent_activated_at,
+    parent_user.credentials_version AS parent_credentials_version,
     student_parent.parent_id,
     student_parent.student_id,
     student_parent.consent_status,

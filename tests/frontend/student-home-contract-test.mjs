@@ -133,7 +133,7 @@ assert.ok(
 );
 pass('no external runtime frontend dependencies');
 
-includes(parentPortal, '$student = require_parent_student();', 'parent portal guard');
+includes(parentPortal, '$parentContext = require_authenticated_parent();', 'authoritative SQL Parent portal guard');
 includes(adminPortal, 'require_admin();', 'admin portal guard');
 pass('parent and admin protected-page contracts remain present');
 

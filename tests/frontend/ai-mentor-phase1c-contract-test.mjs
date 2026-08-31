@@ -22,7 +22,8 @@ assert.ok(sqlRepo.includes("return'already-applied'"),'duplicate apply is idempo
 assert.ok(apply.includes('sourceRevisionHash'),'apply recalculates source revision');
 for(const token of ['OpenAI','AI can make mistakes','does not determine an official academic grade','media_ai_acknowledgement','consent_version']) assert.ok(portal.includes(token),token);
 assert.ok(upload.indexOf('acknowledgeStudent')<upload.indexOf('$_FILES'),'consent precedes media access');
-assert.ok(consentRoute.includes('require_parent_student()'),'parent consent preserves linked-child authorization');
+assert.ok(consentRoute.includes('require_authenticated_parent()'),'parent consent preserves authoritative SQL Parent-child authorization');
+assert.ok(consentRoute.includes("if($action==='withdraw')require_recent_parent_authentication"),'parent consent withdrawal requires recent authentication');
 assert.ok(deleteRoute.includes("$records[$studentId]['retention_status']='StudentDeleted'"),'delete is scoped to current student with a durable tombstone');
 assert.ok(config.includes('YUVA_MEDIA_RETENTION_DAYS'),'retention is configurable');
 console.log('PASS Phase 1C upload, consent, feature gate, and model configuration contracts');

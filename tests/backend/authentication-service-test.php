@@ -110,6 +110,8 @@ function authentication_test_sql_parent(array $overrides = []): array
         'user_role' => 'parent',
         'user_status' => 'active',
         'email_verified_at' => '2026-01-01 00:00:00',
+        'activated_at' => '2026-01-01 00:00:00',
+        'credentials_version' => 1,
     ], $overrides);
 }
 
@@ -124,6 +126,8 @@ function authentication_test_child(array $overrides = []): array
         'parent_user_status' => 'active',
         'parent_email_verified_at' => '2026-01-01 00:00:00',
         'parent_password_hash' => 'parent-hash',
+        'parent_activated_at' => '2026-01-01 00:00:00',
+        'parent_credentials_version' => 1,
         'consent_status' => 'granted',
         'student_approval_status' => 'approved',
         'approved_at' => '2026-01-01 00:00:00',
@@ -470,6 +474,7 @@ foreach ([
     ['user_status' => 'pending'],
     ['user_status' => 'suspended'],
     ['email_verified_at' => null],
+    ['activated_at' => null],
     ['password_hash' => null],
 ] as $override) {
     $blockedParentRepository = authentication_test_repository(
@@ -500,10 +505,8 @@ $legacyParent = $parentAuthentication->authenticate(
     'YC2026001'
 );
 authentication_test_assert(
-    $legacyParent['authenticated'] === true
-    && $legacyParent['source'] === 'filesystem'
-    && $legacyParent['parent_student_id'] === 'YC2026001',
-    'Filesystem parent compatibility must preserve selected-child identity.'
+    $legacyParent['authenticated'] === false,
+    'Legacy Child YUVA ID plus Parent Email must not authenticate a parent.'
 );
 
 $conflictingParentRecord = $filesystemRecord;
@@ -522,8 +525,8 @@ authentication_test_assert(
         'parent@example.test',
         'anything',
         'YC2026001'
-    )['failure_category'] === 'hybrid_conflict',
-    'Incompatible hybrid parent identity must fail closed.'
+    )['authenticated'] === true,
+    'Parent authentication must use the authoritative SQL password and ignore legacy identity stores.'
 );
 
 $parentDummyVerificationCount = 0;

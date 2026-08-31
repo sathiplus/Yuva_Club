@@ -1,5 +1,6 @@
 <?php
 require __DIR__ . '/portal-lib.php';
+$wasParent = ($_SESSION['portal_role'] ?? null) === 'parent';
 $_SESSION = [];
 if (ini_get('session.use_cookies')) {
     $params = session_get_cookie_params();
@@ -13,4 +14,4 @@ if (ini_get('session.use_cookies')) {
     ]);
 }
 session_destroy();
-redirect_to('portal-login.php');
+redirect_to($wasParent ? 'parent-login.php' : 'portal-login.php');

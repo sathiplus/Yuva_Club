@@ -3,7 +3,6 @@ require __DIR__ . '/portal-lib.php';
 
 $status = $_GET['status'] ?? '';
 $step = $_GET['step'] ?? '';
-$authMode = portal_auth_mode();
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = (string) ($_POST['action'] ?? 'login');
     if ($action === 'select_child') {
@@ -20,15 +19,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     $parentEmail = strtolower(clean_text($_POST['parent_email'] ?? ''));
-    $studentId = normalize_yuva_id($_POST['student_id'] ?? '');
-    $credential = $authMode === 'filesystem'
-        ? $parentEmail
-        : (string) ($_POST['credential'] ?? '');
+    $credential = (string) ($_POST['credential'] ?? '');
     $result = portal_parent_login_workflow()->attempt(
         $_SESSION,
         $parentEmail,
         $credential,
-        $studentId !== '' ? $studentId : null,
+        null,
         isset($_POST['csrf_token']) ? (string) $_POST['csrf_token'] : null,
         portal_network_category($_SERVER['REMOTE_ADDR'] ?? null)
     );
@@ -107,35 +103,22 @@ portal_header('Parent Dashboard Login', false, ['assets/public-site.css?v=releas
         <form class="form-card" method="post">
           <?php echo csrf_field(); ?>
           <input type="hidden" name="action" value="login">
-          <?php if ($authMode !== 'sql'): ?>
-            <div class="field">
-              <label for="student_id">Yuva Club ID <?php echo $authMode === 'filesystem' ? '*' : '(for legacy access)'; ?></label>
-              <input id="student_id" name="student_id" type="text" <?php echo $authMode === 'filesystem' ? 'required' : ''; ?> placeholder="YC2026001">
-            </div>
-          <?php endif; ?>
           <div class="field">
             <label for="parent_email">Parent Email *</label>
             <input id="parent_email" name="parent_email" type="email" required autocomplete="email">
           </div>
-          <?php if ($authMode === 'sql'): ?>
             <div class="field">
               <label for="credential">Password *</label>
               <input id="credential" name="credential" type="password" required autocomplete="current-password">
+              <button class="password-visibility-toggle" type="button" data-password-toggle="credential" aria-controls="credential" aria-pressed="false">Show Password</button>
             </div>
-          <?php elseif ($authMode === 'hybrid'): ?>
-            <div class="field">
-              <label for="credential">Credential *</label>
-              <input id="credential" name="credential" type="password" required autocomplete="current-password" placeholder="Password or parent email">
-            </div>
-          <?php endif; ?>
           <button class="button primary" type="submit">View Dashboard</button>
-          <?php if ($authMode !== 'filesystem'): ?>
             <p><a href="forgot-password.php?account=parent">Forgot password?</a></p>
             <p><a href="parent-activate.php">Set up parent access</a></p>
-          <?php endif; ?>
         </form>
       <?php endif; ?>
     </div>
   </section>
 </main>
+<script src="assets/password-visibility.js" defer></script>
 <?php portal_footer(false, true); ?>

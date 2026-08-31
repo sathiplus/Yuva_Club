@@ -2,9 +2,12 @@
 require __DIR__ . '/portal-lib.php';
 
 $token = (string) ($_GET['token'] ?? ($_POST['token'] ?? ''));
-$record = password_reset_token_record($token);
+$requestedAccount = clean_text((string) ($_GET['account'] ?? ($_POST['account'] ?? '')));
+$record = null;
+try { $record = $requestedAccount === 'parent' ? parent_credential_service()->tokenRecord($token, 'password_reset') : password_reset_token_record($token); }
+catch(Throwable $error) { error_log('YUVA password reset lookup failed exception_type='.get_class($error)); }
 $status = $_GET['status'] ?? '';
-$accountType = (string) ($record['account_type'] ?? 'student');
+$accountType = $requestedAccount === 'parent' ? 'parent' : (string) ($record['account_type'] ?? 'student');
 $loginUrl = password_reset_login_url($accountType);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -25,7 +28,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         redirect_to('reset-password.php?status=password-error&token=' . rawurlencode($token));
     }
 
-    if (complete_password_reset($token, $password)) {
+    try { $completed = $accountType === 'parent' ? parent_credential_service()->consume($token, 'password_reset', $password) : complete_password_reset($token, $password); }
+    catch(Throwable $error) { $completed=false; error_log('YUVA password reset completion failed exception_type='.get_class($error)); }
+    if ($completed) {
         redirect_to($loginUrl . '?status=password-reset');
     }
 
@@ -55,13 +60,16 @@ portal_header('Reset Password', false, ['assets/public-site.css?v=release-1.0.2-
         <form class="form-card" method="post">
           <?php echo csrf_field(); ?>
           <input type="hidden" name="token" value="<?php echo e($token); ?>">
+          <input type="hidden" name="account" value="<?php echo e($accountType); ?>">
           <div class="field">
             <label for="password">New Password *</label>
             <input id="password" name="password" type="password" minlength="<?php echo $accountType === 'student' ? '8' : '12'; ?>" required autocomplete="new-password">
+            <button class="password-visibility-toggle" type="button" data-password-toggle="password" aria-controls="password" aria-pressed="false">Show Password</button>
           </div>
           <div class="field">
             <label for="confirm_password">Confirm New Password *</label>
             <input id="confirm_password" name="confirm_password" type="password" minlength="<?php echo $accountType === 'student' ? '8' : '12'; ?>" required autocomplete="new-password">
+            <button class="password-visibility-toggle" type="button" data-password-toggle="confirm_password" aria-controls="confirm_password" aria-pressed="false">Show Password</button>
           </div>
           <button class="button primary" type="submit">Update Password</button>
         </form>
@@ -69,4 +77,5 @@ portal_header('Reset Password', false, ['assets/public-site.css?v=release-1.0.2-
     </div>
   </section>
 </main>
+<script src="assets/password-visibility.js" defer></script>
 <?php portal_footer(false, true); ?>

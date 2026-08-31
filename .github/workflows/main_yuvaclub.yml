@@ -115,6 +115,9 @@ jobs:
           php -l portal-lib.php
           php -l parent.php
           php -l parent-media-consent.php
+          php -l parent-confirm-password.php
+          php -l parent-select-child.php
+          php -l backend/authentication/ParentCredentialService.php
           php -l portal-submit-media.php
           php -l portal-delete-media.php
           php -l admin-delivery-review.php
@@ -171,6 +174,7 @@ jobs:
           node tests/frontend/demo-request-contract-test.mjs
           node tests/frontend/student-experience-contract-test.mjs
           node tests/frontend/parent-experience-contract-test.mjs
+          node tests/frontend/parent-password-authentication-contract-test.mjs
           node tests/frontend/master-admin-contract-test.mjs
           node tests/frontend/ai-mentor-contract-test.mjs
           node tests/frontend/ai-mentor-phase1a-contract-test.mjs

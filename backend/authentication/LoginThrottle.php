@@ -3,13 +3,15 @@ declare(strict_types=1);
 
 namespace YuvaClub\Authentication;
 
+use PDO;
 use RuntimeException;
 
 final class LoginThrottle
 {
     private const MAX_BUCKETS = 5000;
 
-    private string $storagePath;
+    private ?string $storagePath;
+    private ?PDO $pdo;
     private int $maxAttempts;
     private int $windowSeconds;
     private int $lockSeconds;
@@ -18,7 +20,7 @@ final class LoginThrottle
     private $clock;
 
     public function __construct(
-        string $storagePath,
+        string|PDO $storage,
         int $maxAttempts = 5,
         int $windowSeconds = 900,
         int $lockSeconds = 900,
@@ -28,7 +30,8 @@ final class LoginThrottle
             throw new RuntimeException('Invalid login throttle configuration.');
         }
 
-        $this->storagePath = $storagePath;
+        $this->storagePath = is_string($storage) ? $storage : null;
+        $this->pdo = $storage instanceof PDO ? $storage : null;
         $this->maxAttempts = $maxAttempts;
         $this->windowSeconds = $windowSeconds;
         $this->lockSeconds = $lockSeconds;
@@ -40,6 +43,12 @@ final class LoginThrottle
         string $identifier,
         string $networkCategory
     ): bool {
+        if ($this->pdo instanceof PDO) {
+            $hashes = $this->bucketHashes($scope, $identifier, $networkCategory);
+            $statement = $this->pdo->prepare('SELECT CASE WHEN blocked_until > SYSUTCDATETIME() THEN 1 ELSE 0 END FROM dbo.authentication_attempts WHERE scope = :scope AND account_hash = CONVERT(BINARY(32), :account_hash, 2) AND network_hash = CONVERT(BINARY(32), :network_hash, 2)');
+            $statement->execute($hashes);
+            return (int) $statement->fetchColumn() === 1;
+        }
         $key = $this->bucketKey($scope, $identifier, $networkCategory);
         return $this->withLockedState(
             function (array &$state, int $now) use ($key): bool {
@@ -55,6 +64,28 @@ final class LoginThrottle
         string $identifier,
         string $networkCategory
     ): void {
+        if ($this->pdo instanceof PDO) {
+            $parameters = $this->bucketHashes($scope, $identifier, $networkCategory);
+            $parameters['window_seconds_1'] = $this->windowSeconds;
+            $parameters['window_seconds_2'] = $this->windowSeconds;
+            $parameters['window_seconds_3'] = $this->windowSeconds;
+            $parameters['max_attempts'] = $this->maxAttempts;
+            $parameters['lock_seconds'] = $this->lockSeconds;
+            $statement = $this->pdo->prepare(<<<'SQL'
+MERGE dbo.authentication_attempts WITH (HOLDLOCK) AS target
+USING (SELECT :scope AS scope, CONVERT(BINARY(32), :account_hash, 2) AS account_hash, CONVERT(BINARY(32), :network_hash, 2) AS network_hash) AS source
+ON target.scope = source.scope AND target.account_hash = source.account_hash AND target.network_hash = source.network_hash
+WHEN MATCHED THEN UPDATE SET
+    attempt_count = CASE WHEN DATEDIFF(SECOND, target.window_started_at, SYSUTCDATETIME()) >= CONVERT(INT, :window_seconds_1) THEN 1 ELSE target.attempt_count + 1 END,
+    window_started_at = CASE WHEN DATEDIFF(SECOND, target.window_started_at, SYSUTCDATETIME()) >= CONVERT(INT, :window_seconds_2) THEN SYSUTCDATETIME() ELSE target.window_started_at END,
+    blocked_until = CASE WHEN (CASE WHEN DATEDIFF(SECOND, target.window_started_at, SYSUTCDATETIME()) >= CONVERT(INT, :window_seconds_3) THEN 1 ELSE target.attempt_count + 1 END) >= CONVERT(INT, :max_attempts) THEN DATEADD(SECOND, CONVERT(INT, :lock_seconds), SYSUTCDATETIME()) ELSE target.blocked_until END,
+    updated_at = SYSUTCDATETIME()
+WHEN NOT MATCHED THEN INSERT (scope, account_hash, network_hash, attempt_count, window_started_at, blocked_until)
+VALUES (source.scope, source.account_hash, source.network_hash, 1, SYSUTCDATETIME(), NULL);
+SQL);
+            $statement->execute($parameters);
+            return;
+        }
         $key = $this->bucketKey($scope, $identifier, $networkCategory);
         $this->withLockedState(
             function (array &$state, int $now) use ($key): bool {
@@ -90,6 +121,11 @@ final class LoginThrottle
         string $identifier,
         string $networkCategory
     ): void {
+        if ($this->pdo instanceof PDO) {
+            $statement = $this->pdo->prepare('DELETE FROM dbo.authentication_attempts WHERE scope = :scope AND account_hash = CONVERT(BINARY(32), :account_hash, 2) AND network_hash = CONVERT(BINARY(32), :network_hash, 2)');
+            $statement->execute($this->bucketHashes($scope, $identifier, $networkCategory));
+            return;
+        }
         $key = $this->bucketKey($scope, $identifier, $networkCategory);
         $this->withLockedState(
             static function (array &$state, int $now) use ($key): bool {
@@ -114,8 +150,21 @@ final class LoginThrottle
         );
     }
 
+    /** @return array{scope:string,account_hash:string,network_hash:string} */
+    private function bucketHashes(string $scope, string $identifier, string $networkCategory): array
+    {
+        return [
+            'scope' => strtolower(trim($scope)),
+            'account_hash' => hash('sha256', strtolower(trim($identifier))),
+            'network_hash' => hash('sha256', strtolower(trim($networkCategory))),
+        ];
+    }
+
     private function withLockedState(callable $operation): mixed
     {
+        if ($this->storagePath === null) {
+            throw new RuntimeException('Login throttle storage is unavailable.');
+        }
         $directory = dirname($this->storagePath);
         if (!is_dir($directory) && !mkdir($directory, 0755, true) && !is_dir($directory)) {
             throw new RuntimeException('Login throttle storage is unavailable.');

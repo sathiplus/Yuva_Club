@@ -96,6 +96,8 @@ final class ParentLoginWorkflow
                 $session['parent_auth_source'] = 'sql';
                 $session['parent_user_id'] = (int) ($result['parent_user_id'] ?? 0);
                 $session['parent_id'] = (int) ($result['parent_id'] ?? 0);
+                $session['parent_credentials_version'] = (int) ($result['credentials_version'] ?? 1);
+                $session['parent_authenticated_at'] = time();
                 $session['portal_role'] = 'parent';
                 ($this->auditLogger)('parent.login.succeeded');
                 return [
@@ -230,6 +232,9 @@ final class ParentLoginWorkflow
             || ($session['portal_role'] ?? null) !== 'parent'
             || !is_int($session['parent_user_id'] ?? null)
             || !is_int($session['parent_id'] ?? null)
+            || !is_int($session['parent_credentials_version'] ?? null)
+            || !is_int($session['parent_authenticated_at'] ?? null)
+            || (time() - $session['parent_authenticated_at']) > 7200
         ) {
             return false;
         }
@@ -237,7 +242,8 @@ final class ParentLoginWorkflow
         try {
             return $this->authentication->revalidateSqlParentSession(
                 $session['parent_user_id'],
-                $session['parent_id']
+                $session['parent_id'],
+                $session['parent_credentials_version']
             );
         } catch (Throwable) {
             return false;
@@ -265,6 +271,8 @@ final class ParentLoginWorkflow
             $session['parent_auth_source'],
             $session['parent_user_id'],
             $session['parent_id'],
+            $session['parent_credentials_version'],
+            $session['parent_authenticated_at'],
             $session['parent_email'],
             $session['parent_session_started_at'],
             $session['portal_role'],
@@ -281,6 +289,8 @@ final class ParentLoginWorkflow
             $session['parent_auth_source'],
             $session['parent_user_id'],
             $session['parent_id'],
+            $session['parent_credentials_version'],
+            $session['parent_authenticated_at'],
             $session['portal_role']
         );
     }

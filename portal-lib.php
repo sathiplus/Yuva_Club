@@ -12,6 +12,7 @@ require_once __DIR__ . '/backend/authentication/AuthenticationService.php';
 require_once __DIR__ . '/backend/authentication/LoginThrottle.php';
 require_once __DIR__ . '/backend/authentication/StudentLoginWorkflow.php';
 require_once __DIR__ . '/backend/authentication/ParentLoginWorkflow.php';
+require_once __DIR__ . '/backend/authentication/ParentCredentialService.php';
 require_once __DIR__ . '/backend/ai/AiProvider.php';
 require_once __DIR__ . '/backend/ai/DocumentAwareAiProvider.php';
 require_once __DIR__ . '/backend/ai/AiReviewStore.php';
@@ -1892,19 +1893,10 @@ function portal_authentication_service(): \YuvaClub\Authentication\Authenticatio
     }
 
     $mode = portal_auth_mode();
-    if ($mode === \YuvaClub\Authentication\AuthenticationService::MODE_FILESYSTEM) {
-        $repository = new \YuvaClub\Authentication\PortalRepository(
-            static fn(string $sql, array $parameters): ?array => null,
-            static fn(string $sql, array $parameters): array => []
-        );
-    } else {
-        if (db_driver() !== 'sqlsrv') {
-            throw new RuntimeException('SQL portal authentication requires DB_DRIVER=sqlsrv.');
-        }
-        $repository = \YuvaClub\Authentication\PortalRepository::fromPdo(
-            Database::connection()
-        );
+    if (db_driver() !== 'sqlsrv') {
+        throw new RuntimeException('Parent SQL authentication requires DB_DRIVER=sqlsrv.');
     }
+    $repository = \YuvaClub\Authentication\PortalRepository::fromPdo(Database::connection());
 
     $adapter = new \YuvaClub\Authentication\PortalCompatibilityAdapter();
     $students = new \YuvaClub\Authentication\StudentAuthentication(
@@ -1972,9 +1964,7 @@ function portal_parent_login_workflow(): \YuvaClub\Authentication\ParentLoginWor
 
     $workflow = new \YuvaClub\Authentication\ParentLoginWorkflow(
         portal_authentication_service(),
-        new \YuvaClub\Authentication\LoginThrottle(
-            portal_path('portal-data') . DIRECTORY_SEPARATOR . 'parent-login-throttle.json'
-        ),
+        new \YuvaClub\Authentication\LoginThrottle(Database::connection()),
         static fn(?string $token): bool => verify_csrf_token($token),
         static function (): void {
             session_regenerate_id(true);
@@ -1984,6 +1974,41 @@ function portal_parent_login_workflow(): \YuvaClub\Authentication\ParentLoginWor
         }
     );
     return $workflow;
+}
+
+function parent_credential_service(): \YuvaClub\Authentication\ParentCredentialService {
+    static $service = null;
+    if (!$service instanceof \YuvaClub\Authentication\ParentCredentialService) {
+        $service = new \YuvaClub\Authentication\ParentCredentialService(Database::connection());
+    }
+    return $service;
+}
+
+function parent_authentication_throttle(): \YuvaClub\Authentication\LoginThrottle {
+    return new \YuvaClub\Authentication\LoginThrottle(Database::connection());
+}
+
+/** @return array<string,mixed> */
+function require_authenticated_parent(): array {
+    $student = require_parent_student();
+    $identity = parent_credential_service()->parentByUserId((int) ($_SESSION['parent_user_id'] ?? 0));
+    if (!is_array($identity) || (int)($identity['parent_id']??0)!==(int)($_SESSION['parent_id']??0)) {
+        clear_parent_authentication_session();
+        redirect_to('parent-login.php?status=error');
+    }
+    return ['identity'=>$identity,'student'=>$student,'student_id'=>normalize_yuva_id((string)($_SESSION['parent_student_id']??''))];
+}
+
+function parent_recent_authentication_valid(int $seconds = 900): bool {
+    $authenticatedAt=(int)($_SESSION['parent_authenticated_at']??0);
+    return $authenticatedAt>0 && (time()-$authenticatedAt)<=$seconds;
+}
+
+function require_recent_parent_authentication(string $returnTo='parent.php'): void {
+    if (!parent_recent_authentication_valid()) {
+        $_SESSION['parent_recent_auth_return']=$returnTo;
+        redirect_to('parent-confirm-password.php');
+    }
 }
 
 function password_policy_error(string $password): string {
@@ -2860,6 +2885,8 @@ function clear_parent_authentication_session(): void {
         $_SESSION['parent_auth_source'],
         $_SESSION['parent_user_id'],
         $_SESSION['parent_id'],
+        $_SESSION['parent_credentials_version'],
+        $_SESSION['parent_authenticated_at'],
         $_SESSION['portal_role']
     );
 }
@@ -2870,14 +2897,7 @@ function require_parent_student(): array {
         redirect_to('parent-login.php');
     }
 
-    $source = $_SESSION['parent_auth_source'] ?? null;
-    $authMode = portal_auth_mode();
-    if ($source === null && in_array($authMode, ['filesystem', 'hybrid'], true)) {
-        $student = require_parent_for_student($studentId);
-    } elseif (
-        $source === 'sql'
-        && in_array($authMode, ['sql', 'hybrid'], true)
-    ) {
+    if (($_SESSION['parent_auth_source'] ?? null) === 'sql') {
         $student = portal_parent_login_workflow()->revalidateSqlChildAccess($_SESSION);
     } else {
         $student = null;
