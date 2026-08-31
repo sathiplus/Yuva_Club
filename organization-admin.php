@@ -35,6 +35,8 @@ foreach($students as $leadershipStudentId=>$leadershipStudent){try{$leadershipRo
 $leadershipAdminNotice=(string)($_SESSION['leadership_admin_notice']??'');$leadershipAdminError=(string)($_SESSION['leadership_admin_error']??'');unset($_SESSION['leadership_admin_notice'],$_SESSION['leadership_admin_error']);
 $managedChallenges=[];$managedChallengeEntries=[];try{$managedChallenges=competition_foundation_service()->managedBy($admin);$managedChallengeEntries=competition_foundation_service()->managedEntries($admin);}catch(Throwable $error){error_log('YUVA organization challenges unavailable correlation='.bin2hex(random_bytes(12)).' exception_type='.get_class($error));}
 $competitionAdminNotice=(string)($_SESSION['competition_admin_notice']??'');$competitionAdminError=(string)($_SESSION['competition_admin_error']??'');unset($_SESSION['competition_admin_notice'],$_SESSION['competition_admin_error']);
+$quickChallengeTemplates=[];try{$quickChallengeTemplates=quick_challenge_service()->templates($admin);}catch(Throwable $error){error_log('YUVA organization quick challenge view unavailable correlation='.bin2hex(random_bytes(12)).' exception_type='.get_class($error));}
+$quickChallengeAdminNotice=(string)($_SESSION['quick_challenge_admin_notice']??'');$quickChallengeAdminError=(string)($_SESSION['quick_challenge_admin_error']??'');unset($_SESSION['quick_challenge_admin_notice'],$_SESSION['quick_challenge_admin_error']);
 $reports = safety_reports();
 $orgReports = array_filter($reports, static fn($report): bool => is_array($report)
     && student_organization_id(find_student((string) ($report['student_id'] ?? '')) ?? []) === $organizationId);
@@ -91,6 +93,7 @@ portal_header('Organization Admin Dashboard');
         <?php if(($progress['target_level_id']??null)!==null): ?><form action="admin-leadership-decision.php" method="post"><?php echo csrf_field(); ?><input type="hidden" name="yuva_id" value="<?php echo e((string)$leadershipStudentId); ?>"><input type="hidden" name="snapshot_id" value="<?php echo e((string)$progress['snapshot_id']); ?>"><input type="hidden" name="row_version" value="<?php echo e((string)$progress['row_version']); ?>"><input type="hidden" name="source_revision" value="<?php echo e((string)$progress['source_revision']); ?>"><label>Decision note<textarea name="reason" required maxlength="2000"></textarea></label><button class="button primary" name="decision" value="Approved" <?php echo $progress['status']==='Eligible for Review'?'':'disabled'; ?>>Approve <?php echo e((string)$progress['target_level']); ?></button> <button class="button ghost" name="decision" value="More Evidence Needed">More Evidence Needed</button></form><?php endif; ?></article><?php endforeach; ?><?php endif; ?>
     </section>
     <?php require __DIR__.'/competition-admin-panel.php'; ?>
+    <?php require __DIR__.'/quick-challenge-admin-panel.php'; ?>
     <section class="form-card"><h2>Organization Students</h2>
       <?php if ($students === []): ?><p>No student records are assigned to this organization yet.</p>
       <?php else: ?><div class="table-wrap"><table><thead><tr><th>YUVA Identity</th><th>Name</th><th>Program</th><th>School</th><th>Status</th></tr></thead><tbody>

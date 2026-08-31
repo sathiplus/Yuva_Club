@@ -84,6 +84,7 @@ require_once __DIR__ . '/backend/organization-membership.php';
 require_once __DIR__ . '/backend/leadership.php';
 require_once __DIR__ . '/backend/presentation-verification.php';
 require_once __DIR__ . '/backend/competition.php';
+require_once __DIR__ . '/backend/quick-challenge.php';
 require_once __DIR__ . '/backend/subscription-entitlement.php';
 
 function subscription_entitlement_service(): SubscriptionEntitlementService {
@@ -93,6 +94,10 @@ function subscription_entitlement_service(): SubscriptionEntitlementService {
 
 function competition_foundation_service(): CompetitionFoundationService {
     return new CompetitionFoundationService(Database::connection());
+}
+
+function quick_challenge_service(): QuickChallengeService {
+    return new QuickChallengeService(Database::connection());
 }
 
 function e(string $value): string {

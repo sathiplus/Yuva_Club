@@ -166,6 +166,18 @@ Migration 04 or Migration 05 functional objects.
 The rollback is rehearsal-only. It refuses the live `yuva_club` database and
 also refuses to remove the tables while any membership request evidence exists.
 
+## Migration 16: Quick Challenges Phase 2C.2A
+
+`16-quick-challenges-phase2c2a.azure-sql.sql` adds reusable, versioned Quick
+Challenge templates; the approved ten-skill catalog; frozen prompt, timing,
+attempt, division, and rubric references; server-timed attempts; immutable
+response snapshots; and versioned personal-best records. Quick Challenge
+instances reuse the Phase 2C.1 competition lifecycle and organization scope.
+
+The migration is additive and does not add judging, official Competition Score,
+leaderboards, winners, or leadership promotion. The matching rollback is
+rehearsal-only and removes only Migration 16 objects and columns.
+
 ## Validation
 
 Run the filesystem-only test:
