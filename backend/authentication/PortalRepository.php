@@ -76,6 +76,7 @@ SELECT TOP (1)
     student_user.role AS user_role,
     student_user.status AS user_status,
     student_user.email_verified_at,
+    student_user.credentials_version,
     program.code AS program_code,
     program.name AS program_name,
     registration.id AS registration_id,

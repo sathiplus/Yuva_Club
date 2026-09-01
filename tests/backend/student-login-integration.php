@@ -119,6 +119,7 @@ SQL
     $service = new AuthenticationService('sql', $students, $parents);
 
     $success = $service->authenticateStudent($yuvaId, $password);
+    $credentialsVersion = (int) ($success['credentials_version'] ?? 0);
     if (
         ($success['authenticated'] ?? false) !== true
         || ($success['source'] ?? null) !== 'sql'
@@ -130,7 +131,7 @@ SQL
     if ($service->authenticateStudent($yuvaId, 'wrong-password')['authenticated'] !== false) {
         throw new RuntimeException('Wrong synthetic SQL password was accepted.');
     }
-    if ($service->revalidateSqlStudentSession($yuvaId, $userId) === null) {
+    if ($service->revalidateSqlStudentSession($yuvaId, $userId, $credentialsVersion) === null) {
         throw new RuntimeException('Synthetic SQL session did not revalidate.');
     }
 
@@ -189,14 +190,14 @@ SQL
         'password_hash' => $passwordHash,
         'id' => $userId,
     ]);
-    if ($service->revalidateSqlStudentSession($yuvaId, $userId) === null) {
+    if ($service->revalidateSqlStudentSession($yuvaId, $userId, $credentialsVersion) === null) {
         throw new RuntimeException('Restored synthetic SQL session did not revalidate.');
     }
 
     $pdo->prepare(
         "UPDATE dbo.users SET status = N'suspended' WHERE id = :id"
     )->execute(['id' => $userId]);
-    if ($service->revalidateSqlStudentSession($yuvaId, $userId) !== null) {
+    if ($service->revalidateSqlStudentSession($yuvaId, $userId, $credentialsVersion) !== null) {
         throw new RuntimeException('Suspended synthetic SQL session remained authorized.');
     }
 

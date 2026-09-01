@@ -364,6 +364,7 @@ if (database_settings_present()) {
             'recording_agreed' => checked_bool('agree_recording'),
             'parent_permission_granted' => checked_bool('agree_parent_permission'),
             'ip_address' => $ipAddress,
+            'student_password_hash' => db_is_sqlsrv() ? password_hash($accountPassword, PASSWORD_DEFAULT) : null,
         ];
         if (db_is_sqlsrv()) {
             $registration = create_registration_with_reserved_yuva_id($registrationInput);
@@ -388,7 +389,7 @@ if (database_settings_present()) {
         }
         $row[1] = $studentId;
         append_registration_row($fullCsvPath, $headers, $row, $studentIdYear, $idScanPaths);
-        create_student_account($studentId, $studentEmail, $parentEmail, $accountPassword);
+        create_student_account($studentId, $studentEmail, $parentEmail, $accountPassword, !db_is_sqlsrv());
         create_parent_account($parentEmail, $accountPassword, $studentId);
         $storedInDatabase = true;
     } catch (Throwable $error) {

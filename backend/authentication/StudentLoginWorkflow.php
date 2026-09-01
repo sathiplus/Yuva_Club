@@ -95,6 +95,7 @@ final class StudentLoginWorkflow
             if (($result['source'] ?? null) === 'sql') {
                 $session['student_auth_source'] = 'sql';
                 $session['student_user_id'] = (int) ($result['user_id'] ?? 0);
+                $session['student_credentials_version'] = (int) ($result['credentials_version'] ?? 0);
                 $session['portal_role'] = 'student';
             }
 
@@ -117,6 +118,7 @@ final class StudentLoginWorkflow
             || ($session['portal_role'] ?? null) !== 'student'
             || !is_string($session['student_id'] ?? null)
             || !is_int($session['student_user_id'] ?? null)
+            || !is_int($session['student_credentials_version'] ?? null)
         ) {
             $this->clearStudentSession($session);
             return null;
@@ -125,7 +127,8 @@ final class StudentLoginWorkflow
         try {
             $student = $this->authentication->revalidateSqlStudentSession(
                 $session['student_id'],
-                $session['student_user_id']
+                $session['student_user_id'],
+                $session['student_credentials_version']
             );
         } catch (Throwable) {
             $student = null;
@@ -144,6 +147,7 @@ final class StudentLoginWorkflow
             $session['student_id'],
             $session['student_auth_source'],
             $session['student_user_id'],
+            $session['student_credentials_version'],
             $session['portal_role']
         );
     }
