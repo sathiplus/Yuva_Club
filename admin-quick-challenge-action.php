@@ -19,6 +19,11 @@ try{
             $input['organization_code']=$requested;
         }
         quick_challenge_service()->createInstance($admin,$input);$_SESSION['quick_challenge_admin_notice']='Quick Challenge instance created in Draft status.';
+    }elseif($action==='configure_ai_scoring'){
+        if($admin['role']!==YUVA_ROLE_MASTER_ADMIN)throw new RuntimeException('Master Admin authorization is required.');
+        quick_challenge_evaluation_service()->configureTemplate($admin,(string)($_POST['version_guid']??''),($_POST['enabled']??'0')==='1'?(string)($_POST['policy_code']??''):null,($_POST['enabled']??'0')==='1');$_SESSION['quick_challenge_admin_notice']='Versioned AI practice scoring configuration saved.';
+    }elseif($action==='reprocess_ai_evaluation'){
+        if($admin['role']!==YUVA_ROLE_MASTER_ADMIN)throw new RuntimeException('Master Admin authorization is required.');quick_challenge_evaluation_service()->reprocess($admin,(string)($_POST['evaluation_guid']??''));$_SESSION['quick_challenge_admin_notice']='The failed or stale evaluation was reprocessed through the audited action.';
     }else throw new InvalidArgumentException('Unsupported Quick Challenge action.');
 }catch(Throwable $error){$_SESSION['quick_challenge_admin_error']=$error instanceof InvalidArgumentException||$error instanceof RuntimeException?$error->getMessage():'The Quick Challenge request was rejected safely.';error_log('YUVA quick challenge admin action failed correlation='.bin2hex(random_bytes(12)).' exception_type='.get_class($error));}
 header('Location: '.$target,true,303);exit;

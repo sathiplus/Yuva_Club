@@ -1,0 +1,11 @@
+import assert from 'node:assert/strict';import{readFile}from'node:fs/promises';
+const root=new URL('../../',import.meta.url);const read=async p=>readFile(new URL(p,root),'utf8');
+const[portal,parent,panel,route]=await Promise.all(['portal.php','parent.php','quick-challenge-admin-panel.php','student-quick-challenge-analyze.php'].map(read));
+assert.ok(portal.includes('AI Mentor Practice Coaching')&&portal.includes('Your Result · Practice Score')&&portal.includes('Benchmark Beaten'),'Student score and benchmark experience missing');
+assert.ok(portal.includes('Practice Mission')&&portal.includes('What You Did Well')&&portal.includes('Try Next'),'Concise coaching structure missing');
+assert.ok(parent.includes('Quick Challenge completed')&&parent.includes('Practice Score')&&!parent.includes("another student's"),'Parent safe view missing');
+assert.ok(panel.includes('AI practice scoring')&&panel.includes('Versioned scoring policy')&&panel.includes('never official Competition Scores'),'Master Admin controls or practice-only notice missing');
+assert.ok(route.includes('require_student()')&&route.includes('verify_csrf_token')&&!route.includes('providerName'),'Analyze route must be authenticated/CSRF protected without exposing provider metadata');
+for(const html of[portal,parent,panel])assert.ok(!/student_email|parent_email|date_of_birth|phone|address/i.test(html),'Phase 2C.2B surface leaks private identity fields');
+assert.ok(!portal.includes('Official Competition Score')&&!portal.includes('automatic promotion'),'Practice result must not claim official judging or promotion');
+console.log('PASS Phase 2C.2B frontend/privacy contracts');

@@ -12,6 +12,6 @@ assert.ok(admin.includes('known active organization')&&admin.includes("$input['o
 assert.ok(start.includes('require_student()')&&start.includes('verify_csrf_token')&&submit.includes('require_student()')&&submit.includes('verify_csrf_token'),'Student authentication and CSRF are required');
 assert.ok(service.includes('response_deadline_at')&&service.includes('Attempt limit reached')&&service.includes('CONVERT(BINARY(8),:version,2)'),'Server timing, attempt limits, and concurrency are required');
 for(const forbidden of ['student_email','parent_email','date_of_birth','phone','address'])assert.ok(!panel.includes(forbidden)&&!portal.includes(forbidden),`Private field exposed: ${forbidden}`);
-assert.ok(!panel.includes('Competition Score')&&!panel.includes('Leaderboard')&&!panel.includes('Winner'),'Deferred Phase 2C.2B/2C.3 Quick Challenge management UI must remain absent');
+assert.ok(!panel.includes('Official Competition Score')&&!panel.includes('Leaderboard')&&!panel.includes('Winner'),'Official judging and Phase 2C.3 leaderboard management must remain absent');
 assert.ok(!portal.includes('name="practice_score"'),'Students must never submit their own score');
 process.stdout.write('PASS Quick Challenges Phase 2C.2A frontend/security contracts\n');

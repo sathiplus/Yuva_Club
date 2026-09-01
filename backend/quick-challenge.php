@@ -93,12 +93,23 @@ final class QuickChallengeService
 
     public function recordPracticeScore(array $actor,string $attemptGuid,float $score,string $scoreVersion,string $source):array
     {
-        $this->master($actor);if($score<0||$score>100||!preg_match('/^[A-Za-z0-9][A-Za-z0-9._-]{2,79}$/',$scoreVersion)||!in_array($source,['AIPractice','HumanPractice'],true))throw new InvalidArgumentException('Valid versioned practice score is required.');
-        return Database::transaction(function(PDO $pdo)use($attemptGuid,$score,$scoreVersion,$source):array{
+        $this->master($actor);return $this->persistPracticeScore($attemptGuid,$score,$scoreVersion,$source);
+    }
+
+    public function recordAiPracticeScore(string $attemptGuid,float $score,string $scoreVersion):array
+    {
+        return $this->persistPracticeScore($attemptGuid,$score,$scoreVersion,'AIPractice');
+    }
+
+    private function persistPracticeScore(string $attemptGuid,float $score,string $scoreVersion,string $source):array
+    {
+        if($score<0||$score>100||!preg_match('/^[A-Za-z0-9][A-Za-z0-9:._-]{2,119}$/',$scoreVersion)||!in_array($source,['AIPractice','HumanPractice'],true))throw new InvalidArgumentException('Valid versioned practice score is required.');
+        $persist=function(PDO $pdo)use($attemptGuid,$score,$scoreVersion,$source):array{
             $q=$pdo->prepare("SELECT attempt.id,attempt.student_id,attempt.practice_score,attempt.score_version,version.template_id FROM dbo.quick_challenge_attempts attempt WITH(UPDLOCK,HOLDLOCK) JOIN dbo.quick_challenge_template_versions version ON version.id=attempt.template_version_id WHERE attempt.attempt_guid=:guid AND attempt.[status]=N'Submitted'");$q->execute(['guid'=>$attemptGuid]);$attempt=$q->fetch();if(!is_array($attempt))throw new RuntimeException('Submitted attempt is required.');if($attempt['practice_score']!==null)return['status'=>'already-scored','new_personal_best'=>false];
             $pdo->prepare('UPDATE dbo.quick_challenge_attempts SET practice_score=:score,score_version=:version,score_source=:source WHERE id=:id AND practice_score IS NULL')->execute(['score'=>$score,'version'=>$scoreVersion,'source'=>$source,'id'=>$attempt['id']]);
             $best=$pdo->prepare('SELECT TOP(1)id,best_score FROM dbo.student_challenge_personal_bests WITH(UPDLOCK,HOLDLOCK) WHERE student_id=:student AND template_id=:template AND score_version=:version');$best->execute(['student'=>$attempt['student_id'],'template'=>$attempt['template_id'],'version'=>$scoreVersion]);$prior=$best->fetch();$isBest=!is_array($prior)||$score>(float)$prior['best_score'];if(!is_array($prior)){$pdo->prepare('INSERT dbo.student_challenge_personal_bests(student_id,template_id,score_version,best_attempt_id,best_score,achieved_at) VALUES(:student,:template,:version,:attempt,:score,SYSUTCDATETIME())')->execute(['student'=>$attempt['student_id'],'template'=>$attempt['template_id'],'version'=>$scoreVersion,'attempt'=>$attempt['id'],'score'=>$score]);}elseif($isBest){$pdo->prepare('UPDATE dbo.student_challenge_personal_bests SET best_attempt_id=:attempt,best_score=:score,achieved_at=SYSUTCDATETIME(),updated_at=SYSUTCDATETIME() WHERE id=:id')->execute(['attempt'=>$attempt['id'],'score'=>$score,'id'=>$prior['id']]);}return['status'=>'scored','new_personal_best'=>$isBest,'previous_best'=>is_array($prior)?(float)$prior['best_score']:null,'score'=>$score];
-        },'SERIALIZABLE',true);
+        };
+        return $this->pdo->inTransaction()?$persist($this->pdo):Database::transaction($persist,'SERIALIZABLE',true);
     }
 
     private function master(array $actor):void{if(($actor['role']??'')!=='MasterAdmin')throw new RuntimeException('Master Admin authorization is required.');}
