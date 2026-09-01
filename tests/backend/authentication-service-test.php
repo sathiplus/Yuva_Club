@@ -412,7 +412,12 @@ $children = [
     ]),
 ];
 $links = [
-    '401:YC2026001' => authentication_test_child(),
+    '401:YC2026001' => authentication_test_child(['password_hash' => null]),
+    '401:YC2026002' => authentication_test_child([
+        'student_id' => 102,
+        'yuva_id' => 'YC2026002',
+        'password_hash' => 'student-hash',
+    ]),
     '401:YC2026003' => authentication_test_child(['consent_status' => 'revoked']),
 ];
 $parentRepository = authentication_test_repository(
@@ -467,6 +472,14 @@ authentication_test_assert(
     && $parentAuthentication->canAccessChild(401, 'YC2026003') === false
     && $parentAuthentication->canAccessChild(401, 'YC2026999') === false,
     'Parent-child authorization must reject revoked and unlinked children.'
+);
+authentication_test_assert(
+    ($parentAuthentication->authorizedChildRecord(401, 'YC2026001')['Yuva Club ID'] ?? null)
+        === 'YC2026001'
+    && ($parentAuthentication->authorizedChildRecord(401, 'YC2026002')['Yuva Club ID'] ?? null)
+        === 'YC2026002'
+    && $parentAuthentication->authorizedChildRecord(401, 'YC2026003') === null,
+    'Parent-linked child authorization must be independent of student password state and retain relationship authorization.'
 );
 
 foreach ([

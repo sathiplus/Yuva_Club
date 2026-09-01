@@ -740,7 +740,7 @@ foreach ([
     ];
     parent_login_assert(
         $stateWorkflow->revalidateSqlChildAccess($stateSession) !== null,
-        'Baseline parent protected access must succeed.'
+        'Baseline parent protected access must succeed independently of student login activation.'
     );
     if (isset($stateChange['parent'])) {
         $stateParent = array_merge($stateParent, $stateChange['parent']);

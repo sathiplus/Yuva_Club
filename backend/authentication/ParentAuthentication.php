@@ -11,6 +11,7 @@ final class ParentAuthentication
         '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi';
 
     private PortalRepository $repository;
+    private PortalCompatibilityAdapter $adapter;
 
     /** @var callable(string): ?array<string, mixed> */
     private $filesystemStudentFinder;
@@ -33,9 +34,11 @@ final class ParentAuthentication
         callable $filesystemParentIdentityFinder,
         callable $filesystemVerifier,
         ?callable $passwordVerifier = null,
-        ?callable $passwordNeedsRehash = null
+        ?callable $passwordNeedsRehash = null,
+        ?PortalCompatibilityAdapter $adapter = null
     ) {
         $this->repository = $repository;
+        $this->adapter = $adapter ?? new PortalCompatibilityAdapter();
         $this->filesystemStudentFinder = $filesystemStudentFinder;
         $this->filesystemParentIdentityFinder = $filesystemParentIdentityFinder;
         $this->filesystemVerifier = $filesystemVerifier;
@@ -98,6 +101,20 @@ final class ParentAuthentication
         return $row !== null && $this->isAuthorizedChildRow($row)
             ? $this->withoutParentAuthorizationFields($row)
             : null;
+    }
+
+    /** @return array<string, string>|null */
+    public function authorizedChildRecord(int $parentUserId, string $yuvaId): ?array
+    {
+        $row = $this->repository->findParentChildLink(
+            $parentUserId,
+            $this->normalizeYuvaId($yuvaId)
+        );
+        if ($row === null || !$this->isAuthorizedChildRow($row)) {
+            return null;
+        }
+
+        return $this->adapter->studentToLegacyRecord($row);
     }
 
     public function revalidateSqlSession(int $parentUserId, int $parentId, int $credentialsVersion): bool

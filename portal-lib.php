@@ -1928,7 +1928,10 @@ function portal_authentication_service(): \YuvaClub\Authentication\Authenticatio
             hash_equals(
                 strtolower(trim((string) ($record['Parent Email'] ?? ''))),
                 strtolower(trim($credential))
-            )
+            ),
+        null,
+        null,
+        $adapter
     );
 
     $service = new \YuvaClub\Authentication\AuthenticationService(

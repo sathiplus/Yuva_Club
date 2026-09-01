@@ -109,14 +109,6 @@ final class AuthenticationService
         int $parentUserId,
         string $yuvaId
     ): ?array {
-        $link = $this->parents->authorizedChild($parentUserId, $yuvaId);
-        if ($link === null) {
-            return null;
-        }
-
-        return $this->students->revalidateSqlSession(
-            $yuvaId,
-            (int) ($link['student_user_id'] ?? 0)
-        );
+        return $this->parents->authorizedChildRecord($parentUserId, $yuvaId);
     }
 }
