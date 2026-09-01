@@ -55,12 +55,12 @@ try {
     $insertUser = $pdo->prepare(
         <<<'SQL'
 INSERT INTO dbo.users (
-    email, password_hash, role, display_name, email_verified_at, status
+    email, password_hash, role, display_name, email_verified_at, activated_at, password_changed_at, status
 )
 OUTPUT INSERTED.id
 VALUES (
     :email, :password_hash, :role, :display_name,
-    SYSUTCDATETIME(), N'active'
+    SYSUTCDATETIME(), SYSUTCDATETIME(), SYSUTCDATETIME(), N'active'
 )
 SQL
     );
@@ -187,7 +187,7 @@ SQL
     if ($service->authenticateParent($parentEmail, 'wrong-password')['authenticated'] !== false) {
         throw new RuntimeException('Wrong synthetic SQL parent password was accepted.');
     }
-    if (!$service->revalidateSqlParentSession($parentUserId, $parentId)) {
+    if (!$service->revalidateSqlParentSession($parentUserId, $parentId, 1)) {
         throw new RuntimeException('Synthetic SQL parent identity did not revalidate.');
     }
     foreach ($yuvaIds as $yuvaId) {

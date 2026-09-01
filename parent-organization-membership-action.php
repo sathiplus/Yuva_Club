@@ -2,17 +2,18 @@
 declare(strict_types=1);
 
 require __DIR__ . '/portal-lib.php';
-$student = require_parent_student();
+$parentContext = require_authenticated_parent();
 if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !verify_csrf_token($_POST['csrf_token'] ?? null)) {
     redirect_to('parent.php?status=membership-security-error#organization-membership');
 }
-$yuvaId = normalize_yuva_id((string) ($_SESSION['parent_student_id'] ?? ''));
-$parentEmail = normalize_email((string) ($_SESSION['parent_email'] ?? ''));
+$yuvaId = (string) $parentContext['student_id'];
+$parentEmail = normalize_email((string) ($parentContext['identity']['email'] ?? ''));
 $guid = trim((string) ($_POST['membership_guid'] ?? ''));
 $decision = (string) ($_POST['decision'] ?? '');
+if ($decision === 'withdraw') require_recent_parent_authentication('parent.php#organization-membership');
 
 try {
-    if (preg_match('/^[0-9a-f-]{36}$/i', $guid) !== 1 || !parent_can_access_student($parentEmail, $yuvaId)) {
+    if (preg_match('/^[0-9a-f-]{36}$/i', $guid) !== 1) {
         throw new RuntimeException('Parent access denied.');
     }
     $result = organization_membership_service()->parentDecision($parentEmail, $yuvaId, $guid, $decision);

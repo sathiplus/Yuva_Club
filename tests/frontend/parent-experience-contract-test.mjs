@@ -16,7 +16,7 @@ const pass = (message) => process.stdout.write(`PASS ${message}\n`);
 const includes = (source, text, message) =>
   assert.ok(source.includes(text), `${message}: missing ${JSON.stringify(text)}`);
 
-includes(parent, '$student = require_parent_student();', 'parent authorization guard');
+includes(parent, '$parentContext = require_authenticated_parent();', 'SQL Parent authorization guard');
 includes(parent, "$_SESSION['parent_student_id']", 'parent child-context session');
 includes(portalLib, 'function require_parent_student()', 'protected parent access helper');
 pass('parent authorization and child-context contracts');
@@ -65,11 +65,12 @@ for (const decision of ['approve', 'decline', 'withdraw']) {
   includes(parent, `value="${decision}"`, `parent ${decision} decision`);
 }
 includes(parent, 'requestsForStudent($studentId)', 'membership view is limited to the authenticated child');
-includes(membershipAction, '$student = require_parent_student();', 'membership action requires authenticated parent-child context');
+includes(membershipAction, '$parentContext = require_authenticated_parent();', 'membership action requires authenticated SQL Parent-child context');
 includes(membershipAction, 'verify_csrf_token', 'membership action verifies CSRF');
-includes(membershipAction, "$_SESSION['parent_student_id']", 'membership action uses the authenticated child identifier');
-includes(membershipAction, 'parent_can_access_student($parentEmail, $yuvaId)', 'membership action rejects another child');
+includes(membershipAction, "$parentContext['student_id']", 'membership action uses the revalidated child identifier');
+includes(membershipAction, "$parentContext['student_id']", 'membership action rejects another child through authoritative context');
 includes(membershipAction, 'parentDecision($parentEmail, $yuvaId, $guid, $decision)', 'membership mutation remains child and parent scoped');
+includes(membershipAction, "require_recent_parent_authentication('parent.php#organization-membership')", 'withdrawal requires recent Parent authentication');
 assert.ok(!parent.includes('student_email_snapshot') && !parent.includes('parent_email_snapshot'), 'parent UI does not expose membership contact snapshots');
 assert.ok(!/<select\b|<textarea\b/i.test(parent),'parent consent adds no unrelated fields');
 pass('preserved routes and scoped media-consent and organization-membership workflows');

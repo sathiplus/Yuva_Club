@@ -78,7 +78,7 @@ final class AuthenticationService
         ?string $legacyChildYuvaId = null
     ): array {
         return $this->parents->authenticate(
-            $this->mode,
+            self::MODE_SQL,
             $email,
             $credential,
             $legacyChildYuvaId
@@ -98,13 +98,10 @@ final class AuthenticationService
 
     public function revalidateSqlParentSession(
         int $parentUserId,
-        int $parentId
+        int $parentId,
+        int $credentialsVersion
     ): bool {
-        if (!in_array($this->mode, [self::MODE_SQL, self::MODE_HYBRID], true)) {
-            return false;
-        }
-
-        return $this->parents->revalidateSqlSession($parentUserId, $parentId);
+        return $this->parents->revalidateSqlSession($parentUserId, $parentId, $credentialsVersion);
     }
 
     /** @return array<string, mixed>|null */
@@ -112,18 +109,6 @@ final class AuthenticationService
         int $parentUserId,
         string $yuvaId
     ): ?array {
-        if (!in_array($this->mode, [self::MODE_SQL, self::MODE_HYBRID], true)) {
-            return null;
-        }
-
-        $link = $this->parents->authorizedChild($parentUserId, $yuvaId);
-        if ($link === null) {
-            return null;
-        }
-
-        return $this->students->revalidateSqlSession(
-            $yuvaId,
-            (int) ($link['student_user_id'] ?? 0)
-        );
+        return $this->parents->authorizedChildRecord($parentUserId, $yuvaId);
     }
 }

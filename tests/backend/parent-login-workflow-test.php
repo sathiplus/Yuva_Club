@@ -37,6 +37,8 @@ function parent_login_parent(array $overrides = []): array
         'user_role' => 'parent',
         'user_status' => 'active',
         'email_verified_at' => '2026-01-01 00:00:00',
+        'activated_at' => '2026-01-01 00:00:00',
+        'credentials_version' => 1,
     ], $overrides);
 }
 
@@ -74,6 +76,8 @@ function parent_login_link(
         'parent_user_status' => 'active',
         'parent_email_verified_at' => '2026-01-01 00:00:00',
         'parent_password_hash' => 'parent-hash',
+        'parent_activated_at' => '2026-01-01 00:00:00',
+        'parent_credentials_version' => 1,
         'parent_id' => 301,
         'student_id' => $studentId,
         'student_user_id' => $studentUserId,
@@ -251,19 +255,11 @@ $filesystemResult = $filesystemWorkflow->attempt(
     '192.0.2.0/24'
 );
 parent_login_assert(
-    $filesystemResult === [
-        'authenticated' => true,
-        'requires_child_selection' => false,
-    ]
-    && ($filesystemSession['parent_email'] ?? null) === 'parent@example.test'
-    && is_int($filesystemSession['parent_session_started_at'] ?? null)
-    && $filesystemSession['parent_session_started_at'] >= $filesystemLoginStartedAt
-    && $filesystemSession['parent_session_started_at'] <= time()
-    && ($filesystemSession['parent_student_id'] ?? null) === 'YC2026001'
-    && count($filesystemSession) === 3
-    && $regenerations === 1
-    && $fetches === 0,
-    'Filesystem parent login must establish the complete legacy parent session without SQL.'
+    $filesystemResult['authenticated'] === false
+    && $filesystemSession === []
+    && $regenerations === 0
+    && $fetches > 0,
+    'Filesystem mode must not permit legacy Child YUVA ID plus Parent Email authentication.'
 );
 $mismatchSession = [];
 parent_login_assert(
@@ -332,12 +328,12 @@ parent_login_assert(
         'authenticated' => true,
         'requires_child_selection' => true,
     ]
-    && $sqlSession === [
-        'parent_auth_source' => 'sql',
-        'parent_user_id' => 401,
-        'parent_id' => 301,
-        'portal_role' => 'parent',
-    ]
+    && ($sqlSession['parent_auth_source'] ?? null) === 'sql'
+    && ($sqlSession['parent_user_id'] ?? null) === 401
+    && ($sqlSession['parent_id'] ?? null) === 301
+    && ($sqlSession['parent_credentials_version'] ?? null) === 1
+    && is_int($sqlSession['parent_authenticated_at'] ?? null)
+    && ($sqlSession['portal_role'] ?? null) === 'parent'
     && !isset($sqlSession['parent_student_id'])
     && $sqlRegenerations === 1,
     'SQL parent identity must create exact session state without child context.'
@@ -362,6 +358,89 @@ parent_login_assert(
     'Authorized SQL parent-child protected access must revalidate.'
 );
 
+$preLoginCsrf = str_repeat('a', 64);
+$postLoginCsrf = str_repeat('b', 64);
+$activeCsrf = $preLoginCsrf;
+$boundaryRegenerations = 0;
+$boundaryPath = parent_login_temp_path('csrf-boundary');
+$boundaryWorkflow = new ParentLoginWorkflow(
+    $sqlService,
+    new LoginThrottle($boundaryPath),
+    static function (?string $token) use (&$activeCsrf): bool {
+        return is_string($token) && hash_equals($activeCsrf, $token);
+    },
+    static function () use (&$boundaryRegenerations): void {
+        $boundaryRegenerations++;
+    },
+    null,
+    static function (array &$session) use (&$activeCsrf, $postLoginCsrf): void {
+        $activeCsrf = $postLoginCsrf;
+        $session['csrf_token'] = $postLoginCsrf;
+    }
+);
+$boundarySession = ['csrf_token' => $preLoginCsrf];
+$boundaryResult = $boundaryWorkflow->attempt(
+    $boundarySession,
+    'parent@example.test',
+    'parent-password',
+    null,
+    $preLoginCsrf,
+    '20010db800000000/64'
+);
+parent_login_assert(
+    $boundaryResult['authenticated'] === true
+    && ($boundarySession['csrf_token'] ?? null) === $postLoginCsrf
+    && $postLoginCsrf !== $preLoginCsrf
+    && $boundaryRegenerations === 1,
+    'Successful Parent login must regenerate the session and rotate the pre-login CSRF token.'
+);
+
+foreach ([null, 'malformed', $preLoginCsrf, str_repeat('c', 64)] as $rejectedToken) {
+    $rejectedSession = $boundarySession;
+    parent_login_assert(
+        !$boundaryWorkflow->selectChild(
+            $rejectedSession,
+            'YC2026001',
+            $rejectedToken,
+            '20010db800000000/64'
+        )
+        && !isset($rejectedSession['parent_user_id']),
+        'Missing, malformed, stale, or another-session CSRF token must reject child selection.'
+    );
+}
+
+$validBoundarySession = $boundarySession;
+parent_login_assert(
+    $boundaryWorkflow->selectChild(
+        $validBoundarySession,
+        'YC2026001',
+        $postLoginCsrf,
+        '20010db800000000/64'
+    )
+    && ($validBoundarySession['parent_student_id'] ?? null) === 'YC2026001'
+    && $boundaryWorkflow->selectChild(
+        $validBoundarySession,
+        'YC2026002',
+        $postLoginCsrf,
+        '20010db800000000/64'
+    )
+    && ($validBoundarySession['parent_student_id'] ?? null) === 'YC2026002'
+    && $boundaryRegenerations === 3,
+    'Fresh post-login CSRF token must permit authorized child selection and switching.'
+);
+
+$unrelatedSession = $boundarySession;
+parent_login_assert(
+    !$boundaryWorkflow->selectChild(
+        $unrelatedSession,
+        'YC2026999',
+        $postLoginCsrf,
+        '20010db800000000/64'
+    ),
+    'A valid CSRF token must not authorize an unrelated child.'
+);
+parent_login_cleanup($boundaryPath);
+
 $wrongPasswordSession = [];
 parent_login_assert(
     $sqlWorkflow->attempt(
@@ -377,6 +456,7 @@ parent_login_assert(
 
 foreach ([
     ['email_verified_at' => null],
+    ['activated_at' => null],
     ['user_status' => 'disabled'],
     ['user_status' => 'suspended'],
     ['user_role' => 'student'],
@@ -437,6 +517,8 @@ foreach ([
         'parent_auth_source' => 'sql',
         'parent_user_id' => 401,
         'parent_id' => 301,
+        'parent_credentials_version' => 1,
+        'parent_authenticated_at' => time(),
         'portal_role' => 'parent',
     ];
     parent_login_assert(
@@ -489,6 +571,8 @@ $csrfSelectionSession = [
     'parent_auth_source' => 'sql',
     'parent_user_id' => 401,
     'parent_id' => 301,
+    'parent_credentials_version' => 1,
+    'parent_authenticated_at' => time(),
     'portal_role' => 'parent',
 ];
 parent_login_assert(
@@ -546,12 +630,12 @@ $unactivatedService = parent_login_service(
     $unactivatedFetches
 );
 parent_login_assert(
-    $unactivatedService->authenticateParent(
+    !$unactivatedService->authenticateParent(
         'parent@example.test',
         'parent@example.test',
         'YC2026001'
-    )['source'] === 'filesystem',
-    'Compatible unactivated SQL parent may retain legacy access.'
+    )['authenticated'],
+    'Unactivated Parent must not retain legacy access.'
 );
 
 $conflictingFilesystem = parent_login_filesystem_student();
@@ -568,12 +652,12 @@ $conflictService = parent_login_service(
     $conflictFetches
 );
 parent_login_assert(
-    !$conflictService->authenticateParent(
+    $conflictService->authenticateParent(
         'parent@example.test',
         'parent-password',
         'YC2026001'
     )['authenticated'],
-    'Conflicting hybrid parent identity must fail closed.'
+    'Legacy filesystem identity data must not influence SQL Parent authentication.'
 );
 
 $clock = 1000;
@@ -649,12 +733,14 @@ foreach ([
         'parent_auth_source' => 'sql',
         'parent_user_id' => 401,
         'parent_id' => 301,
+        'parent_credentials_version' => 1,
+        'parent_authenticated_at' => time(),
         'portal_role' => 'parent',
         'parent_student_id' => 'YC2026001',
     ];
     parent_login_assert(
         $stateWorkflow->revalidateSqlChildAccess($stateSession) !== null,
-        'Baseline parent protected access must succeed.'
+        'Baseline parent protected access must succeed independently of student login activation.'
     );
     if (isset($stateChange['parent'])) {
         $stateParent = array_merge($stateParent, $stateChange['parent']);
@@ -684,14 +770,14 @@ parent_login_assert(
 );
 parent_login_assert(
     is_string($parentSource)
-    && str_contains($parentSource, '$student = require_parent_student();')
+    && str_contains($parentSource, '$parentContext = require_authenticated_parent();')
     && !str_contains($parentSource, 'AuthenticationService'),
     'Parent UI must delegate only its authorization guard.'
 );
 
 parent_login_cleanup($sqlPath);
-fwrite(STDOUT, "PASS filesystem parent login regression\n");
+fwrite(STDOUT, "PASS legacy filesystem Parent authentication rejection\n");
 fwrite(STDOUT, "PASS SQL parent identity and child selection sessions\n");
-fwrite(STDOUT, "PASS parent hybrid precedence and no-downgrade behavior\n");
+fwrite(STDOUT, "PASS SQL-only Parent precedence and no-downgrade behavior\n");
 fwrite(STDOUT, "PASS parent CSRF and throttling controls\n");
 fwrite(STDOUT, "PASS parent protected-page authorization revalidation\n");

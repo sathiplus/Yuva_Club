@@ -228,6 +228,8 @@ SELECT TOP (1)
     parent_user.role AS user_role,
     parent_user.status AS user_status,
     parent_user.email_verified_at
+    ,parent_user.activated_at
+    ,parent_user.credentials_version
 FROM dbo.parents AS parent
 INNER JOIN dbo.users AS parent_user
     ON parent_user.id = parent.user_id
@@ -254,6 +256,8 @@ SELECT TOP (1)
     parent_user.role AS user_role,
     parent_user.status AS user_status,
     parent_user.email_verified_at
+    ,parent_user.activated_at
+    ,parent_user.credentials_version
 FROM dbo.parents AS parent
 INNER JOIN dbo.users AS parent_user
     ON parent_user.id = parent.user_id
@@ -277,6 +281,8 @@ SELECT
     parent_user.status AS parent_user_status,
     parent_user.email_verified_at AS parent_email_verified_at,
     parent_user.password_hash AS parent_password_hash,
+    parent_user.activated_at AS parent_activated_at,
+    parent_user.credentials_version AS parent_credentials_version,
     student.id,
     student.user_id AS student_user_id,
     student.yuva_id,
@@ -318,15 +324,46 @@ SELECT TOP (1)
     parent_user.status AS parent_user_status,
     parent_user.email_verified_at AS parent_email_verified_at,
     parent_user.password_hash AS parent_password_hash,
+    parent_user.activated_at AS parent_activated_at,
+    parent_user.credentials_version AS parent_credentials_version,
     student_parent.parent_id,
     student_parent.student_id,
     student_parent.consent_status,
     student.yuva_id,
     student.user_id AS student_user_id,
+    student.first_name AS student_first_name,
+    student.last_name AS student_last_name,
+    student.preferred_name,
+    student.date_of_birth,
+    student.grade,
+    student.school,
+    student.city_state,
+    student.phone AS student_phone,
+    student.whatsapp_contact,
     student.approval_status AS student_approval_status,
     student.approved_at,
+    student_user.email AS student_email,
     student_user.role AS student_user_role,
-    student_user.status AS student_user_status
+    student_user.status AS student_user_status,
+    program.code AS program_code,
+    program.name AS program_name,
+    registration.id AS registration_id,
+    registration.status AS registration_status,
+    registration.submitted_at AS registration_submitted_at,
+    registration.age,
+    registration.interests,
+    registration.why_join,
+    registration.presentation_experience,
+    registration.presentation_topics,
+    registration.preferred_schedule,
+    registration.suggestions,
+    registration.code_of_conduct_agreed,
+    registration.recording_agreed,
+    registration.parent_permission_granted,
+    LTRIM(RTRIM(CONCAT(parent.first_name, N' ', parent.last_name))) AS parent_name,
+    parent.relationship AS parent_relationship,
+    parent_user.email AS parent_email,
+    parent.phone AS parent_phone
 FROM dbo.parents AS parent
 INNER JOIN dbo.users AS parent_user
     ON parent_user.id = parent.user_id
@@ -336,6 +373,31 @@ INNER JOIN dbo.students AS student
     ON student.id = student_parent.student_id
 INNER JOIN dbo.users AS student_user
     ON student_user.id = student.user_id
+INNER JOIN dbo.programs AS program
+    ON program.id = student.program_id
+OUTER APPLY (
+    SELECT TOP (1)
+        registration_row.id,
+        registration_row.status,
+        registration_row.submitted_at,
+        registration_row.age,
+        registration_row.interests,
+        registration_row.why_join,
+        registration_row.presentation_experience,
+        registration_row.presentation_topics,
+        registration_row.preferred_schedule,
+        registration_row.suggestions,
+        registration_row.code_of_conduct_agreed,
+        registration_row.recording_agreed,
+        registration_row.parent_permission_granted
+    FROM dbo.registrations AS registration_row
+    WHERE registration_row.student_id = student.id
+    ORDER BY
+        CASE WHEN registration_row.status = N'approved' THEN 0 ELSE 1 END,
+        registration_row.reviewed_at DESC,
+        registration_row.submitted_at DESC,
+        registration_row.id DESC
+) AS registration
 WHERE parent_user.id = :parent_user_id
   AND student.yuva_id = :yuva_id
 SQL,

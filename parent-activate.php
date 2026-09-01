@@ -3,7 +3,8 @@ require __DIR__ . '/portal-lib.php';
 
 $status = clean_text($_GET['status'] ?? '');
 $token = clean_text($_GET['token'] ?? ($_POST['token'] ?? ''));
-$activationRecord = $token !== '' ? parent_activation_record($token) : null;
+$activationRecord = null;
+if ($token !== '') { try { $activationRecord=parent_credential_service()->tokenRecord($token,'activation'); } catch(Throwable $error) { error_log('YUVA Parent activation lookup failed exception_type='.get_class($error)); } }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!verify_csrf_token($_POST['csrf_token'] ?? null)) {
@@ -13,14 +14,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = clean_text($_POST['action'] ?? '');
     if ($action === 'request') {
         $parentEmail = normalize_email(clean_text($_POST['parent_email'] ?? ''));
-        if ($parentEmail !== '' && !login_rate_limited('parent-activation:' . $parentEmail)) {
-            $activationToken = create_parent_activation_token($parentEmail);
+        $throttle=parent_authentication_throttle();$network=portal_network_category($_SERVER['REMOTE_ADDR']??null);
+        if ($parentEmail !== '' && !$throttle->isBlocked('parent-activation',$parentEmail,$network)) {
+            try { $activationToken = parent_credential_service()->issueToken($parentEmail, 'activation'); } catch(Throwable $error) { $activationToken=null; error_log('YUVA Parent activation request failed exception_type='.get_class($error)); }
             if ($activationToken !== null) {
                 send_parent_activation_email($parentEmail, parent_activation_url($activationToken));
             } else {
                 audit_log_event(parent_actor_id($parentEmail), YUVA_ROLE_PARENT, null, 'parent.activation.requested', 'parent', $parentEmail, false, ['reason' => 'no_existing_relationship']);
             }
-            record_login_attempt('parent-activation:' . $parentEmail, $activationToken !== null);
+            $throttle->recordFailure('parent-activation',$parentEmail,$network);
         }
         redirect_to('parent-activate.php?status=requested');
     }
@@ -31,7 +33,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($password === '' || !hash_equals($password, $confirmPassword) || password_policy_error($password) !== '') {
             redirect_to('parent-activate.php?token=' . rawurlencode($token) . '&status=password-error');
         }
-        if (complete_parent_activation($token, $password)) {
+        try { $activated=parent_credential_service()->consume($token, 'activation', $password); } catch(Throwable $error) { $activated=false; error_log('YUVA Parent activation completion failed exception_type='.get_class($error)); }
+        if ($activated) {
             redirect_to('parent-login.php?status=activated');
         }
         redirect_to('parent-activate.php?status=invalid-token');
@@ -67,10 +70,12 @@ portal_header('Parent Account Setup', false, ['assets/public-site.css?v=release-
           <div class="field">
             <label for="password">New Password *</label>
             <input id="password" name="password" type="password" minlength="12" required autocomplete="new-password">
+            <button class="password-visibility-toggle" type="button" data-password-toggle="password" aria-controls="password" aria-pressed="false">Show Password</button>
           </div>
           <div class="field">
             <label for="confirm_password">Confirm New Password *</label>
             <input id="confirm_password" name="confirm_password" type="password" minlength="12" required autocomplete="new-password">
+            <button class="password-visibility-toggle" type="button" data-password-toggle="confirm_password" aria-controls="confirm_password" aria-pressed="false">Show Password</button>
           </div>
           <button class="button primary" type="submit">Set Password</button>
         </form>
@@ -89,4 +94,5 @@ portal_header('Parent Account Setup', false, ['assets/public-site.css?v=release-
     </div>
   </section>
 </main>
+<script src="assets/password-visibility.js" defer></script>
 <?php portal_footer(false, true); ?>
