@@ -36,23 +36,48 @@ function m19_versions(PDO $pdo): array
     )->fetchAll(PDO::FETCH_COLUMN));
 }
 
+function m19_ledger_exists(PDO $pdo): bool
+{
+    return (int) $pdo->query(
+        "SELECT CASE WHEN OBJECT_ID(N'dbo.schema_migrations', N'U') IS NULL THEN 0 ELSE 1 END"
+    )->fetchColumn() === 1;
+}
+
 function m19_assert_baseline(PDO $pdo, bool $expectMigration19): void
 {
-    $versions = m19_versions($pdo);
-    foreach (range(6, 18) as $version) {
-        $expected = str_pad((string) $version, 2, '0', STR_PAD_LEFT);
-        if (!in_array($expected, $versions, true)) {
-            throw new RuntimeException('Required baseline migration is absent.');
+    if (m19_ledger_exists($pdo)) {
+        $versions = m19_versions($pdo);
+        foreach (range(6, 18) as $version) {
+            $expected = str_pad((string) $version, 2, '0', STR_PAD_LEFT);
+            if (!in_array($expected, $versions, true)) {
+                throw new RuntimeException('Required baseline migration is absent.');
+            }
+        }
+        foreach (['04', '05'] as $skipped) {
+            if (in_array($skipped, $versions, true)) {
+                throw new RuntimeException('Intentionally skipped migration is unexpectedly present.');
+            }
+        }
+        if (in_array(PHASE2C2B_M19_VERSION, $versions, true) !== $expectMigration19) {
+            throw new RuntimeException('Migration 19 ledger state is unexpected.');
+        }
+        return;
+    }
+
+    foreach ([
+        'ai_mentor_reviews', 'ai_mentor_delivery_reviews', 'ai_mentor_media_consents',
+        'student_public_identity_history', 'organization_student_membership_requests',
+        'leadership_decisions', 'presentation_verifications', 'competitions',
+        'subscription_plans', 'quick_challenge_templates', 'parent_authentication_tokens',
+        'student_registration_credentials',
+    ] as $table) {
+        if (m19_object_count($pdo, 'U', $table) !== 1) {
+            throw new RuntimeException('Required baseline migration object is absent.');
         }
     }
-    foreach (['04', '05'] as $skipped) {
-        if (in_array($skipped, $versions, true)) {
-            throw new RuntimeException('Intentionally skipped migration is unexpectedly present.');
-        }
-    }
-    $hasMigration19 = in_array(PHASE2C2B_M19_VERSION, $versions, true);
-    if ($hasMigration19 !== $expectMigration19) {
-        throw new RuntimeException('Migration 19 ledger state is unexpected.');
+    if (m19_object_count($pdo, 'V', 'vw_portal_students') !== 0
+        || m19_object_count($pdo, 'U', 'organizations') !== 0) {
+        throw new RuntimeException('Intentionally skipped migration object is unexpectedly present.');
     }
 }
 
@@ -95,33 +120,53 @@ function m19_assert_schema(PDO $pdo, bool $present): void
 function m19_apply(PDO $pdo): void
 {
     $migration = m19_definition();
-    $applied = migration_applied($pdo);
-    migration_assert_checksum($migration, $applied);
-    if (!isset($applied[PHASE2C2B_M19_VERSION])) {
-        migration_apply($pdo, $migration, false);
+    m19_execute_sql_file($pdo, $migration['path']);
+    if (m19_ledger_exists($pdo)) {
+        $applied = migration_applied($pdo);
+        migration_assert_checksum($migration, $applied);
+        if (!isset($applied[PHASE2C2B_M19_VERSION])) {
+            migration_record($pdo, $migration);
+        }
     }
     m19_assert_baseline($pdo, true);
     m19_assert_schema($pdo, true);
 }
 
+function m19_execute_sql_file(PDO $pdo, string $path): void
+{
+    $sql = file_get_contents($path);
+    if ($sql === false) {
+        throw new RuntimeException('Migration SQL file could not be read.');
+    }
+    $pdo->beginTransaction();
+    try {
+        foreach (migration_sql_batches($sql) as $batch) {
+            $pdo->exec($batch);
+        }
+        $pdo->commit();
+    } catch (Throwable $error) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        throw $error;
+    }
+}
+
 function m19_rollback(PDO $pdo): void
 {
     m19_assert_baseline($pdo, true);
-    $sql = file_get_contents(
+    m19_execute_sql_file(
+        $pdo,
         __DIR__ . '/../database/19-quick-challenge-ai-scoring-phase2c2b-rollback.sql'
     );
-    if ($sql === false) {
-        throw new RuntimeException('Migration 19 rollback is unavailable.');
-    }
-    foreach (migration_sql_batches($sql) as $batch) {
-        $pdo->exec($batch);
-    }
-    $statement = $pdo->prepare(
-        'DELETE FROM dbo.schema_migrations WHERE version = :version'
-    );
-    $statement->execute(['version' => PHASE2C2B_M19_VERSION]);
-    if ($statement->rowCount() !== 1) {
-        throw new RuntimeException('Migration 19 ledger rollback count is unexpected.');
+    if (m19_ledger_exists($pdo)) {
+        $statement = $pdo->prepare(
+            'DELETE FROM dbo.schema_migrations WHERE version = :version'
+        );
+        $statement->execute(['version' => PHASE2C2B_M19_VERSION]);
+        if ($statement->rowCount() !== 1) {
+            throw new RuntimeException('Migration 19 ledger rollback count is unexpected.');
+        }
     }
     m19_assert_baseline($pdo, false);
     m19_assert_schema($pdo, false);
