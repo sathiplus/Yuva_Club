@@ -159,6 +159,17 @@ function create_registration_with_reserved_yuva_id(array $input): array {
         ]);
 
         $registrationId = db_inserted_id($pdo, $stmt);
+        if (db_is_sqlsrv($pdo) && is_string($input['student_password_hash'] ?? null)) {
+            $passwordHash = (string) $input['student_password_hash'];
+            if ($passwordHash === '' || strlen($passwordHash) > 255) {
+                throw new RuntimeException('A valid Student credential hash is required.');
+            }
+            $credential = $pdo->prepare(
+                'INSERT INTO dbo.student_registration_credentials(registration_id,password_hash)
+                 VALUES(:registration_id,:password_hash)'
+            );
+            $credential->execute(['registration_id'=>$registrationId,'password_hash'=>$passwordHash]);
+        }
         $reservedYuvaId = db_is_sqlsrv($pdo)
             ? reserve_registration_yuva_id($pdo, $registrationId, gmdate('Y'))
             : '';
@@ -773,6 +784,51 @@ function approve_registration_sqlsrv(int $registrationId, int $adminUserId): str
                 'student',
                 $studentName
             );
+            $existingCredential = $pdo->prepare(
+                'SELECT CASE WHEN DATALENGTH(student_user.password_hash)>0 THEN 1 ELSE 0 END AS has_password,
+                        (SELECT COUNT(*) FROM dbo.students existing_student WHERE existing_student.user_id=student_user.id) AS student_count
+                 FROM dbo.users student_user WITH (UPDLOCK,HOLDLOCK)
+                 WHERE student_user.id=:user_id'
+            );
+            $existingCredential->execute(['user_id'=>$studentUserId]);
+            $existingCredentialState=$existingCredential->fetch(PDO::FETCH_ASSOC);
+            if (!is_array($existingCredentialState)
+                || (int)($existingCredentialState['has_password']??0)!==0
+                || (int)($existingCredentialState['student_count']??0)!==0) {
+                throw new RuntimeException('Student email is already assigned to an established account.');
+            }
+            $credential = $pdo->prepare(
+                'SELECT password_hash
+                 FROM dbo.student_registration_credentials WITH (UPDLOCK,HOLDLOCK)
+                 WHERE registration_id=:registration_id'
+            );
+            $credential->execute(['registration_id'=>$registrationId]);
+            $studentPasswordHash = $credential->fetchColumn();
+            if (!is_string($studentPasswordHash) || $studentPasswordHash === '') {
+                throw new RuntimeException('Registration is missing its pending Student credential.');
+            }
+            $activateUser = $pdo->prepare(
+                "UPDATE dbo.users
+                 SET password_hash=:password_hash,
+                     email_verified_at=COALESCE(email_verified_at,SYSUTCDATETIME()),
+                     activated_at=COALESCE(activated_at,SYSUTCDATETIME()),
+                     password_changed_at=SYSUTCDATETIME(),
+                     credentials_version=credentials_version+1,
+                     updated_at=SYSUTCDATETIME()
+                 WHERE id=:user_id AND role=N'student' AND status=N'active'"
+            );
+            $activateUser->execute(['password_hash'=>$studentPasswordHash,'user_id'=>$studentUserId]);
+            if ($activateUser->rowCount() !== 1) {
+                throw new RuntimeException('Student SQL credential activation failed.');
+            }
+            $consumeCredential=$pdo->prepare(
+                'DELETE FROM dbo.student_registration_credentials
+                 WHERE registration_id=:registration_id'
+            );
+            $consumeCredential->execute(['registration_id'=>$registrationId]);
+            if ($consumeCredential->rowCount() !== 1) {
+                throw new RuntimeException('Pending Student credential removal failed.');
+            }
             $studentId = sqlsrv_create_student(
                 $pdo,
                 $registration,

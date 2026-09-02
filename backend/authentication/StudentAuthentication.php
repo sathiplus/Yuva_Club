@@ -54,6 +54,7 @@ final class StudentAuthentication
      *   source: string|null,
      *   student_id: string|null,
      *   user_id: int|null,
+     *   credentials_version?: int,
      *   record: array<string, mixed>|null,
      *   password_rehash_required: bool,
      *   failure_category: string|null
@@ -84,7 +85,7 @@ final class StudentAuthentication
     }
 
     /** @return array<string, mixed>|null */
-    public function revalidateSqlSession(string $yuvaId, int $userId): ?array
+    public function revalidateSqlSession(string $yuvaId, int $userId, int $credentialsVersion): ?array
     {
         if ($userId <= 0) {
             return null;
@@ -97,6 +98,7 @@ final class StudentAuthentication
             $student === null
             || !$this->isActivatedSqlStudent($student)
             || (int) ($student['student_user_id'] ?? 0) !== $userId
+            || (int) ($student['credentials_version'] ?? 0) !== $credentialsVersion
         ) {
             return null;
         }
@@ -197,6 +199,7 @@ final class StudentAuthentication
             'source' => 'sql',
             'student_id' => $this->normalizeYuvaId((string) ($student['yuva_id'] ?? '')),
             'user_id' => (int) ($student['student_user_id'] ?? 0),
+            'credentials_version' => (int) ($student['credentials_version'] ?? 0),
             'record' => $this->adapter->studentToLegacyRecord($student),
             'password_rehash_required' => ($this->passwordNeedsRehash)($hash),
             'failure_category' => null,

@@ -41,6 +41,7 @@ function student_login_sql_row(array $overrides = []): array
         'password_hash' => 'student-hash',
         'user_role' => 'student',
         'user_status' => 'active',
+        'credentials_version' => 3,
         'registration_status' => 'approved',
         'program_name' => 'School Yuva',
     ], $overrides);
@@ -249,6 +250,7 @@ student_login_assert(
         'student_id' => 'YC2026001',
         'student_auth_source' => 'sql',
         'student_user_id' => 201,
+        'student_credentials_version' => 3,
         'portal_role' => 'student',
     ]
     && $sqlRegenerations === 1,
@@ -440,6 +442,7 @@ $revalidationSession = [
     'student_id' => 'YC2026001',
     'student_auth_source' => 'sql',
     'student_user_id' => 201,
+    'student_credentials_version' => 3,
     'portal_role' => 'student',
 ];
 student_login_assert(
@@ -453,10 +456,23 @@ student_login_assert(
     'Protected access must fail and clear student keys after status changes.'
 );
 $revalidationRow['user_status'] = 'active';
+$staleCredentialSession = [
+    'student_id' => 'YC2026001',
+    'student_auth_source' => 'sql',
+    'student_user_id' => 201,
+    'student_credentials_version' => 2,
+    'portal_role' => 'student',
+];
+student_login_assert(
+    $revalidationWorkflow->revalidateSqlSession($staleCredentialSession) === null
+    && $staleCredentialSession === [],
+    'Password changes must invalidate sessions with a stale credential version.'
+);
 $wrongIdentitySession = [
     'student_id' => 'YC2026001',
     'student_auth_source' => 'sql',
     'student_user_id' => 999,
+    'student_credentials_version' => 3,
     'portal_role' => 'student',
 ];
 student_login_assert(

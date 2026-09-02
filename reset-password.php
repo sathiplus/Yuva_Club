@@ -4,7 +4,11 @@ require __DIR__ . '/portal-lib.php';
 $token = (string) ($_GET['token'] ?? ($_POST['token'] ?? ''));
 $requestedAccount = clean_text((string) ($_GET['account'] ?? ($_POST['account'] ?? '')));
 $record = null;
-try { $record = $requestedAccount === 'parent' ? parent_credential_service()->tokenRecord($token, 'password_reset') : password_reset_token_record($token); }
+try {
+    if ($requestedAccount === 'parent') $record = parent_credential_service()->tokenRecord($token, 'password_reset');
+    elseif ($requestedAccount === 'student' && portal_auth_mode() === 'sql') $record = student_credential_service()->tokenRecord($token, 'password_reset');
+    else $record = password_reset_token_record($token);
+}
 catch(Throwable $error) { error_log('YUVA password reset lookup failed exception_type='.get_class($error)); }
 $status = $_GET['status'] ?? '';
 $accountType = $requestedAccount === 'parent' ? 'parent' : (string) ($record['account_type'] ?? 'student');
@@ -12,7 +16,7 @@ $loginUrl = password_reset_login_url($accountType);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!verify_csrf_token($_POST['csrf_token'] ?? null)) {
-        redirect_to('reset-password.php?status=security-error&token=' . rawurlencode($token));
+        redirect_to('reset-password.php?status=security-error&account=' . rawurlencode($accountType) . '&token=' . rawurlencode($token));
     }
 
     $password = (string) ($_POST['password'] ?? '');
@@ -25,10 +29,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         redirect_to('reset-password.php?status=invalid');
     }
     if ($password !== $confirmPassword || $policyError !== '') {
-        redirect_to('reset-password.php?status=password-error&token=' . rawurlencode($token));
+        redirect_to('reset-password.php?status=password-error&account=' . rawurlencode($accountType) . '&token=' . rawurlencode($token));
     }
 
-    try { $completed = $accountType === 'parent' ? parent_credential_service()->consume($token, 'password_reset', $password) : complete_password_reset($token, $password); }
+    try {
+        if ($accountType === 'parent') $completed = parent_credential_service()->consume($token, 'password_reset', $password);
+        elseif ($accountType === 'student' && portal_auth_mode() === 'sql') $completed = student_credential_service()->consume($token, 'password_reset', $password);
+        else $completed = complete_password_reset($token, $password);
+    }
     catch(Throwable $error) { $completed=false; error_log('YUVA password reset completion failed exception_type='.get_class($error)); }
     if ($completed) {
         redirect_to($loginUrl . '?status=password-reset');

@@ -13,6 +13,7 @@ require_once __DIR__ . '/backend/authentication/LoginThrottle.php';
 require_once __DIR__ . '/backend/authentication/StudentLoginWorkflow.php';
 require_once __DIR__ . '/backend/authentication/ParentLoginWorkflow.php';
 require_once __DIR__ . '/backend/authentication/ParentCredentialService.php';
+require_once __DIR__ . '/backend/authentication/StudentCredentialService.php';
 require_once __DIR__ . '/backend/ai/AiProvider.php';
 require_once __DIR__ . '/backend/ai/DocumentAwareAiProvider.php';
 require_once __DIR__ . '/backend/ai/AiReviewStore.php';
@@ -1995,6 +1996,14 @@ function parent_credential_service(): \YuvaClub\Authentication\ParentCredentialS
     return $service;
 }
 
+function student_credential_service(): \YuvaClub\Authentication\StudentCredentialService {
+    static $service = null;
+    if (!$service instanceof \YuvaClub\Authentication\StudentCredentialService) {
+        $service = new \YuvaClub\Authentication\StudentCredentialService(Database::connection());
+    }
+    return $service;
+}
+
 function parent_authentication_throttle(): \YuvaClub\Authentication\LoginThrottle {
     return new \YuvaClub\Authentication\LoginThrottle(Database::connection());
 }
@@ -2076,7 +2085,7 @@ function write_student_accounts(array $accounts): void {
     write_json_file(student_accounts_file(), $accounts);
 }
 
-function create_student_account(string $yuvaId, string $studentEmail, string $parentEmail, string $password): void {
+function create_student_account(string $yuvaId, string $studentEmail, string $parentEmail, string $password, bool $storeCredential = true): void {
     $yuvaId = normalize_yuva_id($yuvaId);
     if ($yuvaId === '' || student_password_policy_error($password) !== '') {
         return;
@@ -2095,7 +2104,7 @@ function create_student_account(string $yuvaId, string $studentEmail, string $pa
         'yuva_id' => $yuvaId,
         'student_email' => strtolower(trim($studentEmail)),
         'parent_email' => strtolower(trim($parentEmail)),
-        'password_hash' => password_hash($password, PASSWORD_DEFAULT),
+        'password_hash' => $storeCredential ? password_hash($password, PASSWORD_DEFAULT) : '',
         'status' => 'active',
         'email_verified' => false,
         'identity_onboarding_required' => true,
@@ -2870,6 +2879,7 @@ function clear_student_authentication_session(): void {
         $_SESSION['student_id'],
         $_SESSION['student_auth_source'],
         $_SESSION['student_user_id'],
+        $_SESSION['student_credentials_version'],
         $_SESSION['portal_role']
     );
 }
