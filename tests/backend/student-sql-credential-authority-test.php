@@ -12,6 +12,7 @@ $forgot=$read('forgot-password.php');
 $reset=$read('reset-password.php');
 $studentAuth=$read('backend/authentication/StudentAuthentication.php');
 $workflow=$read('backend/authentication/StudentLoginWorkflow.php');
+$integration=$read('tests/backend/student-sql-credential-authority-integration.php');
 
 foreach(['student_registration_credentials','student_authentication_tokens','token_hash BINARY(32)','used_at','revoked_at','expires_at','ROWVERSION','BEGIN TRANSACTION','COMMIT TRANSACTION'] as $token) student_credential_assert(str_contains($migration,$token),'Migration 18 missing '.$token);
 student_credential_assert(!preg_match('/\bpassword\s+NVARCHAR/i',$migration),'Migration must not persist plaintext passwords.');
@@ -24,4 +25,5 @@ student_credential_assert(str_contains($forgot,"student_credential_service()->is
 student_credential_assert(str_contains($reset,"student_credential_service()->consume"),'SQL reset completion must update SQL credentials.');
 student_credential_assert(str_contains($studentAuth,"credentials_version")&&str_contains($workflow,"student_credentials_version"),'Student sessions must enforce credential versions.');
 student_credential_assert(str_contains($rollback,'DROP TABLE dbo.student_authentication_tokens')&&str_contains($rollback,'DROP TABLE dbo.student_registration_credentials'),'Migration 18 rollback incomplete.');
+foreach(["PHP_SAPI !== 'cli'","YUVA_INTEGRATION_TEST_MODE","strcasecmp(\$database, 'yuva_club')","_rehearsal_","new StudentCredentialService(\$pdo)",'approve_registration(',"revalidateSqlStudentSession",'proc_open(','finally {','m18_cleanup('] as $token) student_credential_assert(str_contains($integration,$token),'Executable SQLSRV harness missing '.$token);
 fwrite(STDOUT,"PASS Student SQL credential authority security contracts\n");
