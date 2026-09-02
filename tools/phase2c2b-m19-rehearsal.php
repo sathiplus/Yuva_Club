@@ -152,7 +152,10 @@ function m19_main(array $arguments): int
         fwrite(STDOUT, 'PASS ' . $operation . PHP_EOL);
         return 0;
     } catch (Throwable $error) {
-        fwrite(STDERR, 'FAIL ' . $operation . ': '
+        $category = $error instanceof PDOException
+            ? 'PDO/' . (string) $error->getCode()
+            : $error::class;
+        fwrite(STDERR, 'FAIL ' . $operation . ' [' . $category . ']: '
             . migration_safe_error_message($error) . PHP_EOL);
         return 1;
     }
