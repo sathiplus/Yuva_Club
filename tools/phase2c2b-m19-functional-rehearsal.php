@@ -18,12 +18,13 @@ final class M19HarnessProvider implements AiProvider
 {
     public int $calls = 0;
 
-    public function __construct(private int $score = 80) {}
+    public function __construct(private int $score = 80, private bool $malformed = false) {}
     public function providerName(): string { return 'rehearsal-fake'; }
     public function modelName(): string { return 'deterministic-v1'; }
     public function generateStructuredReview(string $prompt): array
     {
         $this->calls++;
+        if ($this->malformed) return ['ok'=>true,'output'=>['unexpected'=>'shape']];
         return ['ok' => true, 'output' => [
             'scores' => [
                 'Claim' => $this->score,
@@ -160,6 +161,33 @@ function m19f_main(): int
         m19f_assert($evaluationCount===0,'Source hash mismatch reserved an evaluation.');
         $bestCount=m19f_id($pdo,'SELECT COUNT_BIG(*)+1 FROM dbo.student_challenge_personal_bests WHERE student_id=:student',['student'=>$student['id']])-1;
         m19f_assert($bestCount===0,'Source hash mismatch updated Personal Best.');
+
+        $missing=m19f_attempt($pdo,$entry,(int)$student['id'],$version,'Missing-hash rehearsal response.',true);
+        $pdo->prepare('UPDATE dbo.quick_challenge_attempts SET source_revision_hash=NULL WHERE attempt_guid=:attempt')->execute(['attempt'=>$missing]);
+        $before=$provider->calls;$rejected=false;
+        try{$enabled->analyze((string)$student['yuva_id'],$missing);}catch(RuntimeException $error){$rejected=str_contains($error->getMessage(),'source integrity validation failed');}
+        m19f_assert($rejected&&$provider->calls===$before,'Missing source hash was not rejected before provider use.');
+
+        $malformed=m19f_attempt($pdo,$entry,(int)$student['id'],$version,'Malformed-hash rehearsal response.',true);
+        $constraintRejected=false;
+        try{$pdo->prepare("UPDATE dbo.quick_challenge_attempts SET source_revision_hash=N'not-a-sha256' WHERE attempt_guid=:attempt")->execute(['attempt'=>$malformed]);}catch(PDOException){$constraintRejected=true;}
+        m19f_assert($constraintRejected,'Malformed source hash bypassed the SQL integrity constraint.');
+
+        $altered=m19f_attempt($pdo,$entry,(int)$student['id'],$version,'Original immutable response.',true);
+        $pdo->prepare("UPDATE dbo.quick_challenge_attempts SET source_snapshot_json=N'{\"response_text\":\"altered\"}' WHERE attempt_guid=:attempt")->execute(['attempt'=>$altered]);
+        $before=$provider->calls;$rejected=false;
+        try{$enabled->analyze((string)$student['yuva_id'],$altered);}catch(RuntimeException $error){$rejected=str_contains($error->getMessage(),'source integrity validation failed');}
+        m19f_assert($rejected&&$provider->calls===$before,'Altered snapshot was not rejected before provider use.');
+
+        $failedAttempt=m19f_attempt($pdo,$entry,(int)$student['id'],$version,'Reprocess integrity response.',true);
+        $badProvider=new M19HarnessProvider(80,true);
+        $badService=new QuickChallengeEvaluationService($pdo,$badProvider,new QuickChallengePromptCatalog(),new QuickChallengeScoreValidator(),static fn():bool=>true);
+        $failed=$badService->analyze((string)$student['yuva_id'],$failedAttempt);
+        m19f_assert(($failed['status']??'')==='failed'&&$badProvider->calls===1,'Failed evaluation fixture was not created safely.');
+        $pdo->prepare("UPDATE dbo.quick_challenge_attempts SET source_snapshot_json=N'{\"response_text\":\"corrupted before reprocess\"}' WHERE attempt_guid=:attempt")->execute(['attempt'=>$failedAttempt]);
+        $before=$badProvider->calls;$rejected=false;
+        try{$badService->reprocess(['role'=>'MasterAdmin','email'=>M19_MARKER.'@example.test'],(string)$failed['evaluation_guid']);}catch(RuntimeException $error){$rejected=str_contains($error->getMessage(),'source integrity validation failed');}
+        m19f_assert($rejected&&$badProvider->calls===$before,'Master Admin reprocess bypassed source integrity validation.');
         fwrite(STDOUT,"PASS functional-preflight\n");
         return 0;
     } finally {
