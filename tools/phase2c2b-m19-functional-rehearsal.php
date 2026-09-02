@@ -67,6 +67,17 @@ function m19f_attempt(PDO $pdo, int $entry, int $student, int $version, string $
     return $guid;
 }
 
+function m19f_score(PDO $pdo, int $entry, int $student, int $version, string $yuvaId, int $score): array
+{
+    $provider = new M19HarnessProvider($score);
+    $service = new QuickChallengeEvaluationService($pdo, $provider, new QuickChallengePromptCatalog(), new QuickChallengeScoreValidator(), static fn(): bool => true);
+    $attempt = m19f_attempt($pdo, $entry, $student, $version, 'Controlled score '.$score.' response.', true);
+    $result = $service->analyze($yuvaId, $attempt);
+    m19f_assert($provider->calls === 1, 'A completed evaluation must call the provider exactly once.');
+    m19f_assert(($result['status'] ?? '') === 'completed' && (int) ($result['total_score'] ?? -1) === $score, 'Normalized scoring result was not persisted correctly.');
+    return [$service, $provider, $attempt, $result];
+}
+
 function m19f_cleanup(PDO $pdo): void
 {
     $template = $pdo->prepare('SELECT id FROM dbo.quick_challenge_templates WHERE template_code=:marker');
@@ -188,6 +199,51 @@ function m19f_main(): int
         $before=$badProvider->calls;$rejected=false;
         try{$badService->reprocess(['role'=>'MasterAdmin','email'=>M19_MARKER.'@example.test'],(string)$failed['evaluation_guid']);}catch(RuntimeException $error){$rejected=str_contains($error->getMessage(),'source integrity validation failed');}
         m19f_assert($rejected&&$badProvider->calls===$before,'Master Admin reprocess bypassed source integrity validation.');
+
+        // Successful scoring, provenance, Personal Best, benchmark and idempotency.
+        [$scoreService,$scoreProvider,$attempt72,$score72]=m19f_score($pdo,$entry,(int)$student['id'],$version,(string)$student['yuva_id'],72);
+        m19f_assert(($score72['new_personal_best']??false)===true&&(int)($score72['benchmark_score']??-1)===80,'Initial Personal Best or fixed benchmark was incorrect.');
+        [$unused80,$provider80,$attempt80,$score80]=m19f_score($pdo,$entry,(int)$student['id'],$version,(string)$student['yuva_id'],80);
+        m19f_assert(($score80['new_personal_best']??false)===true&&(int)($score80['previous_best']??-1)===72,'Personal Best did not advance 72 to 80.');
+        [$unused76,$provider76,$attempt76,$score76]=m19f_score($pdo,$entry,(int)$student['id'],$version,(string)$student['yuva_id'],76);
+        m19f_assert(($score76['new_personal_best']??true)===false&&(int)($score76['previous_best']??-1)===80,'Personal Best did not remain 80 after 76.');
+        $idempotent=$scoreService->analyze((string)$student['yuva_id'],$attempt72);
+        m19f_assert(($idempotent['idempotent']??false)===true&&$scoreProvider->calls===1,'Repeated Analyze was not provider-idempotent.');
+        $eval=$pdo->prepare('SELECT e.[status],e.source_revision_hash,e.template_version,e.rubric_version,e.scoring_policy_version,e.ai_provider,e.ai_model,e.prompt_version,e.total_score FROM dbo.quick_challenge_evaluations e JOIN dbo.quick_challenge_attempts a ON a.id=e.attempt_id WHERE a.attempt_guid=:attempt');
+        $eval->execute(['attempt'=>$attempt80]);$provenance=$eval->fetch(PDO::FETCH_ASSOC);
+        m19f_assert(is_array($provenance)&&$provenance['status']==='Completed'&&(int)$provenance['total_score']===80&&$provenance['prompt_version']===QuickChallengePromptCatalog::VERSION,'Evaluation provenance was not frozen correctly.');
+        $best=$pdo->prepare('SELECT best_score FROM dbo.student_challenge_personal_bests WHERE student_id=:student AND template_id=:template');$best->execute(['student'=>$student['id'],'template'=>$template]);
+        m19f_assert((int)$best->fetchColumn()===80,'Persisted Personal Best is not 80.');
+
+        // Seeded benchmark modes must remain deterministic and privacy-safe.
+        $benchmarks=$pdo->query("SELECT benchmark_type,COUNT_BIG(*) c FROM dbo.quick_challenge_scoring_policies WHERE [status]=N'Active' GROUP BY benchmark_type")->fetchAll(PDO::FETCH_KEY_PAIR);
+        m19f_assert(isset($benchmarks['Fixed'],$benchmarks['Difficulty'],$benchmarks['LeadershipLevel']),'Fixed, difficulty and leadership-label benchmark policies are required.');
+        $labels=$pdo->query("SELECT COUNT_BIG(*) FROM dbo.quick_challenge_scoring_policies WHERE benchmark_type=N'LeadershipLevel' AND benchmark_label IS NOT NULL AND benchmark_label NOT LIKE N'%@%'")->fetchColumn();
+        m19f_assert((int)$labels>=2,'Leadership benchmark labels were not privacy-safe system labels.');
+
+        // Student result contract, manager authorization/scope, and privacy surface.
+        $studentResults=$scoreService->resultsForStudent((string)$student['yuva_id']);
+        m19f_assert(count($studentResults)>=3&&isset($studentResults[0]['coaching'],$studentResults[0]['components']),'Student result contract is incomplete.');
+        $masterRows=$scoreService->adminEvaluations(['role'=>'MasterAdmin','email'=>M19_MARKER.'@example.test']);
+        m19f_assert(count($masterRows)>=3&&!array_key_exists('email',$masterRows[0]),'Master Admin results or privacy-safe identity contract failed.');
+        $orgRows=$scoreService->adminEvaluations(['role'=>'OrganizationAdmin','organization_id'=>'SYNTH-M19']);
+        $otherOrgRows=$scoreService->adminEvaluations(['role'=>'OrganizationAdmin','organization_id'=>'OTHER-ORG']);
+        m19f_assert(count($orgRows)>=3&&count($otherOrgRows)===0,'Organization Admin scoping failed.');
+        $denied=false;try{$scoreService->adminEvaluations(['role'=>'Student']);}catch(RuntimeException){$denied=true;}m19f_assert($denied,'Unauthorized evaluation administration was accepted.');
+
+        // Failed results never change Personal Best, and transaction rollback is atomic.
+        $best->execute(['student'=>$student['id'],'template'=>$template]);$bestBefore=(int)$best->fetchColumn();
+        $badAttempt=m19f_attempt($pdo,$entry,(int)$student['id'],$version,'Malformed provider output.',true);
+        $malformedProvider=new M19HarnessProvider(99,true);$malformedService=new QuickChallengeEvaluationService($pdo,$malformedProvider,new QuickChallengePromptCatalog(),new QuickChallengeScoreValidator(),static fn():bool=>true);
+        $badResult=$malformedService->analyze((string)$student['yuva_id'],$badAttempt);
+        m19f_assert(($badResult['status']??'')==='failed'&&$malformedProvider->calls===1,'Malformed AI output was not failed safely.');
+        $best->execute(['student'=>$student['id'],'template'=>$template]);m19f_assert((int)$best->fetchColumn()===$bestBefore,'Failed evaluation mutated Personal Best.');
+        $beforeRollback=(int)$pdo->query('SELECT COUNT_BIG(*) FROM dbo.quick_challenge_attempts')->fetchColumn();
+        try{Database::transaction(function(PDO $tx)use($entry,$student,$version):void{m19f_attempt($tx,$entry,(int)$student['id'],$version,'Forced rollback fixture.',true);throw new RuntimeException('forced rollback');},'SERIALIZABLE',true);}catch(RuntimeException $error){m19f_assert($error->getMessage()==='forced rollback','Unexpected rollback error.');}
+        m19f_assert((int)$pdo->query('SELECT COUNT_BIG(*) FROM dbo.quick_challenge_attempts')->fetchColumn()===$beforeRollback,'Forced rollback changed attempt state.');
+
+        // Coaching scores must stay separated from leadership and official competition state.
+        foreach(['leadership_decisions','leadership_level_history','competition_submissions'] as $separated){m19f_assert((int)$pdo->query('SELECT COUNT_BIG(*) FROM dbo.'.$separated)->fetchColumn()===$baseline[$separated],$separated.' was mutated by coaching scoring.');}
         fwrite(STDOUT,"PASS functional-preflight\n");
         return 0;
     } finally {
