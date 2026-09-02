@@ -4,7 +4,7 @@ require dirname(__DIR__,2).'/backend/ai/QuickChallengeScoring.php';
 use YuvaClub\AI\QuickChallengePromptCatalog;
 use YuvaClub\AI\QuickChallengeScoreValidator;
 function c2b(bool $condition,string $message):void{if(!$condition)throw new RuntimeException($message);}
-$root=dirname(__DIR__,2);$migration=(string)file_get_contents($root.'/database/19-quick-challenge-ai-scoring-phase2c2b.azure-sql.sql');$rollback=(string)file_get_contents($root.'/database/19-quick-challenge-ai-scoring-phase2c2b-rollback.sql');$service=(string)file_get_contents($root.'/backend/quick-challenge-evaluation.php');$promptFile=(string)file_get_contents($root.'/backend/ai/QuickChallengeScoring.php');
+$root=dirname(__DIR__,2);$migration=(string)file_get_contents($root.'/database/19-quick-challenge-ai-scoring-phase2c2b.azure-sql.sql');$rollback=(string)file_get_contents($root.'/database/19-quick-challenge-ai-scoring-phase2c2b-rollback.sql');$service=(string)file_get_contents($root.'/backend/quick-challenge-evaluation.php');$promptFile=(string)file_get_contents($root.'/backend/ai/QuickChallengeScoring.php');$rehearsal=(string)file_get_contents($root.'/tools/phase2c2b-m19-rehearsal.php');
 $submit=(string)file_get_contents($root.'/student-quick-challenge-submit.php');
 foreach(['quick_challenge_scoring_policies','quick_challenge_evaluations','quick_challenge_evaluation_audit','source_revision_hash','scoring_policy_version','ai_provider','ai_model','prompt_version','benchmark_score','ROWVERSION']as$item)c2b(str_contains($migration,$item),'Migration 19 missing '.$item);
 c2b(str_contains($migration,"UNIQUE(attempt_id,source_revision_hash,scoring_policy_id)")&&str_contains($service,'db_acquire_application_lock'),'Duplicate and concurrent Analyze must be idempotent.');
@@ -14,6 +14,7 @@ c2b(str_contains($rollback,"DB_NAME() NOT LIKE N'%rehearsal%'")&&str_contains($r
 c2b(str_contains($service,"'ai_quick_challenge_scoring'")&&str_contains($migration,'future-phase-3a3'),'Central entitlement integration and future usage attachment are required.');
 c2b(str_contains($submit,'quick_challenge_evaluation_service()->analyze')&&str_contains($submit,'attempt submitted and locked'),'Submitted immutable attempts must enter AI evaluation without weakening submission persistence.');
 c2b(!str_contains($service,'leadership_decisions')&&!str_contains($service,'current_level_id'),'AI practice scoring must not promote leadership.');
+c2b(str_contains($rehearsal,'PHASE2C2B_M19_DATABASE')&&str_contains($rehearsal,'m19_assert_target')&&str_contains($rehearsal,"['04', '05']"),'Migration 19 rehearsal tooling must fail closed and preserve skipped migrations.');
 c2b(str_contains($service,"'audio_transcript','video_transcript','ai_mentor_delivery_review'")&&str_contains($service,"snapshot['timing']"),'Media attempts must reuse immutable transcript/timing evidence.');
 c2b(str_contains($service,"['Beginner'=>65,'Intermediate'=>75,'Advanced'=>85]"),'Difficulty benchmarks must resolve deterministically.');
 foreach(['accent','race','ethnicity','attractiveness','disability','socioeconomic','sensitive characteristic','coaching only','never an official Competition Score']as$guard)c2b(str_contains($promptFile,$guard),'Fairness guard missing '.$guard);
