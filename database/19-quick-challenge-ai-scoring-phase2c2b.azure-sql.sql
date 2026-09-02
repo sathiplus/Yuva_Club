@@ -1,3 +1,4 @@
+-- Migration 19: Phase 2C.2B AI Quick Challenge practice scoring.
 SET NOCOUNT ON;
 SET XACT_ABORT ON;
 BEGIN TRANSACTION;

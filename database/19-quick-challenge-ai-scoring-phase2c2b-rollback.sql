@@ -1,7 +1,8 @@
+-- Migration 19 rollback: Phase 2C.2B AI Quick Challenge practice scoring.
 SET NOCOUNT ON;
 SET XACT_ABORT ON;
 IF DB_NAME() NOT LIKE N'%rehearsal%' AND DB_NAME() NOT LIKE N'%test%'
-    THROW 51018,'Migration 18 rollback is restricted to rehearsal/test databases.',1;
+    THROW 51019,'Migration 19 rollback is restricted to rehearsal/test databases.',1;
 BEGIN TRANSACTION;
 
 IF OBJECT_ID(N'dbo.quick_challenge_evaluation_audit',N'U') IS NOT NULL DROP TABLE dbo.quick_challenge_evaluation_audit;

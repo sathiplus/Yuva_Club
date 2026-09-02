@@ -4,9 +4,9 @@ require dirname(__DIR__,2).'/backend/ai/QuickChallengeScoring.php';
 use YuvaClub\AI\QuickChallengePromptCatalog;
 use YuvaClub\AI\QuickChallengeScoreValidator;
 function c2b(bool $condition,string $message):void{if(!$condition)throw new RuntimeException($message);}
-$root=dirname(__DIR__,2);$migration=(string)file_get_contents($root.'/database/18-quick-challenge-ai-scoring-phase2c2b.azure-sql.sql');$rollback=(string)file_get_contents($root.'/database/18-quick-challenge-ai-scoring-phase2c2b-rollback.sql');$service=(string)file_get_contents($root.'/backend/quick-challenge-evaluation.php');$promptFile=(string)file_get_contents($root.'/backend/ai/QuickChallengeScoring.php');
+$root=dirname(__DIR__,2);$migration=(string)file_get_contents($root.'/database/19-quick-challenge-ai-scoring-phase2c2b.azure-sql.sql');$rollback=(string)file_get_contents($root.'/database/19-quick-challenge-ai-scoring-phase2c2b-rollback.sql');$service=(string)file_get_contents($root.'/backend/quick-challenge-evaluation.php');$promptFile=(string)file_get_contents($root.'/backend/ai/QuickChallengeScoring.php');
 $submit=(string)file_get_contents($root.'/student-quick-challenge-submit.php');
-foreach(['quick_challenge_scoring_policies','quick_challenge_evaluations','quick_challenge_evaluation_audit','source_revision_hash','scoring_policy_version','ai_provider','ai_model','prompt_version','benchmark_score','ROWVERSION']as$item)c2b(str_contains($migration,$item),'Migration 18 missing '.$item);
+foreach(['quick_challenge_scoring_policies','quick_challenge_evaluations','quick_challenge_evaluation_audit','source_revision_hash','scoring_policy_version','ai_provider','ai_model','prompt_version','benchmark_score','ROWVERSION']as$item)c2b(str_contains($migration,$item),'Migration 19 missing '.$item);
 c2b(str_contains($migration,"UNIQUE(attempt_id,source_revision_hash,scoring_policy_id)")&&str_contains($service,'db_acquire_application_lock'),'Duplicate and concurrent Analyze must be idempotent.');
 c2b(str_contains($service,"['Failed','Stale']")&&str_contains($service,'ReprocessRequested'),'Failed/Stale reprocessing must be restricted and audited.');
 c2b(str_contains($migration,"N'Processing',N'Completed',N'Failed',N'Stale'")&&str_contains($service,"[status]=N'Completed'"),'Safe evaluation lifecycle is required.');
