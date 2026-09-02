@@ -148,9 +148,18 @@ function m19f_main(): int
 
         $mismatch=m19f_attempt($pdo,$entry,(int)$student['id'],$version,'Tamper-detection rehearsal response.',false);
         $before=$provider->calls;
-        $result=$enabled->analyze((string)$student['yuva_id'],$mismatch);
+        $rejected=false;
+        try {
+            $enabled->analyze((string)$student['yuva_id'],$mismatch);
+        } catch (RuntimeException $error) {
+            $rejected=str_contains($error->getMessage(),'source integrity validation failed');
+        }
+        m19f_assert($rejected,'Source hash mismatch was not rejected safely.');
         m19f_assert($provider->calls===$before,'Source hash mismatch reached the AI provider.');
-        m19f_assert(($result['status']??'')!=='completed','Source hash mismatch completed an evaluation.');
+        $evaluationCount=m19f_id($pdo,'SELECT COUNT_BIG(*)+1 FROM dbo.quick_challenge_evaluations e JOIN dbo.quick_challenge_attempts a ON a.id=e.attempt_id WHERE a.attempt_guid=:attempt',['attempt'=>$mismatch])-1;
+        m19f_assert($evaluationCount===0,'Source hash mismatch reserved an evaluation.');
+        $bestCount=m19f_id($pdo,'SELECT COUNT_BIG(*)+1 FROM dbo.student_challenge_personal_bests WHERE student_id=:student',['student'=>$student['id']])-1;
+        m19f_assert($bestCount===0,'Source hash mismatch updated Personal Best.');
         fwrite(STDOUT,"PASS functional-preflight\n");
         return 0;
     } finally {

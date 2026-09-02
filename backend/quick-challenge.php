@@ -1,6 +1,22 @@
 <?php
 declare(strict_types=1);
 
+function quick_challenge_snapshot_hash(string $snapshotJson): string
+{
+    if ($snapshotJson === '') {
+        throw new RuntimeException('Immutable attempt snapshot is invalid.');
+    }
+    try {
+        $snapshot = json_decode($snapshotJson, true, 512, JSON_THROW_ON_ERROR);
+    } catch (JsonException) {
+        throw new RuntimeException('Immutable attempt snapshot is invalid.');
+    }
+    if (!is_array($snapshot)) {
+        throw new RuntimeException('Immutable attempt snapshot is invalid.');
+    }
+    return hash('sha256', $snapshotJson);
+}
+
 final class QuickChallengeService
 {
     private const TYPES=['speech','persuasion','impromptu','explain','storytelling','elevator_pitch','critical_thinking','teaching','research_summary','leadership_reflection'];
@@ -87,7 +103,7 @@ final class QuickChallengeService
         $version=normalize_sqlsrv_rowversion_token($rowVersion);$responseText=trim($responseText);if($responseText===''||$this->length($responseText)>12000)throw new InvalidArgumentException('A valid challenge response is required.');
         return Database::transaction(function(PDO $pdo)use($yuvaId,$attemptGuid,$version,$responseText):array{
             $student=$this->student($yuvaId);$q=$pdo->prepare("SELECT attempt.id,attempt.response_deadline_at,attempt.started_at,attempt.[status],entry.id entry_id,competition.id competition_id,competition.submission_deadline FROM dbo.quick_challenge_attempts attempt WITH(UPDLOCK,HOLDLOCK) JOIN dbo.competition_entries entry ON entry.id=attempt.competition_entry_id JOIN dbo.competitions competition ON competition.id=entry.competition_id WHERE attempt.attempt_guid=:guid AND attempt.student_id=:student AND entry.student_id=:student_owner");$q->execute(['guid'=>$attemptGuid,'student'=>$student['id'],'student_owner'=>$student['id']]);$attempt=$q->fetch();if(!is_array($attempt))throw new RuntimeException('Quick Challenge attempt is unavailable.');$now=new DateTimeImmutable('now',new DateTimeZone('UTC'));if($attempt['status']!=='Started'||$now<$this->date((string)$attempt['started_at'])||$now>$this->date((string)$attempt['response_deadline_at'])||$now>$this->date((string)$attempt['submission_deadline']))throw new RuntimeException('Quick Challenge timing window has closed.');
-            $snapshot=json_encode(['response_text'=>$responseText],JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);$hash=hash('sha256',$snapshot);$u=$pdo->prepare("UPDATE dbo.quick_challenge_attempts SET [status]=N'Submitted',submitted_at=SYSUTCDATETIME(),source_type=N'text_response',source_reference=:reference,source_revision_hash=:hash,source_snapshot_json=:snapshot WHERE id=:id AND [status]=N'Started' AND row_version=CONVERT(BINARY(8),:version,2)");$u->bindValue(':reference','quick-response:'.$attemptGuid.':'.$hash,PDO::PARAM_STR);$u->bindValue(':hash',$hash,PDO::PARAM_STR);$u->bindValue(':snapshot',$snapshot,PDO::PARAM_STR);$u->bindValue(':id',(int)$attempt['id'],PDO::PARAM_INT);$u->bindValue(':version',$version,PDO::PARAM_STR);$u->execute();if($u->rowCount()!==1)throw new RuntimeException('Stale or duplicate attempt submission was rejected.');$this->audit((int)$attempt['competition_id'],(int)$attempt['entry_id'],'QuickAttemptSubmitted',['attempt_guid'=>$attemptGuid,'source_revision_hash'=>$hash]);return['status'=>'submitted','source_revision_hash'=>$hash];
+            $snapshot=json_encode(['response_text'=>$responseText],JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);$hash=quick_challenge_snapshot_hash($snapshot);$u=$pdo->prepare("UPDATE dbo.quick_challenge_attempts SET [status]=N'Submitted',submitted_at=SYSUTCDATETIME(),source_type=N'text_response',source_reference=:reference,source_revision_hash=:hash,source_snapshot_json=:snapshot WHERE id=:id AND [status]=N'Started' AND row_version=CONVERT(BINARY(8),:version,2)");$u->bindValue(':reference','quick-response:'.$attemptGuid.':'.$hash,PDO::PARAM_STR);$u->bindValue(':hash',$hash,PDO::PARAM_STR);$u->bindValue(':snapshot',$snapshot,PDO::PARAM_STR);$u->bindValue(':id',(int)$attempt['id'],PDO::PARAM_INT);$u->bindValue(':version',$version,PDO::PARAM_STR);$u->execute();if($u->rowCount()!==1)throw new RuntimeException('Stale or duplicate attempt submission was rejected.');$this->audit((int)$attempt['competition_id'],(int)$attempt['entry_id'],'QuickAttemptSubmitted',['attempt_guid'=>$attemptGuid,'source_revision_hash'=>$hash]);return['status'=>'submitted','source_revision_hash'=>$hash];
         },'SERIALIZABLE',true);
     }
 
