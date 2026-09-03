@@ -1,0 +1,74 @@
+<?php
+declare(strict_types=1);
+
+use YuvaClub\AI\AiProvider;
+use YuvaClub\AI\QuickChallengePromptCatalog;
+use YuvaClub\AI\QuickChallengeScoreValidator;
+
+final class QuickChallengeEvaluationService
+{
+    public function __construct(private PDO $pdo,private AiProvider $provider,private QuickChallengePromptCatalog $prompts,private QuickChallengeScoreValidator $validator,private $hasFeature){}
+
+    public function analyze(string $yuvaId,string $attemptGuid,bool $allowRetry=false):array
+    {
+        $yuvaId=strtoupper(trim($yuvaId));
+        $reserved=Database::transaction(function(PDO $pdo)use($yuvaId,$attemptGuid,$allowRetry):array{
+            db_acquire_application_lock($pdo,'quick-evaluation:'.$attemptGuid,5000);
+            $q=$pdo->prepare("SELECT a.id attempt_id,a.source_revision_hash,a.source_snapshot_json,a.source_type,a.practice_score,s.id student_id,v.id template_version_id,v.version_number,v.difficulty,v.rubric_version_id,v.ai_evaluation_enabled,v.scoring_policy_id,t.challenge_type,v.prompt_text,p.policy_version,p.weights_json,p.benchmark_type,p.benchmark_score,p.benchmark_label,p.id policy_id,r.version_number rubric_version FROM dbo.quick_challenge_attempts a JOIN dbo.students s ON s.id=a.student_id JOIN dbo.quick_challenge_template_versions v ON v.id=a.template_version_id JOIN dbo.quick_challenge_templates t ON t.id=v.template_id JOIN dbo.competition_rubric_versions r ON r.id=v.rubric_version_id LEFT JOIN dbo.quick_challenge_scoring_policies p ON p.id=v.scoring_policy_id WHERE a.attempt_guid=:attempt AND UPPER(s.yuva_id)=:yuva AND a.[status]=N'Submitted'");$q->execute(['attempt'=>$attemptGuid,'yuva'=>$yuvaId]);$row=$q->fetch(PDO::FETCH_ASSOC);if(!is_array($row))throw new RuntimeException('Submitted student-owned attempt is required.');$storedHash=(string)($row['source_revision_hash']??'');if(preg_match('/^[0-9a-fA-F]{64}$/',$storedHash)!==1)throw new RuntimeException('Immutable attempt source integrity validation failed.');$computedHash=quick_challenge_snapshot_hash((string)($row['source_snapshot_json']??''));if(!hash_equals(strtolower($storedHash),$computedHash))throw new RuntimeException('Immutable attempt source integrity validation failed.');if(!(bool)call_user_func($this->hasFeature,$yuvaId,'ai_quick_challenge_scoring'))return ['status'=>'disabled'];if(!(bool)$row['ai_evaluation_enabled']||empty($row['policy_id']))return ['status'=>'disabled'];if($row['benchmark_type']==='Difficulty'){$scores=['Beginner'=>65,'Intermediate'=>75,'Advanced'=>85];$row['benchmark_score']=$scores[(string)$row['difficulty']]??75;$row['benchmark_label']=(string)$row['difficulty'].' Benchmark';}
+            $existing=$pdo->prepare("SELECT TOP(1)id,evaluation_guid,[status],total_score FROM dbo.quick_challenge_evaluations WITH(UPDLOCK,HOLDLOCK) WHERE attempt_id=:attempt AND source_revision_hash=:hash AND scoring_policy_id=:policy");$existing->execute(['attempt'=>$row['attempt_id'],'hash'=>$row['source_revision_hash'],'policy'=>$row['policy_id']]);$found=$existing->fetch(PDO::FETCH_ASSOC);$guid='';if(is_array($found)){if(!$allowRetry||!in_array($found['status'],['Failed','Stale'],true))return ['status'=>strtolower((string)$found['status']),'evaluation_guid'=>(string)$found['evaluation_guid'],'total_score'=>$found['total_score'],'idempotent'=>true];$retry=$pdo->prepare("UPDATE dbo.quick_challenge_evaluations SET [status]=N'Processing',error_code=NULL,error_message=NULL,processing_started_at=SYSUTCDATETIME(),completed_at=NULL WHERE id=:id AND [status] IN(N'Failed',N'Stale')");$retry->execute(['id'=>$found['id']]);if($retry->rowCount()!==1)throw new RuntimeException('Evaluation retry changed concurrently.');$guid=(string)$found['evaluation_guid'];}
+            $provider=method_exists($this->provider,'providerName')?$this->provider->providerName():'configured';$model=method_exists($this->provider,'modelName')?$this->provider->modelName():'configured';
+            if($guid===''){$insert=$pdo->prepare("INSERT dbo.quick_challenge_evaluations(attempt_id,student_id,template_version_id,rubric_version_id,scoring_policy_id,source_revision_hash,source_type,template_version,rubric_version,scoring_policy_version,ai_provider,ai_model,prompt_version,[status],benchmark_type,benchmark_score,benchmark_label,processing_started_at) OUTPUT CONVERT(NVARCHAR(36),INSERTED.evaluation_guid) AS evaluation_guid VALUES(:attempt,:student,:template,:rubric_id,:policy,:hash,:source_type,:template_version,:rubric_version,:policy_version,:provider,:model,:prompt,N'Processing',:benchmark_type,:benchmark_score,:benchmark_label,SYSUTCDATETIME())");$insert->execute(['attempt'=>$row['attempt_id'],'student'=>$row['student_id'],'template'=>$row['template_version_id'],'rubric_id'=>$row['rubric_version_id'],'policy'=>$row['policy_id'],'hash'=>$row['source_revision_hash'],'source_type'=>$row['source_type'],'template_version'=>$row['version_number'],'rubric_version'=>$row['rubric_version'],'policy_version'=>$row['policy_version'],'provider'=>$provider,'model'=>$model,'prompt'=>QuickChallengePromptCatalog::VERSION,'benchmark_type'=>$row['benchmark_type'],'benchmark_score'=>$row['benchmark_score'],'benchmark_label'=>$row['benchmark_label']]);$guid=(string)$insert->fetchColumn();}
+            $snapshot=json_decode((string)$row['source_snapshot_json'],true);$weights=json_decode((string)$row['weights_json'],true);if(!is_array($snapshot)||!is_array($weights))throw new RuntimeException('Immutable attempt snapshot or scoring policy is invalid.');$evidence=$this->evidenceText($snapshot,(string)$row['source_type']);
+            return $row+['status'=>'reserved','evaluation_guid'=>$guid,'attempt_guid'=>$attemptGuid,'weights'=>$weights,'response_text'=>$evidence];
+        },'SERIALIZABLE',true);
+        if(($reserved['status']??'')!=='reserved')return $reserved;
+        try{$generated=$this->provider->generateStructuredReview($this->prompts->prompt((string)$reserved['challenge_type'],(string)$reserved['prompt_text'],(string)$reserved['response_text'],$reserved['weights']));}catch(Throwable){$generated=['ok'=>false,'error'=>'AI provider call failed.'];}
+        $validated=($generated['ok']??false)&&is_array($generated['output']??null)?$this->validator->validate($generated['output'],$reserved['weights']):['ok'=>false,'error'=>'AI provider did not return a valid result.'];
+        return Database::transaction(function(PDO $pdo)use($reserved,$validated):array{
+            $q=$pdo->prepare("SELECT id,[status] FROM dbo.quick_challenge_evaluations WITH(UPDLOCK,HOLDLOCK) WHERE evaluation_guid=:guid");$q->execute(['guid'=>$reserved['evaluation_guid']]);$current=$q->fetch(PDO::FETCH_ASSOC);if(!is_array($current)||$current['status']!=='Processing')throw new RuntimeException('Evaluation state changed concurrently.');
+            if(!($validated['ok']??false)){$u=$pdo->prepare("UPDATE dbo.quick_challenge_evaluations SET [status]=N'Failed',error_code=N'invalid_ai_result',error_message=:error,completed_at=SYSUTCDATETIME() WHERE id=:id AND [status]=N'Processing'");$u->execute(['error'=>(string)($validated['error']??'Evaluation failed.'),'id'=>$current['id']]);return ['status'=>'failed','evaluation_guid'=>$reserved['evaluation_guid']];}
+            $result=$validated['result'];$score=(int)$result['total_score'];$components=json_encode($result['components'],JSON_THROW_ON_ERROR|JSON_UNESCAPED_SLASHES);$feedback=json_encode(['strengths'=>$result['strengths'],'improvements'=>$result['improvements'],'practice_mission'=>$result['practice_mission']],JSON_THROW_ON_ERROR|JSON_UNESCAPED_SLASHES);
+            $u=$pdo->prepare("UPDATE dbo.quick_challenge_evaluations SET [status]=N'Completed',component_scores_json=:components,total_score=:score,coaching_feedback_json=:feedback,completed_at=SYSUTCDATETIME() WHERE id=:id AND [status]=N'Processing'");$u->execute(['components'=>$components,'score'=>$score,'feedback'=>$feedback,'id'=>$current['id']]);if($u->rowCount()!==1)throw new RuntimeException('Evaluation completion changed concurrently.');
+            $scoreVersion='qcs:'.$reserved['policy_version'].':rubric:'.$reserved['rubric_version'];$quick=new QuickChallengeService($pdo);$best=$quick->recordAiPracticeScore((string)$reserved['attempt_guid'],$score,$scoreVersion);
+            return ['status'=>'completed','evaluation_guid'=>$reserved['evaluation_guid'],'total_score'=>$score,'benchmark_score'=>$reserved['benchmark_score'],'benchmark_label'=>$reserved['benchmark_label'],'benchmark_beaten'=>$reserved['benchmark_score']!==null&&$score>=(int)$reserved['benchmark_score']]+$best;
+        },'SERIALIZABLE',true);
+    }
+
+    public function resultsForStudent(string $yuvaId):array
+    {
+        $q=$this->pdo->prepare("SELECT e.evaluation_guid,e.[status],e.total_score,e.benchmark_score,e.benchmark_label,e.component_scores_json,e.coaching_feedback_json,e.completed_at,a.attempt_guid,a.attempt_number,t.display_name,v.difficulty,pb.best_score FROM dbo.quick_challenge_evaluations e JOIN dbo.quick_challenge_attempts a ON a.id=e.attempt_id JOIN dbo.students s ON s.id=e.student_id JOIN dbo.quick_challenge_template_versions v ON v.id=e.template_version_id JOIN dbo.quick_challenge_templates t ON t.id=v.template_id LEFT JOIN dbo.student_challenge_personal_bests pb ON pb.student_id=s.id AND pb.template_id=t.id AND pb.score_version=CONCAT(N'qcs:',e.scoring_policy_version,N':rubric:',e.rubric_version) WHERE UPPER(s.yuva_id)=UPPER(:yuva) ORDER BY e.created_at DESC");$q->execute(['yuva'=>$yuvaId]);$rows=$q->fetchAll(PDO::FETCH_ASSOC)?:[];foreach($rows as&$row){$row['components']=json_decode((string)($row['component_scores_json']??''),true)?:[];$row['coaching']=json_decode((string)($row['coaching_feedback_json']??''),true)?:[];unset($row['component_scores_json'],$row['coaching_feedback_json']);}unset($row);return $rows;
+    }
+
+    public function policies():array{return $this->pdo->query("SELECT policy_guid,policy_code,policy_version,challenge_type,benchmark_type,benchmark_score,benchmark_label,prompt_version,[status] FROM dbo.quick_challenge_scoring_policies ORDER BY challenge_type,policy_version DESC")->fetchAll(PDO::FETCH_ASSOC)?:[];}
+
+    public function configureTemplate(array $actor,string $versionGuid,?string $policyCode,bool $enabled):void
+    {
+        if(($actor['role']??'')!=='MasterAdmin')throw new RuntimeException('Master Admin authorization is required.');
+        Database::transaction(function(PDO $pdo)use($actor,$versionGuid,$policyCode,$enabled):void{
+            $q=$pdo->prepare("SELECT v.id,t.challenge_type FROM dbo.quick_challenge_template_versions v WITH(UPDLOCK,HOLDLOCK) JOIN dbo.quick_challenge_templates t ON t.id=v.template_id WHERE v.version_guid=:guid AND v.is_frozen=1");$q->execute(['guid'=>$versionGuid]);$version=$q->fetch(PDO::FETCH_ASSOC);if(!is_array($version))throw new RuntimeException('Frozen template version is required.');$policyId=null;
+            if($enabled){$p=$pdo->prepare("SELECT TOP(1)id FROM dbo.quick_challenge_scoring_policies WHERE policy_code=:code AND challenge_type=:type AND [status]=N'Active' ORDER BY policy_version DESC");$p->execute(['code'=>trim((string)$policyCode),'type'=>$version['challenge_type']]);$policyId=$p->fetchColumn();if($policyId===false)throw new RuntimeException('A compatible active scoring policy is required.');}
+            $u=$pdo->prepare('UPDATE dbo.quick_challenge_template_versions SET ai_evaluation_enabled=:enabled,scoring_policy_id=:policy WHERE id=:id');$u->execute(['enabled'=>$enabled?1:0,'policy'=>$policyId===false?null:$policyId,'id'=>$version['id']]);
+            $audit=$pdo->prepare("INSERT dbo.quick_challenge_evaluation_audit(evaluation_id,action_type,actor_role,actor_identifier,entity_reference,succeeded,metadata_json) VALUES(NULL,N'TemplateScoringConfigured',:role,:actor,:reference,1,:metadata)");$audit->execute(['role'=>'MasterAdmin','actor'=>strtolower((string)($actor['email']??'')),'reference'=>$versionGuid,'metadata'=>json_encode(['enabled'=>$enabled,'policy_code'=>$enabled?$policyCode:null],JSON_THROW_ON_ERROR)]);
+        },'SERIALIZABLE',true);
+    }
+
+    public function adminEvaluations(array $actor):array
+    {
+        $role=(string)($actor['role']??'');if(!in_array($role,['MasterAdmin','OrganizationAdmin'],true))throw new RuntimeException('Challenge manager authorization is required.');$where='';$params=[];
+        if($role==='OrganizationAdmin'){$where=" WHERE c.owner_organization_code=:organization";$params=['organization'=>(string)($actor['organization_id']??'')];}
+        $q=$this->pdo->prepare("SELECT TOP(100)e.evaluation_guid,e.[status],e.total_score,e.benchmark_label,e.created_at,s.yuva_id,s.public_handle,s.avatar_code FROM dbo.quick_challenge_evaluations e JOIN dbo.quick_challenge_attempts a ON a.id=e.attempt_id JOIN dbo.competition_entries ce ON ce.id=a.competition_entry_id JOIN dbo.competitions c ON c.id=ce.competition_id JOIN dbo.students s ON s.id=e.student_id".$where." ORDER BY e.created_at DESC");$q->execute($params);return $q->fetchAll(PDO::FETCH_ASSOC)?:[];
+    }
+
+    public function reprocess(array $actor,string $evaluationGuid):array
+    {
+        if(($actor['role']??'')!=='MasterAdmin')throw new RuntimeException('Master Admin authorization is required.');$q=$this->pdo->prepare("SELECT a.attempt_guid,s.yuva_id,e.id,e.[status] FROM dbo.quick_challenge_evaluations e JOIN dbo.quick_challenge_attempts a ON a.id=e.attempt_id JOIN dbo.students s ON s.id=e.student_id WHERE e.evaluation_guid=:guid");$q->execute(['guid'=>$evaluationGuid]);$row=$q->fetch(PDO::FETCH_ASSOC);if(!is_array($row)||!in_array($row['status'],['Failed','Stale'],true))throw new RuntimeException('Only Failed or Stale evaluations can be reprocessed.');$audit=$this->pdo->prepare("INSERT dbo.quick_challenge_evaluation_audit(evaluation_id,action_type,actor_role,actor_identifier,entity_reference,succeeded) VALUES(:evaluation,N'ReprocessRequested',N'MasterAdmin',:actor,:reference,1)");$audit->execute(['evaluation'=>$row['id'],'actor'=>strtolower((string)($actor['email']??'')),'reference'=>$evaluationGuid]);return $this->analyze((string)$row['yuva_id'],(string)$row['attempt_guid'],true);
+    }
+
+    /** @param array<string,mixed> $snapshot */
+    private function evidenceText(array $snapshot,string $sourceType):string
+    {
+        if(is_string($snapshot['response_text']??null)&&trim($snapshot['response_text'])!=='')return trim($snapshot['response_text']);
+        if(in_array($sourceType,['audio_transcript','video_transcript','ai_mentor_delivery_review'],true)&&is_string($snapshot['transcript']??null)&&trim($snapshot['transcript'])!=='')return trim($snapshot['transcript'])."\nObservable timing evidence: ".json_encode($snapshot['timing']??[],JSON_THROW_ON_ERROR|JSON_UNESCAPED_SLASHES);
+        throw new RuntimeException('The immutable attempt has no supported scoring evidence.');
+    }
+}

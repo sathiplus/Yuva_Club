@@ -191,6 +191,28 @@ The matching rollback is for isolated rehearsal only. It removes Migration 17
 objects and credential lifecycle columns but never removes Parent, student, or
 relationship rows.
 
+## Migration 18: Student SQL credential authority
+
+`18-student-sql-credential-authority.azure-sql.sql` makes SQL the sole Student
+password authority in SQL mode. It adds pending registration credentials and
+hashed, single-use Student activation/reset tokens without automatically
+backfilling existing NULL password hashes.
+
+## Migration 19: AI Quick Challenge practice scoring
+
+`19-quick-challenge-ai-scoring-phase2c2b.azure-sql.sql` adds immutable,
+versioned AI practice evaluations for submitted Quick Challenge attempts. It
+reuses the Phase 2C.2A attempt snapshot, source SHA-256, rubric version, and
+Personal Best foundation; the existing AI provider abstraction; and the Phase
+3A.1 entitlement resolver. Versioned scoring policies carry challenge-specific
+weights and privacy-safe system benchmarks. Evaluation provenance records the
+provider, model, prompt, rubric, template, scoring policy, and benchmark used.
+
+These scores are coaching-only. Migration 19 does not add official Competition
+Score, judges, winners, leaderboards, or leadership promotion. The matching
+rollback is restricted to rehearsal/test databases and removes only Migration
+19 tables, guarded columns, and its feature rule.
+
 ## Validation
 
 Run the filesystem-only test:

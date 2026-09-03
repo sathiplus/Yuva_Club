@@ -1,6 +1,22 @@
 <?php
 declare(strict_types=1);
 
+function quick_challenge_snapshot_hash(string $snapshotJson): string
+{
+    if ($snapshotJson === '') {
+        throw new RuntimeException('Immutable attempt snapshot is invalid.');
+    }
+    try {
+        $snapshot = json_decode($snapshotJson, true, 512, JSON_THROW_ON_ERROR);
+    } catch (JsonException) {
+        throw new RuntimeException('Immutable attempt snapshot is invalid.');
+    }
+    if (!is_array($snapshot)) {
+        throw new RuntimeException('Immutable attempt snapshot is invalid.');
+    }
+    return hash('sha256', $snapshotJson);
+}
+
 final class QuickChallengeService
 {
     private const TYPES=['speech','persuasion','impromptu','explain','storytelling','elevator_pitch','critical_thinking','teaching','research_summary','leadership_reflection'];
@@ -87,18 +103,29 @@ final class QuickChallengeService
         $version=normalize_sqlsrv_rowversion_token($rowVersion);$responseText=trim($responseText);if($responseText===''||$this->length($responseText)>12000)throw new InvalidArgumentException('A valid challenge response is required.');
         return Database::transaction(function(PDO $pdo)use($yuvaId,$attemptGuid,$version,$responseText):array{
             $student=$this->student($yuvaId);$q=$pdo->prepare("SELECT attempt.id,attempt.response_deadline_at,attempt.started_at,attempt.[status],entry.id entry_id,competition.id competition_id,competition.submission_deadline FROM dbo.quick_challenge_attempts attempt WITH(UPDLOCK,HOLDLOCK) JOIN dbo.competition_entries entry ON entry.id=attempt.competition_entry_id JOIN dbo.competitions competition ON competition.id=entry.competition_id WHERE attempt.attempt_guid=:guid AND attempt.student_id=:student AND entry.student_id=:student_owner");$q->execute(['guid'=>$attemptGuid,'student'=>$student['id'],'student_owner'=>$student['id']]);$attempt=$q->fetch();if(!is_array($attempt))throw new RuntimeException('Quick Challenge attempt is unavailable.');$now=new DateTimeImmutable('now',new DateTimeZone('UTC'));if($attempt['status']!=='Started'||$now<$this->date((string)$attempt['started_at'])||$now>$this->date((string)$attempt['response_deadline_at'])||$now>$this->date((string)$attempt['submission_deadline']))throw new RuntimeException('Quick Challenge timing window has closed.');
-            $snapshot=json_encode(['response_text'=>$responseText],JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);$hash=hash('sha256',$snapshot);$u=$pdo->prepare("UPDATE dbo.quick_challenge_attempts SET [status]=N'Submitted',submitted_at=SYSUTCDATETIME(),source_type=N'text_response',source_reference=:reference,source_revision_hash=:hash,source_snapshot_json=:snapshot WHERE id=:id AND [status]=N'Started' AND row_version=CONVERT(BINARY(8),:version,2)");$u->bindValue(':reference','quick-response:'.$attemptGuid.':'.$hash,PDO::PARAM_STR);$u->bindValue(':hash',$hash,PDO::PARAM_STR);$u->bindValue(':snapshot',$snapshot,PDO::PARAM_STR);$u->bindValue(':id',(int)$attempt['id'],PDO::PARAM_INT);$u->bindValue(':version',$version,PDO::PARAM_STR);$u->execute();if($u->rowCount()!==1)throw new RuntimeException('Stale or duplicate attempt submission was rejected.');$this->audit((int)$attempt['competition_id'],(int)$attempt['entry_id'],'QuickAttemptSubmitted',['attempt_guid'=>$attemptGuid,'source_revision_hash'=>$hash]);return['status'=>'submitted','source_revision_hash'=>$hash];
+            $snapshot=json_encode(['response_text'=>$responseText],JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);$hash=quick_challenge_snapshot_hash($snapshot);$u=$pdo->prepare("UPDATE dbo.quick_challenge_attempts SET [status]=N'Submitted',submitted_at=SYSUTCDATETIME(),source_type=N'text_response',source_reference=:reference,source_revision_hash=:hash,source_snapshot_json=:snapshot WHERE id=:id AND [status]=N'Started' AND row_version=CONVERT(BINARY(8),:version,2)");$u->bindValue(':reference','quick-response:'.$attemptGuid.':'.$hash,PDO::PARAM_STR);$u->bindValue(':hash',$hash,PDO::PARAM_STR);$u->bindValue(':snapshot',$snapshot,PDO::PARAM_STR);$u->bindValue(':id',(int)$attempt['id'],PDO::PARAM_INT);$u->bindValue(':version',$version,PDO::PARAM_STR);$u->execute();if($u->rowCount()!==1)throw new RuntimeException('Stale or duplicate attempt submission was rejected.');$this->audit((int)$attempt['competition_id'],(int)$attempt['entry_id'],'QuickAttemptSubmitted',['attempt_guid'=>$attemptGuid,'source_revision_hash'=>$hash]);return['status'=>'submitted','source_revision_hash'=>$hash];
         },'SERIALIZABLE',true);
     }
 
     public function recordPracticeScore(array $actor,string $attemptGuid,float $score,string $scoreVersion,string $source):array
     {
-        $this->master($actor);if($score<0||$score>100||!preg_match('/^[A-Za-z0-9][A-Za-z0-9._-]{2,79}$/',$scoreVersion)||!in_array($source,['AIPractice','HumanPractice'],true))throw new InvalidArgumentException('Valid versioned practice score is required.');
-        return Database::transaction(function(PDO $pdo)use($attemptGuid,$score,$scoreVersion,$source):array{
+        $this->master($actor);return $this->persistPracticeScore($attemptGuid,$score,$scoreVersion,$source);
+    }
+
+    public function recordAiPracticeScore(string $attemptGuid,float $score,string $scoreVersion):array
+    {
+        return $this->persistPracticeScore($attemptGuid,$score,$scoreVersion,'AIPractice');
+    }
+
+    private function persistPracticeScore(string $attemptGuid,float $score,string $scoreVersion,string $source):array
+    {
+        if($score<0||$score>100||!preg_match('/^[A-Za-z0-9][A-Za-z0-9:._-]{2,119}$/',$scoreVersion)||!in_array($source,['AIPractice','HumanPractice'],true))throw new InvalidArgumentException('Valid versioned practice score is required.');
+        $persist=function(PDO $pdo)use($attemptGuid,$score,$scoreVersion,$source):array{
             $q=$pdo->prepare("SELECT attempt.id,attempt.student_id,attempt.practice_score,attempt.score_version,version.template_id FROM dbo.quick_challenge_attempts attempt WITH(UPDLOCK,HOLDLOCK) JOIN dbo.quick_challenge_template_versions version ON version.id=attempt.template_version_id WHERE attempt.attempt_guid=:guid AND attempt.[status]=N'Submitted'");$q->execute(['guid'=>$attemptGuid]);$attempt=$q->fetch();if(!is_array($attempt))throw new RuntimeException('Submitted attempt is required.');if($attempt['practice_score']!==null)return['status'=>'already-scored','new_personal_best'=>false];
             $pdo->prepare('UPDATE dbo.quick_challenge_attempts SET practice_score=:score,score_version=:version,score_source=:source WHERE id=:id AND practice_score IS NULL')->execute(['score'=>$score,'version'=>$scoreVersion,'source'=>$source,'id'=>$attempt['id']]);
             $best=$pdo->prepare('SELECT TOP(1)id,best_score FROM dbo.student_challenge_personal_bests WITH(UPDLOCK,HOLDLOCK) WHERE student_id=:student AND template_id=:template AND score_version=:version');$best->execute(['student'=>$attempt['student_id'],'template'=>$attempt['template_id'],'version'=>$scoreVersion]);$prior=$best->fetch();$isBest=!is_array($prior)||$score>(float)$prior['best_score'];if(!is_array($prior)){$pdo->prepare('INSERT dbo.student_challenge_personal_bests(student_id,template_id,score_version,best_attempt_id,best_score,achieved_at) VALUES(:student,:template,:version,:attempt,:score,SYSUTCDATETIME())')->execute(['student'=>$attempt['student_id'],'template'=>$attempt['template_id'],'version'=>$scoreVersion,'attempt'=>$attempt['id'],'score'=>$score]);}elseif($isBest){$pdo->prepare('UPDATE dbo.student_challenge_personal_bests SET best_attempt_id=:attempt,best_score=:score,achieved_at=SYSUTCDATETIME(),updated_at=SYSUTCDATETIME() WHERE id=:id')->execute(['attempt'=>$attempt['id'],'score'=>$score,'id'=>$prior['id']]);}return['status'=>'scored','new_personal_best'=>$isBest,'previous_best'=>is_array($prior)?(float)$prior['best_score']:null,'score'=>$score];
-        },'SERIALIZABLE',true);
+        };
+        return $this->pdo->inTransaction()?$persist($this->pdo):Database::transaction($persist,'SERIALIZABLE',true);
     }
 
     private function master(array $actor):void{if(($actor['role']??'')!=='MasterAdmin')throw new RuntimeException('Master Admin authorization is required.');}
