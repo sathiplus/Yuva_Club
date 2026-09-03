@@ -89,6 +89,7 @@ require_once __DIR__ . '/backend/presentation-verification.php';
 require_once __DIR__ . '/backend/competition.php';
 require_once __DIR__ . '/backend/quick-challenge.php';
 require_once __DIR__ . '/backend/quick-challenge-evaluation.php';
+require_once __DIR__ . '/backend/growth-profile.php';
 require_once __DIR__ . '/backend/subscription-entitlement.php';
 
 function subscription_entitlement_service(): SubscriptionEntitlementService {
@@ -107,6 +108,10 @@ function quick_challenge_service(): QuickChallengeService {
 function quick_challenge_evaluation_service(?\YuvaClub\AI\AiProvider $provider=null): QuickChallengeEvaluationService {
     $provider??=new \YuvaClub\AI\OpenAiResponsesProvider(openai_api_key(),openai_model_name());
     return new QuickChallengeEvaluationService(Database::connection(),$provider,new \YuvaClub\AI\QuickChallengePromptCatalog(),new \YuvaClub\AI\QuickChallengeScoreValidator(),static fn(string $yuvaId,string $feature):bool=>subscription_entitlement_service()->hasFeature($yuvaId,$feature));
+}
+
+function growth_profile_service(): GrowthProfileService {
+    return new GrowthProfileService(Database::connection());
 }
 
 function e(string $value): string {

@@ -52,6 +52,7 @@ $quickChallenges=[];try{$quickChallenges=quick_challenge_service()->studentChall
 $quickChallengeAttempt=is_array($_SESSION['quick_challenge_attempt']??null)?$_SESSION['quick_challenge_attempt']:null;
 $quickChallengeSubmittedAttempt=(string)($_SESSION['quick_challenge_submitted_attempt']??'');
 $quickChallengeResults=[];try{$quickChallengeResults=quick_challenge_evaluation_service()->resultsForStudent($studentId);}catch(Throwable $error){error_log('YUVA student Quick Challenge results unavailable correlation='.bin2hex(random_bytes(12)).' exception_type='.get_class($error));}
+$growthProfile=null;try{$growthProfile=growth_profile_service()->forStudent($studentId);}catch(Throwable $error){error_log('YUVA student My Growth unavailable correlation='.bin2hex(random_bytes(12)).' exception_type='.get_class($error));}
 $competitionStudentNotice=(string)($_SESSION['competition_student_notice']??'');$competitionStudentError=(string)($_SESSION['competition_student_error']??'');unset($_SESSION['competition_student_notice'],$_SESSION['competition_student_error']);
 $subscriptionStatus=['plan_code'=>'free','display_name'=>'Free','source_type'=>'default','ends_at'=>null];try{$subscriptionStatus=subscription_entitlement_service()->resolve($studentId);}catch(Throwable $error){error_log('YUVA student subscription view unavailable correlation='.bin2hex(random_bytes(12)).' exception_type='.get_class($error));}
 $subscriptionStudentNotice=(string)($_SESSION['subscription_student_notice']??'');$subscriptionStudentError=(string)($_SESSION['subscription_student_error']??'');unset($_SESSION['subscription_student_notice'],$_SESSION['subscription_student_error']);
@@ -256,6 +257,7 @@ foreach ($studentAnnouncements as $announcement) {
 portal_header('Student Dashboard', true);
 ?>
 <main id="app-main" tabindex="-1">
+  <section class="band"><div class="form-card"><p class="eyebrow">My Growth</p><h2>See what your practice is building</h2><p><?php echo is_array($growthProfile)?e((string)$growthProfile['next_action']['text']):'Your private growth profile will be available after the next platform migration.'; ?></p><a class="button primary" href="my-growth.php">Open My Growth</a></div></section>
   <section class="band app-section" id="app-home" data-app-section="home">
     <?php
       $nameParts = preg_split('/\s+/', trim($name), -1, PREG_SPLIT_NO_EMPTY) ?: [];
