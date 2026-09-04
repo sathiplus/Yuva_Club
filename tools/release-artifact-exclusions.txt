@@ -5,8 +5,23 @@ submissions/
 
 # Repository and environment metadata
 .git/
+.github/
+.gitattributes
+.gitignore
 .env
 .env.*
+
+# Source-control-only quality, migration, and documentation material
+tests/
+tools/
+docs/
+database/
+README.md
+STUDENT_V1_RC1_TEST_PLAN.md
+AZURE_SQL_APP_SETTINGS.md
+build-site.ps1
+crop-topic-images.ps1
+serve-local.ps1
 
 # Private, temporary, review, and generated output
 artifacts/
