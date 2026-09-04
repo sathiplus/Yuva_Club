@@ -147,6 +147,23 @@ function m20_attempt(PDO $pdo,array $fixture,int $student,int $number,int $score
     return $attempt;
 }
 
+function m20_worker(string $yuva): int
+{
+    m20_assert(getenv('YUVA_INTEGRATION_TEST_MODE')==='1','Explicit integration-test flag is required.');
+    $pdo=Database::connection();$db=(string)$pdo->query('SELECT DB_NAME()')->fetchColumn();
+    m20_assert($db!=='yuva_club'&&hash_equals(M20_DB,$db),'Worker refused unexpected database.');
+    (new GrowthProfileService($pdo))->forStudent($yuva,true);
+    return 0;
+}
+
+function m20_concurrent_award(string $yuva): void
+{
+    $command=escapeshellarg(PHP_BINARY).' '.escapeshellarg(__FILE__).' '.escapeshellarg('--award-worker='.$yuva);
+    $spec=[0=>['pipe','r'],1=>['pipe','w'],2=>['pipe','w']];$workers=[];
+    for($i=0;$i<2;$i++){$pipes=[];$process=proc_open($command,$spec,$pipes,null,null);m20_assert(is_resource($process),'Concurrent award worker could not start.');fclose($pipes[0]);$workers[]=[$process,$pipes];}
+    foreach($workers as[$process,$pipes]){$stdout=stream_get_contents($pipes[1]);$stderr=stream_get_contents($pipes[2]);fclose($pipes[1]);fclose($pipes[2]);$status=proc_close($process);m20_assert($status===0,'Concurrent award worker failed: '.trim($stdout.' '.$stderr));}
+}
+
 function m20_main(): int
 {
     m20_assert(getenv('YUVA_INTEGRATION_TEST_MODE')==='1','Explicit integration-test flag is required.');
@@ -165,6 +182,21 @@ function m20_main(): int
         $emptyProfile=$service->forStudent($empty['yuva'],false);
         m20_assert($emptyProfile['trend']===[] && $emptyProfile['skills']===[] && $emptyProfile['summary']['challenges_completed']===0,'Honest empty state failed.');
         m20_assert(str_contains((string)$emptyProfile['next_action']['text'],'first Quick Challenge'),'Empty next action failed.');
+        $emptyAwarded=$service->forStudent($empty['yuva'],true);
+        m20_assert(count($emptyAwarded['achievements'])===0,'A Student below Speaker received a Leadership achievement.');
+
+        $speakerLevel=m20_id($pdo,"SELECT id FROM dbo.levels WHERE code=N'speaker'");
+        $speaker=m20_student($pdo,'SPEAKER',$speakerLevel);
+        $speakerProfile=$service->forStudent($speaker['yuva'],true);
+        $speakerCodes=array_column($speakerProfile['achievements'],'achievement_code');
+        m20_assert(in_array('speaker-level',$speakerCodes,true),'Canonical speaker code did not issue Speaker Level.');
+        m20_assert(!in_array('leader-level',$speakerCodes,true),'Speaker incorrectly received Leader Level.');
+        m20_assert(count($service->forStudent($speaker['yuva'],true)['achievements'])===1,'Speaker achievement was duplicated on refresh.');
+
+        $concurrent=m20_student($pdo,'CONCURRENT',$speakerLevel);
+        m20_concurrent_award($concurrent['yuva']);
+        $concurrentAwards=$pdo->prepare('SELECT COUNT_BIG(*) FROM dbo.student_achievements WHERE student_id=:student');$concurrentAwards->execute(['student'=>$concurrent['id']]);
+        m20_assert((int)$concurrentAwards->fetchColumn()===1,'Concurrent issuance did not produce exactly one achievement.');
 
         $student=m20_student($pdo,'FULL',$leader);
         $fixture=m20_challenge($pdo,$student['id'],$student['yuva']);
@@ -219,5 +251,6 @@ function m20_main(): int
     }
 }
 
+if(isset($argv[1])&&str_starts_with((string)$argv[1],'--award-worker=')){try{exit(m20_worker(substr((string)$argv[1],15)));}catch(Throwable $error){fwrite(STDERR,'worker failed'.PHP_EOL);exit(1);}}
 try { exit(m20_main()); }
 catch(Throwable $error){$category=$error instanceof PDOException?'PDO/'.(string)$error->getCode():$error::class;$message=$error instanceof PDOException?'A database operation failed.':preg_replace('/[\r\n\t]+/',' ',trim($error->getMessage()));fwrite(STDERR,'FAIL '.$category.': '.$message."\n");exit(1);}

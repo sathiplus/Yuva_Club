@@ -14,6 +14,9 @@ growth_check(str_contains($service,'forAdmin')&&str_contains($service,'Active sa
 growth_check(str_contains($service,'l.code leadership_level'),'Growth Profile must resolve the current Leadership level from dbo.levels.code while preserving the leadership_level result key.');
 growth_check(str_contains($service,"CONCAT(previous_level.code,N' to ',new_level.code)"),'Leadership activity labels must use the authoritative dbo.levels.code columns.');
 growth_check(!str_contains($service,'.level_code'),'Growth Profile must not reference the nonexistent dbo.levels.level_code column.');
+growth_check(str_contains($service,"strtolower(trim((string)(\$summary['leadership_level']??'')))"),'Leadership achievement predicates must normalize the authoritative code once.');
+growth_check(str_contains($service,"in_array(\$levelCode,['speaker','leader'],true)")&&str_contains($service,"\$levelCode==='leader'"),'Speaker and Leader achievement predicates must use canonical lowercase codes.');
+growth_check(!str_contains($service,"['Speaker','Leader']")&&!str_contains($service,"==='Leader'"),'Display-label casing must not control achievement issuance.');
 growth_check(str_contains($admin,'require_admin_post'),'Master corrective action must require authenticated CSRF-protected POST.');
 growth_check(str_contains($student,'Complete another compatible challenge')&&str_contains($student,'No Personal Best yet'),'Honest one-score/empty states missing.');
 growth_check(str_contains($parent,'forParent')&&str_contains($org,'forAdmin'),'Safe Parent and Organization summaries missing.');
