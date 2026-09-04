@@ -213,6 +213,19 @@ Score, judges, winners, leaderboards, or leadership promotion. The matching
 rollback is restricted to rehearsal/test databases and removes only Migration
 19 tables, guarded columns, and its feature rule.
 
+## Migration 20: My Growth achievement foundation
+
+`20-my-growth-achievements-phase2c2c.azure-sql.sql` adds only versioned
+achievement definitions, the deduplicated student achievement ledger, and its
+corrective-action audit. My Growth scores, compatible trends, Personal Bests,
+benchmarks, weekly consistency, recent activity, and beta metrics are derived
+from the authoritative Phase 1/2 records rather than copied into new history
+tables. One meaningful activity per ISO week qualifies for healthy consistency;
+logins, refreshes, and time-on-site never qualify.
+
+The matching rollback is rehearsal/test only and refuses to drop Migration 20
+while student achievement evidence remains.
+
 ## Validation
 
 Run the filesystem-only test:
