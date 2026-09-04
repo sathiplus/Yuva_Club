@@ -11,6 +11,9 @@ growth_check(str_contains($service,"WITH(UPDLOCK,HOLDLOCK)")&&str_contains($serv
 growth_check(str_contains($service,'uq_student_achievement_once')||str_contains($migration,'uq_student_achievement_once'),'Duplicate achievement prevention missing.');
 growth_check(str_contains($service,'forParent')&&str_contains($service,'authorizedChildren'),'Parent must use authoritative linked children.');
 growth_check(str_contains($service,'forAdmin')&&str_contains($service,'Active same-organization membership'),'Organization scope guard missing.');
+growth_check(str_contains($service,'l.code leadership_level'),'Growth Profile must resolve the current Leadership level from dbo.levels.code while preserving the leadership_level result key.');
+growth_check(str_contains($service,"CONCAT(previous_level.code,N' to ',new_level.code)"),'Leadership activity labels must use the authoritative dbo.levels.code columns.');
+growth_check(!str_contains($service,'.level_code'),'Growth Profile must not reference the nonexistent dbo.levels.level_code column.');
 growth_check(str_contains($admin,'require_admin_post'),'Master corrective action must require authenticated CSRF-protected POST.');
 growth_check(str_contains($student,'Complete another compatible challenge')&&str_contains($student,'No Personal Best yet'),'Honest one-score/empty states missing.');
 growth_check(str_contains($parent,'forParent')&&str_contains($org,'forAdmin'),'Safe Parent and Organization summaries missing.');
