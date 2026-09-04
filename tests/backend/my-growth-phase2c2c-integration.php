@@ -255,4 +255,4 @@ function m20_main(): int
 
 if(isset($argv[1])&&str_starts_with((string)$argv[1],'--award-worker=')){try{exit(m20_worker(substr((string)$argv[1],15)));}catch(Throwable $error){fwrite(STDERR,'worker failed'.PHP_EOL);exit(1);}}
 try { exit(m20_main()); }
-catch(Throwable $error){$category=$error instanceof PDOException?'PDO/'.(string)$error->getCode():$error::class;$message=$error instanceof PDOException?'A database operation failed.':preg_replace('/[\r\n\t]+/',' ',trim($error->getMessage()));fwrite(STDERR,'FAIL '.$category.': '.$message."\n");exit(1);}
+catch(Throwable $error){$category=$error instanceof PDOException?'PDO/'.(string)$error->getCode():$error::class;$message=preg_replace('/[\r\n\t]+/',' ',trim($error->getMessage()));fwrite(STDERR,'FAIL '.$category.': '.$message."\n");exit(1);}
