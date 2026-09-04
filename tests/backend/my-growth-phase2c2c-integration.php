@@ -90,6 +90,7 @@ function m20_cleanup(PDO $pdo): void
         $pdo->prepare('DELETE FROM dbo.users WHERE id=:id')->execute(['id'=>$row['id']]);
     }
     foreach ($userIds as $user) $pdo->prepare('DELETE FROM dbo.users WHERE id=:id')->execute(['id'=>$user]);
+    $pdo->prepare('DELETE FROM dbo.users WHERE email LIKE :marker')->execute(['marker'=>'p2c2c-m20-functional-%@example.test']);
     $competitions=$pdo->prepare('SELECT id FROM dbo.competitions WHERE created_by_email LIKE :marker');
     $competitions->execute(['marker'=>'p2c2c-m20-functional-%@example.test']);
     foreach (array_map('intval',$competitions->fetchAll(PDO::FETCH_COLUMN)) as $competition) {
