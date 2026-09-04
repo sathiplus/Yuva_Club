@@ -23,6 +23,16 @@
   --parent-ease: cubic-bezier(.2, .7, .2, 1);
 }
 
+.parent-experience .practice-result {
+  border-left: 5px solid var(--parent-purple);
+  background: #f8f5ff;
+}
+
+.parent-experience .official-result {
+  border: 2px solid var(--parent-navy);
+  background: #f4f7ff;
+}
+
 body:has(.parent-experience) {
   color: var(--parent-text);
   background:

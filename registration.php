@@ -3,6 +3,16 @@ declare(strict_types=1);
 
 require __DIR__ . '/portal-lib.php';
 
+if (!isset($_SESSION['beta_registration_started'])) {
+    try {
+        $_SESSION['beta_registration_funnel_id'] = random_int(1, PHP_INT_MAX);
+        log_beta_event('beta.registration_started', null, 'registration_funnel', (int) $_SESSION['beta_registration_funnel_id']);
+        $_SESSION['beta_registration_started'] = true;
+    } catch (Throwable $error) {
+        error_log('YUVA Beta registration measurement unavailable correlation=' . bin2hex(random_bytes(12)) . ' exception_type=' . get_class($error));
+    }
+}
+
 $status = $_GET['status'] ?? '';
 $studentId = $_GET['id'] ?? '';
 $registrationId = $_GET['registration'] ?? '';

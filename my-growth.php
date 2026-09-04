@@ -1,13 +1,14 @@
 <?php
 require __DIR__.'/portal-lib.php';
 $student=require_student();$studentId=(string)$student['Yuva Club ID'];$growth=null;
+try{$userId=(int)($_SESSION['student_user_id']??0);if($userId>0){log_beta_event('beta.my_growth_viewed',$userId,'student_account',$userId);}}catch(Throwable $error){error_log('YUVA Beta My Growth measurement unavailable correlation='.bin2hex(random_bytes(12)).' exception_type='.get_class($error));}
 try{$growth=growth_profile_service()->forStudent($studentId);}catch(Throwable $error){error_log('YUVA My Growth unavailable correlation='.bin2hex(random_bytes(12)).' exception_type='.get_class($error));}
 portal_header('My Growth',true);
 ?>
 <link rel="stylesheet" href="assets/my-growth.css?v=1">
 <main class="growth-page" id="my-growth-main">
   <a class="growth-back" href="portal.php">← Student dashboard</a>
-  <header class="growth-hero"><p class="eyebrow">My Growth</p><h1>See what practice is building.</h1><p>Your private progress profile uses completed, comparable YUVA Club activity—never screen time or login counts.</p></header>
+  <header class="growth-hero"><p class="eyebrow">My Growth</p><h1>See what practice is building.</h1><p>Your private progress profile uses completed, comparable YUVA Club activity—never screen time or login counts.</p><p><strong>Personal Best:</strong> Your highest score on comparable practice challenges. <strong>Benchmark:</strong> A private target set by YUVA—not another student’s score.</p></header>
   <?php if(!is_array($growth)): ?><section class="growth-empty"><h2>Growth is temporarily unavailable</h2><p>Your records are safe. Please try again later.</p></section>
   <?php else: $summary=$growth['summary']; ?>
   <section class="growth-metrics" aria-label="Growth summary">

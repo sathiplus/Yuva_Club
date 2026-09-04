@@ -92,6 +92,9 @@ body.student-app {
 
 /* Home dashboard */
 .student-app #app-home { max-width: 1280px; margin: 0 auto; }
+.student-app .practice-result { border-left: 5px solid #6d5ce7; background: #f7f5ff; }
+.student-app .practice-result > .eyebrow { color: #5140c7; }
+.student-app .home-growth-card { border-top: 4px solid #2f80ed; }
 .student-app .home-welcome { position: relative; min-height: 238px; display: flex; align-items: center; overflow: hidden; isolation: isolate; margin: 0 0 24px; padding: clamp(28px, 5vw, 48px); border-radius: 0 0 28px 28px; color: #fff; background: radial-gradient(circle at 78% 12%, rgba(48,105,255,.36), transparent 27%), radial-gradient(circle at 100% 100%, rgba(123,44,191,.28), transparent 35%), linear-gradient(135deg, #07163f 0%, #081b51 52%, #06123a 100%); box-shadow: 0 18px 42px rgba(7,22,63,.22); }
 .student-app .home-welcome::before { content: ""; position: absolute; z-index: -1; inset: auto -80px -130px auto; width: 330px; height: 330px; border: 1px solid rgba(255,255,255,.08); border-radius: 50%; box-shadow: 0 0 0 42px rgba(255,255,255,.018), 0 0 0 84px rgba(255,255,255,.012); }
 .student-app .home-welcome-copy { position: relative; z-index: 2; max-width: 620px; }

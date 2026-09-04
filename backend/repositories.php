@@ -914,3 +914,33 @@ function log_activity(?int $actorUserId, string $action, ?string $entityType = n
         $metadata
     );
 }
+
+/** Record a privacy-minimized, idempotent Beta funnel milestone. */
+function log_beta_event(
+    string $action,
+    ?int $actorUserId = null,
+    ?string $entityType = null,
+    ?int $entityId = null,
+    array $metadata = []
+): void {
+    if (!str_starts_with($action, 'beta.')) {
+        throw new InvalidArgumentException('Beta event names must use the beta namespace.');
+    }
+    $statement = db()->prepare(
+        'INSERT INTO activity_logs (actor_user_id, action, entity_type, entity_id, metadata, ip_address, user_agent)
+         SELECT :actor_user_id, :action, :entity_type, :entity_id, :metadata, NULL, NULL
+         WHERE NOT EXISTS (
+             SELECT 1 FROM activity_logs
+             WHERE action = :dedupe_action
+               AND ((actor_user_id = :dedupe_actor) OR (actor_user_id IS NULL AND :dedupe_actor_null IS NULL))
+               AND ((entity_type = :dedupe_type) OR (entity_type IS NULL AND :dedupe_type_null IS NULL))
+               AND ((entity_id = :dedupe_id) OR (entity_id IS NULL AND :dedupe_id_null IS NULL))
+         )'
+    );
+    $statement->execute([
+        'actor_user_id'=>$actorUserId,'action'=>$action,'entity_type'=>$entityType,'entity_id'=>$entityId,
+        'metadata'=>$metadata===[]?null:json_encode($metadata,JSON_THROW_ON_ERROR),
+        'dedupe_action'=>$action,'dedupe_actor'=>$actorUserId,'dedupe_actor_null'=>$actorUserId,
+        'dedupe_type'=>$entityType,'dedupe_type_null'=>$entityType,'dedupe_id'=>$entityId,'dedupe_id_null'=>$entityId,
+    ]);
+}

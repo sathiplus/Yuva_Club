@@ -417,6 +417,15 @@ if (!$storedInDatabase) {
     create_parent_account($parentEmail, $accountPassword, $studentId);
 }
 
+if ($storedInDatabase && is_numeric($registrationId)) {
+    try {
+        log_beta_event('beta.registration_completed', null, 'registration', (int) $registrationId);
+    } catch (Throwable $error) {
+        error_log('YUVA Beta registration completion measurement unavailable correlation=' . bin2hex(random_bytes(12)) . ' exception_type=' . get_class($error));
+    }
+}
+unset($_SESSION['beta_registration_started'], $_SESSION['beta_registration_funnel_id']);
+
 if ($notificationEmail !== '') {
     $registrationReference = $storedInDatabase ? ($studentId . ' / Registration #' . (string) $registrationId) : $studentId;
     $subject = "New Yuva Club Registration: $registrationReference";
