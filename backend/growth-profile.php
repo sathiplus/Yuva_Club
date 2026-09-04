@@ -29,7 +29,9 @@ final class GrowthProfileService
 
     public function forParent(array $parentSession,string $yuvaId):array
     {
-        $allowed=array_map(static fn(array $c):string=>strtoupper((string)($c['yuva_id']??'')),portal_parent_login_workflow()->authorizedChildren($parentSession));
+        $children=portal_parent_login_workflow()->authorizedChildren($parentSession);
+        if(!is_array($children))throw new RuntimeException('Linked Parent authorization is required.');
+        $allowed=array_map(static fn(array $c):string=>strtoupper((string)($c['yuva_id']??'')),$children);
         if(!in_array(strtoupper($yuvaId),$allowed,true))throw new RuntimeException('Linked Parent authorization is required.');
         return $this->forStudent($yuvaId);
     }

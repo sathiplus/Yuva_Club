@@ -10,6 +10,8 @@ growth_check(!str_contains($service,'generateStructuredReview')&&!str_contains($
 growth_check(str_contains($service,"WITH(UPDLOCK,HOLDLOCK)")&&str_contains($service,"'SERIALIZABLE'"),'Achievement issuance must be transaction-safe and idempotent.');
 growth_check(str_contains($service,'uq_student_achievement_once')||str_contains($migration,'uq_student_achievement_once'),'Duplicate achievement prevention missing.');
 growth_check(str_contains($service,'forParent')&&str_contains($service,'authorizedChildren'),'Parent must use authoritative linked children.');
+growth_check(str_contains($service,'if(!is_array($children))')&&str_contains($service,"throw new RuntimeException('Linked Parent authorization is required.')"),'Invalid Parent authorization results must fail closed before mapping.');
+growth_check(strpos($service,'if(!is_array($children))')<strpos($service,'array_map'),'Parent authorization must be validated before array_map.');
 growth_check(str_contains($service,'forAdmin')&&str_contains($service,'Active same-organization membership'),'Organization scope guard missing.');
 growth_check(str_contains($service,'l.code leadership_level'),'Growth Profile must resolve the current Leadership level from dbo.levels.code while preserving the leadership_level result key.');
 growth_check(str_contains($service,"CONCAT(previous_level.code,N' to ',new_level.code)"),'Leadership activity labels must use the authoritative dbo.levels.code columns.');

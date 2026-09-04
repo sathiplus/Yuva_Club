@@ -11,9 +11,8 @@ final class M20ParentGuard
     /** @param array<string,mixed> $session */
     public function authorizedChildren(array &$session): ?array
     {
-        return isset($session['allowed_yuva_id'])
-            ? [['yuva_id' => $session['allowed_yuva_id']]]
-            : null;
+        if(array_key_exists('authorized_children',$session))return is_array($session['authorized_children'])?$session['authorized_children']:null;
+        return isset($session['allowed_yuva_id'])?[['yuva_id'=>$session['allowed_yuva_id']]]:null;
     }
 }
 
@@ -225,7 +224,9 @@ function m20_main(): int
 
         $parentOk=['allowed_yuva_id'=>$student['yuva']];$parentBad=[];
         m20_assert($service->forParent($parentOk,$student['yuva'])['yuva_id']===$student['yuva'],'Linked Parent view failed.');
-        $denied=false;try{$service->forParent($parentBad,$student['yuva']);}catch(RuntimeException){$denied=true;}m20_assert($denied,'Unrelated Parent was not rejected.');
+        $denied=false;try{$service->forParent($parentBad,$student['yuva']);}catch(RuntimeException $error){$denied=$error->getMessage()==='Linked Parent authorization is required.'&&!str_contains($error->getMessage(),$student['yuva']);}m20_assert($denied,'Invalid Parent session was not rejected neutrally.');
+        $zero=['authorized_children'=>[]];$denied=false;try{$service->forParent($zero,$student['yuva']);}catch(RuntimeException $error){$denied=$error->getMessage()==='Linked Parent authorization is required.';}m20_assert($denied,'A valid zero-child authorization set did not remain empty.');
+        $unrelated=['authorized_children'=>[['yuva_id'=>M20_MARKER.'-OTHER']]];$denied=false;try{$service->forParent($unrelated,$student['yuva']);}catch(RuntimeException $error){$denied=$error->getMessage()==='Linked Parent authorization is required.';}m20_assert($denied,'Unrelated Parent was not rejected.');
         $membership=m20_id($pdo,"INSERT dbo.organization_student_membership_requests(organization_code,request_type,student_id,student_email_snapshot,student_email_normalized,invitation_purpose,[status],invited_by_email,expires_at) OUTPUT INSERTED.id VALUES(N'SYNTH-M20',N'LinkExisting',:student,N'synthetic@example.test',N'synthetic@example.test',N'Synthetic only',N'Active',N'p2c2c-m20-functional-admin@example.test',DATEADD(day,1,SYSUTCDATETIME()))",['student'=>$student['id']]);
         m20_assert($membership>0 && $service->forAdmin(['role'=>'OrganizationAdmin','organization_id'=>'SYNTH-M20'],$student['yuva'])['student_id']===$student['id'],'Same-organization authorization failed.');
         $denied=false;try{$service->forAdmin(['role'=>'OrganizationAdmin','organization_id'=>'OTHER'],$student['yuva']);}catch(RuntimeException){$denied=true;}m20_assert($denied,'Cross-organization access was not rejected.');
