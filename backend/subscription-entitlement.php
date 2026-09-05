@@ -1,5 +1,6 @@
 <?php
 declare(strict_types=1);
+require_once __DIR__.'/beta-invitation-email.php';
 
 final class SubscriptionEntitlementService {
     public function __construct(private PDO $db) {}
@@ -39,7 +40,47 @@ final class SubscriptionEntitlementService {
     public function issueInvitation(array $actor,string $campaignGuid,string $yuvaId): array {
         $this->master($actor);$student=$this->student($yuvaId);$raw='YUVA-BETA-'.strtoupper(bin2hex(random_bytes(12)));$hex=hash('sha256',$raw);
         $this->db->beginTransaction();try{$stmt=$this->db->prepare("SELECT id FROM dbo.promo_campaigns WITH(UPDLOCK,HOLDLOCK) WHERE campaign_guid=:guid AND status=N'active' AND starts_at<=SYSUTCDATETIME() AND (ends_at IS NULL OR ends_at>SYSUTCDATETIME())");$stmt->execute(['guid'=>$campaignGuid]);$campaignId=$stmt->fetchColumn();if(!$campaignId)throw new RuntimeException('Campaign unavailable.');
-            $stmt=$this->db->prepare("INSERT dbo.promo_invitations(campaign_id,intended_student_id,token_hash,code_hint,expires_at,created_by_email) VALUES(:campaign,:student,CONVERT(binary(32),:hash,2),:hint,DATEADD(hour,72,SYSUTCDATETIME()),:email)");$stmt->execute(['campaign'=>$campaignId,'student'=>$student['id'],'hash'=>$hex,'hint'=>substr($raw,-6),'email'=>strtolower((string)$actor['email'])]);$this->audit($actor,'InvitationIssued','student',$student['yuva_id'],true,['campaign_id'=>(int)$campaignId]);$this->db->commit();return ['invitation_code'=>$raw,'expires_in_hours'=>72];}catch(Throwable $e){if($this->db->inTransaction())$this->db->rollBack();throw $e;}
+            // The campaign lock serializes competing issuers. Even expired invites require
+            // explicit revocation before reissue; request retries must never send again.
+            $existing=$this->db->prepare("SELECT 1 FROM dbo.promo_invitations WHERE campaign_id=:campaign AND intended_student_id=:student AND revoked_at IS NULL");
+            $existing->execute(['campaign'=>$campaignId,'student'=>$student['id']]);
+            if($existing->fetchColumn())throw new RuntimeException('An invitation already exists. No email was sent. Revoke the unused invitation before reissuing.');
+            $recipient=$this->db->prepare("SELECT u.email FROM dbo.students s JOIN dbo.users u ON u.id=s.user_id WHERE s.id=:student AND u.status=N'active' AND s.approval_status=N'approved'");
+            $recipient->execute(['student'=>$student['id']]);$email=(string)$recipient->fetchColumn();
+            if(!filter_var($email,FILTER_VALIDATE_EMAIL))throw new RuntimeException('An active approved Student email is required.');
+            $stmt=$this->db->prepare("INSERT dbo.promo_invitations(campaign_id,intended_student_id,token_hash,code_hint,expires_at,created_by_email) OUTPUT CONVERT(nvarchar(36),INSERTED.invitation_guid) invitation_guid,INSERTED.expires_at VALUES(:campaign,:student,CONVERT(binary(32),:hash,2),:hint,DATEADD(hour,72,SYSUTCDATETIME()),:email)");$stmt->execute(['campaign'=>$campaignId,'student'=>$student['id'],'hash'=>$hex,'hint'=>substr($raw,-6),'email'=>strtolower((string)$actor['email'])]);$issued=$stmt->fetch(PDO::FETCH_ASSOC);$this->audit($actor,'InvitationIssued','student',$student['yuva_id'],true,['campaign_id'=>(int)$campaignId]);$this->db->commit();return ['invitation_code'=>$raw,'expires_in_hours'=>72,'expires_at'=>$issued['expires_at'],'invitation_guid'=>$issued['invitation_guid'],'recipient'=>$email];}catch(Throwable $e){if($this->db->inTransaction())$this->db->rollBack();throw $e;}
+    }
+
+    public function emailInvitation(array $actor,string $campaignGuid,string $yuvaId,?callable $mailer=null): array {
+        $this->master($actor);
+        $url=beta_invitation_redemption_url(); // Fail before issuing if canonical config is unsafe.
+        $issued=$this->issueInvitation($actor,$campaignGuid,$yuvaId);
+        $guid=(string)$issued['invitation_guid'];
+        $this->audit($actor,'InvitationEmailAttempted','invitation',$guid,true);
+        $sent=false;
+        try {
+            $message=beta_invitation_email($issued['invitation_code'],(string)$issued['expires_at'],$url);
+            $send=$mailer??static fn(string $to,string $subject,string $text,string $html):bool=>send_yuva_email($to,$subject,$text,'',$html);
+            $sent=$send($issued['recipient'],$message['subject'],$message['text'],$message['html'])===true;
+        } catch(Throwable $error) {
+            // Provider exception messages/arguments may contain mail content. Never log them.
+            $sent=false;
+        } finally { unset($issued,$message); }
+        $this->audit($actor,$sent?'InvitationEmailSucceeded':'InvitationEmailFailed','invitation',$guid,$sent);
+        // Provider acceptance is not proof of mailbox receipt. No code leaves this method.
+        return ['invitation_created'=>true,'email_accepted'=>$sent,'invitation_guid'=>$guid];
+    }
+
+    public function revokeInvitation(array $actor,string $guid):void {
+        $this->master($actor);
+        $this->db->beginTransaction();
+        try {
+            $stmt=$this->db->prepare("UPDATE dbo.promo_invitations SET revoked_at=SYSUTCDATETIME() WHERE invitation_guid=:guid AND used_at IS NULL AND revoked_at IS NULL");
+            $stmt->execute(['guid'=>$guid]);
+            if($stmt->rowCount()!==1)throw new RuntimeException('Only an unused, unrevoked invitation can be revoked.');
+            $this->audit($actor,'InvitationRevoked','invitation',$guid,true);
+            $this->db->commit();
+        }catch(Throwable $error){if($this->db->inTransaction())$this->db->rollBack();throw $error;}
     }
 
     public function redeem(string $yuvaId,string $rawToken): array {
