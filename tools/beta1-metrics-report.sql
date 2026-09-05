@@ -2,11 +2,29 @@
 DECLARE @campaign_code NVARCHAR(40)=N'YUVA-BETA-1';
 DECLARE @starts_at DATETIME2='2026-09-01T00:00:00';
 DECLARE @ends_at DATETIME2=DATEADD(day,30,@starts_at);
+DECLARE @report_at DATETIME2=SYSUTCDATETIME(); -- UTC observation cutoff (override for historical reports).
 
 WITH beta_students AS (
-  SELECT DISTINCT e.student_id
+  -- Redemption creates access with starts_at=SYSUTCDATETIME(); campaign starts_at
+  -- is only its availability schedule, and registration is not Beta activation.
+  -- Earliest grant for this campaign anchors one cohort per student, even after renewal/revocation.
+  SELECT e.student_id,MIN(e.starts_at) activated_at
   FROM dbo.student_entitlements e
   WHERE e.source_type=N'PREMIUM_BETA_PROMO' AND e.source_reference=@campaign_code
+  GROUP BY e.student_id
+), week2_eligible AS (
+  SELECT student_id,activated_at FROM beta_students
+  WHERE DATEADD(day,14,activated_at)<=@report_at
+), week2_returned AS (
+  -- Existing meaningful source: completed/submitted Quick Challenges, timed by
+  -- submitted_at, never a start, login, page view, or calendar-week transition.
+  SELECT b.student_id FROM week2_eligible b
+  WHERE EXISTS (
+    SELECT 1 FROM dbo.quick_challenge_attempts a
+    WHERE a.student_id=b.student_id AND a.[status]=N'Submitted'
+      AND a.submitted_at>=DATEADD(day,7,b.activated_at)
+      AND a.submitted_at<DATEADD(day,14,b.activated_at)
+  )
 ), attempts AS (
   SELECT a.student_id,a.[status],a.started_at,a.submitted_at,
          ROW_NUMBER() OVER(PARTITION BY a.student_id ORDER BY a.started_at,a.id) student_attempt_number
@@ -14,8 +32,7 @@ WITH beta_students AS (
   WHERE a.started_at>=@starts_at AND a.started_at<@ends_at
 ), attempt_totals AS (
   SELECT student_id,COUNT(*) attempt_count,
-         MAX(CASE WHEN [status]=N'Submitted' THEN 1 ELSE 0 END) completed,
-         COUNT(DISTINCT CONCAT(YEAR(started_at),N'-',DATEPART(isowk,started_at))) active_weeks
+         MAX(CASE WHEN [status]=N'Submitted' THEN 1 ELSE 0 END) completed
   FROM attempts GROUP BY student_id
 ), scored AS (
   SELECT e.student_id,e.template_version_id,e.total_score,e.benchmark_score,e.completed_at,
@@ -41,7 +58,8 @@ WITH beta_students AS (
     (SELECT COUNT(*) FROM per_student WHERE scored_attempts>=2 AND improved=1) improved_students,
     (SELECT COUNT(DISTINCT pb.student_id) FROM dbo.student_challenge_personal_bests pb JOIN beta_students b ON b.student_id=pb.student_id WHERE pb.achieved_at>=@starts_at AND pb.achieved_at<@ends_at) personal_best_students,
     (SELECT COUNT(*) FROM per_student WHERE beat_benchmark=1) benchmark_students,
-    (SELECT COUNT(*) FROM attempt_totals WHERE active_weeks>=2) week2_students,
+    (SELECT COUNT(*) FROM week2_returned) week2_students,
+    (SELECT COUNT(*) FROM week2_eligible) week2_eligible_students,
     (SELECT COUNT(DISTINCT l.actor_user_id) FROM dbo.activity_logs l JOIN dbo.students s ON s.user_id=l.actor_user_id JOIN beta_students b ON b.student_id=s.id WHERE l.action=N'beta.ai_mentor_used' AND l.created_at>=@starts_at AND l.created_at<@ends_at) ai_mentor_students,
     (SELECT COUNT(DISTINCT l.actor_user_id) FROM dbo.activity_logs l JOIN dbo.students s ON s.user_id=l.actor_user_id JOIN beta_students b ON b.student_id=s.id WHERE l.action=N'beta.my_growth_viewed' AND l.created_at>=@starts_at AND l.created_at<@ends_at) my_growth_students
 )
@@ -55,7 +73,7 @@ SELECT *,
   CAST(100.0*improved_students/NULLIF(repeated_students,0) AS DECIMAL(5,1)) improvement_after_repeat_pct,
   CAST(100.0*personal_best_students/NULLIF(scored_students,0) AS DECIMAL(5,1)) personal_best_pct,
   CAST(100.0*benchmark_students/NULLIF(scored_students,0) AS DECIMAL(5,1)) benchmark_beat_pct,
-  CAST(100.0*week2_students/NULLIF(activated_students,0) AS DECIMAL(5,1)) week2_return_pct,
+  CAST(100.0*week2_students/NULLIF(week2_eligible_students,0) AS DECIMAL(5,1)) week2_return_pct,
   CAST(100.0*ai_mentor_students/NULLIF(activated_students,0) AS DECIMAL(5,1)) ai_mentor_usage_pct,
   CAST(100.0*my_growth_students/NULLIF(activated_students,0) AS DECIMAL(5,1)) my_growth_usage_pct
 FROM totals;
