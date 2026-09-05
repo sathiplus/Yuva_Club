@@ -14,6 +14,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     );
 
     if ($result['authenticated'] === true) {
+        try {
+            $userId = (int) ($_SESSION['student_user_id'] ?? 0);
+            if ($userId > 0) {
+                log_beta_event('beta.first_login', $userId, 'student_account', $userId);
+            }
+        } catch (Throwable $error) {
+            error_log('YUVA Beta login measurement unavailable correlation=' . bin2hex(random_bytes(12)) . ' exception_type=' . get_class($error));
+        }
         $studentId = normalize_yuva_id((string) ($_SESSION['student_id'] ?? ''));
         if (student_identity_onboarding_required($studentId)) {
             redirect_to('student-identity-onboarding.php');

@@ -10,6 +10,10 @@ $research = $researchAll[$studentId] ?? null;
 $record = student_record($studentId);
 $topics = yuva_topic_categories();
 $status = $_GET['status'] ?? '';
+$studentUserId=(int)($_SESSION['student_user_id']??0);
+if(($_GET['view']??'')==='ai-mentor'&&$studentUserId>0){
+    try{log_beta_event('beta.ai_mentor_used',$studentUserId,'student_account',$studentUserId);}catch(Throwable $error){error_log('YUVA Beta AI Mentor measurement unavailable correlation='.bin2hex(random_bytes(12)).' exception_type='.get_class($error));}
+}
 $hub = hub_settings();
 $studentGroup = student_program_group($student);
 $session = group_session($hub, $studentGroup);
@@ -49,6 +53,7 @@ $leadershipNotice=(string)($_SESSION['leadership_notice']??'');$leadershipError=
 $availableChallenges=[];$challengeEntries=[];
 try{$availableChallenges=competition_foundation_service()->availableForStudent($studentId);$challengeEntries=competition_foundation_service()->entriesForStudent($studentId);}catch(Throwable $error){error_log('YUVA student challenges unavailable correlation='.bin2hex(random_bytes(12)).' exception_type='.get_class($error));}
 $quickChallenges=[];try{$quickChallenges=quick_challenge_service()->studentChallenges($studentId);}catch(Throwable $error){error_log('YUVA student quick challenges unavailable correlation='.bin2hex(random_bytes(12)).' exception_type='.get_class($error));}
+$recommendedChallenge=$quickChallenges[0]??null;
 $quickChallengeAttempt=is_array($_SESSION['quick_challenge_attempt']??null)?$_SESSION['quick_challenge_attempt']:null;
 $quickChallengeSubmittedAttempt=(string)($_SESSION['quick_challenge_submitted_attempt']??'');
 $quickChallengeResults=[];try{$quickChallengeResults=quick_challenge_evaluation_service()->resultsForStudent($studentId);}catch(Throwable $error){error_log('YUVA student Quick Challenge results unavailable correlation='.bin2hex(random_bytes(12)).' exception_type='.get_class($error));}
@@ -211,7 +216,7 @@ if ($aiReviewState === 'approved') {
         'eyebrow' => 'AI Mentor',
         'title' => 'Your approved guidance is ready',
         'body' => $aiMentorSummary !== '' ? $aiMentorSummary : 'Your administrator-approved review is ready to read.',
-        'href' => '#app-ai-coach',
+        'href' => 'portal.php?view=ai-mentor#app-ai-coach',
         'action' => 'Read guidance',
     ];
 } elseif ($aiReviewState === 'awaiting-approval') {
@@ -220,7 +225,7 @@ if ($aiReviewState === 'approved') {
         'eyebrow' => 'Review status',
         'title' => 'Your guidance is awaiting approval',
         'body' => 'Your latest review remains private while a YUVA Club administrator checks it.',
-        'href' => '#app-ai-coach',
+        'href' => 'portal.php?view=ai-mentor#app-ai-coach',
         'action' => 'View status',
     ];
 } elseif ($research !== null) {
@@ -257,7 +262,6 @@ foreach ($studentAnnouncements as $announcement) {
 portal_header('Student Dashboard', true);
 ?>
 <main id="app-main" tabindex="-1">
-  <section class="band"><div class="form-card"><p class="eyebrow">My Growth</p><h2>See what your practice is building</h2><p><?php echo is_array($growthProfile)?e((string)$growthProfile['next_action']['text']):'Your private growth profile will be available after the next platform migration.'; ?></p><a class="button primary" href="my-growth.php">Open My Growth</a></div></section>
   <section class="band app-section" id="app-home" data-app-section="home">
     <?php
       $nameParts = preg_split('/\s+/', trim($name), -1, PREG_SPLIT_NO_EMPTY) ?: [];
@@ -308,19 +312,38 @@ portal_header('Student Dashboard', true);
     <?php if ($status === 'error'): ?><div class="form-status error" role="alert">Please complete all required fields.</div><?php endif; ?>
     <?php if ($status === 'certificate-not-ready'): ?><div class="form-status" role="status" aria-live="polite">Your certificate is not available yet. It will open after your progress is reviewed and the certificate is marked ready.</div><?php endif; ?>
 
-    <div class="home-metrics" aria-label="Student achievements">
-      <div class="home-metric"><span>Points</span><strong><?php echo e((string) $points); ?></strong></div>
-      <div class="home-metric"><span>Tokens</span><strong><?php echo e((string) $tokens); ?></strong></div>
-      <div class="home-metric"><span>Leadership level</span><strong><?php echo e($level); ?></strong></div>
-      <div class="home-metric"><span>Streak</span><strong>Not tracked yet</strong></div>
-    </div>
-
     <div class="home-dashboard-grid">
       <div class="form-card next-action-card home-card-wide">
-        <p class="eyebrow">Today’s Mission</p>
-        <h2><?php echo e($nextAction['title']); ?></h2>
-        <p><?php echo e($nextAction['body']); ?></p>
-        <a class="button primary" href="<?php echo e($nextAction['href']); ?>"><?php echo e($nextAction['button']); ?></a>
+        <p class="eyebrow">Today’s Challenge</p>
+        <?php if(is_array($recommendedChallenge)): ?>
+          <h2><?php echo e((string)$recommendedChallenge['title']); ?></h2>
+          <p><?php echo e((string)$recommendedChallenge['template_name']); ?> · <?php echo e((string)$recommendedChallenge['difficulty']); ?> · <?php echo e((string)(ceil(((int)$recommendedChallenge['preparation_seconds']+(int)$recommendedChallenge['response_seconds'])/60))); ?> min</p>
+          <p><?php echo e((string)$recommendedChallenge['description']); ?></p>
+          <a class="button primary" href="#app-challenges">Start Challenge</a>
+        <?php else: ?>
+          <h2><?php echo e($nextAction['title']); ?></h2>
+          <p><?php echo e($nextAction['body']); ?></p>
+          <a class="button primary" href="<?php echo e($nextAction['href']); ?>"><?php echo e($nextAction['button']); ?></a>
+        <?php endif; ?>
+        <a class="button ghost" href="portal.php?view=ai-mentor#app-ai-coach">Practice With AI</a>
+      </div>
+
+      <div class="form-card home-card-wide home-growth-card">
+        <p class="eyebrow">My Growth</p><h2>See what your practice is building</h2>
+        <p><?php echo is_array($growthProfile)?e((string)$growthProfile['next_action']['text']):'Complete a Quick Challenge to begin your private growth profile.'; ?></p>
+        <p class="form-note"><strong>Personal Best:</strong> Your highest score on comparable practice challenges. <strong>Benchmark:</strong> A private target set by YUVA—not another student’s score.</p>
+        <a class="button primary" href="my-growth.php">Open My Growth</a>
+      </div>
+
+      <div class="form-card home-mentor-card home-card-wide">
+        <span class="home-mentor-mark" aria-hidden="true"><?php echo student_app_icon('sparkles'); ?></span>
+        <div><p class="eyebrow">AI Mentor</p><h2><?php echo $aiReviewState === 'approved' ? 'Your approved guidance' : 'A thoughtful next step'; ?></h2><p><?php echo e($homeMentorMessage); ?></p><a class="button ghost" href="portal.php?view=ai-mentor#app-ai-coach"><?php echo $aiReviewState === 'approved' ? 'Read approved guidance' : 'View mentor status'; ?></a></div>
+      </div>
+
+      <div class="form-card home-progress-card home-card-wide">
+        <p class="eyebrow">Leadership Journey</p><h2><?php echo e($level); ?></h2>
+        <p><?php echo e(match(strtolower($level)){'speaker'=>'Build confidence through verified presentations and practice.','leader'=>'Use your growing skills to contribute and lead.','mentor'=>'Help others grow through experience and service.',default=>'Discover and begin building your voice.'}); ?></p>
+        <a class="button ghost" href="#app-progress">View your journey</a>
       </div>
 
       <div class="form-card home-quick-access">
@@ -341,28 +364,6 @@ portal_header('Student Dashboard', true);
         <p><?php echo e($homeSessionStart ?: '--:--'); ?> - <?php echo e($homeSessionEnd ?: '--:--'); ?></p>
         <p class="home-status"><span>Status</span><?php echo e($homeSessionStatus); ?></p>
         <a class="button ghost" href="#app-present">View session</a>
-      </div>
-
-      <div class="form-card home-progress-card">
-        <p class="eyebrow">Leadership Journey</p>
-        <h2><?php echo e($challengeStage); ?></h2>
-        <div class="home-progress-list">
-          <p><span>Presentations</span><strong><?php echo e($record['presentations'] ?? '0'); ?></strong></p>
-          <p><span>Attendance</span><strong><?php echo e($record['attendance'] ?? '0'); ?> sessions</strong></p>
-          <p><span>Service hours</span><strong><?php echo e($record['service_hours'] ?? '0'); ?> hours</strong></p>
-          <p><span>Rubric score</span><strong><?php echo e((string) $rubricScore); ?> / 100</strong></p>
-        </div>
-        <a class="button ghost" href="#app-progress">View your journey</a>
-      </div>
-
-      <div class="form-card home-mentor-card">
-        <span class="home-mentor-mark" aria-hidden="true"><?php echo student_app_icon('sparkles'); ?></span>
-        <div>
-          <p class="eyebrow">AI Mentor</p>
-          <h2><?php echo $aiReviewState === 'approved' ? 'Your approved guidance' : 'A thoughtful next step'; ?></h2>
-          <p><?php echo e($homeMentorMessage); ?></p>
-          <a class="button ghost" href="#app-ai-coach"><?php echo $aiReviewState === 'approved' ? 'Read approved guidance' : 'View mentor status'; ?></a>
-        </div>
       </div>
 
       <div class="form-card home-achievement-card">
@@ -394,6 +395,12 @@ portal_header('Student Dashboard', true);
           <p>You’re all caught up. Approved club announcements will appear here.</p>
         <?php endif; ?>
         <a class="button ghost" href="#app-notifications">View notifications</a>
+      </div>
+
+      <div class="home-metrics home-card-wide" aria-label="Additional student progress">
+        <div class="home-metric"><span>Points</span><strong><?php echo e((string)$points); ?></strong></div>
+        <div class="home-metric"><span>Tokens</span><strong><?php echo e((string)$tokens); ?></strong></div>
+        <div class="home-metric"><span>Verified presentations</span><strong><?php echo e($record['presentations']??'0'); ?></strong></div>
       </div>
     </div>
   </section>
@@ -1144,7 +1151,7 @@ portal_header('Student Dashboard', true);
         <h2 id="practice-submission-status-title"><?php echo e($submissionPresentation['title']); ?></h2>
         <p><?php echo e($submissionPresentation['body']); ?></p>
       </div>
-      <?php if ($submissionState === \YuvaClub\Submission\ResearchSubmissionState::REVIEW_APPROVED): ?><a class="button ghost" href="#app-ai-coach">Open AI Mentor</a>
+      <?php if ($submissionState === \YuvaClub\Submission\ResearchSubmissionState::REVIEW_APPROVED): ?><a class="button ghost" href="portal.php?view=ai-mentor#app-ai-coach">Open AI Mentor</a>
       <?php elseif ($submissionState !== \YuvaClub\Submission\ResearchSubmissionState::SUBMISSION_RECEIVED && $submissionState !== \YuvaClub\Submission\ResearchSubmissionState::REVIEW_NOT_STARTED && $submissionState !== \YuvaClub\Submission\ResearchSubmissionState::REVIEW_PROCESSING && $submissionState !== \YuvaClub\Submission\ResearchSubmissionState::REVIEW_PENDING_APPROVAL): ?><a class="button ghost" href="#research-submission">Review Submission</a><?php endif; ?>
     </article>
 
@@ -1264,7 +1271,7 @@ portal_header('Student Dashboard', true);
     <?php if($competitionStudentError!==''): ?><div class="form-status error" role="alert"><?php echo e($competitionStudentError); ?></div><?php endif; ?>
     <?php if($quickChallengeAttempt!==null): ?><article class="form-card" id="quick-challenge-attempt"><p class="eyebrow">Attempt <?php echo e((string)$quickChallengeAttempt['attempt_number']); ?> · Server timed</p><h3><?php echo e((string)$quickChallengeAttempt['prompt']); ?></h3><p>Preparation ends: <?php echo e((string)$quickChallengeAttempt['started_at']); ?><br>Response deadline: <?php echo e((string)$quickChallengeAttempt['response_deadline_at']); ?></p><form action="student-quick-challenge-submit.php" method="post"><?php echo csrf_field(); ?><input type="hidden" name="attempt_guid" value="<?php echo e((string)$quickChallengeAttempt['attempt_guid']); ?>"><input type="hidden" name="row_version" value="<?php echo e((string)$quickChallengeAttempt['row_version']); ?>"><label>Your response<textarea name="response_text" maxlength="12000" required></textarea></label><button class="button primary" type="submit">Submit Attempt</button></form></article><?php endif; ?>
     <?php if($quickChallengeSubmittedAttempt!==''): ?><article class="form-card"><p class="eyebrow">AI Mentor Practice Coaching</p><h3>Analyze your locked attempt</h3><p>Your immutable submitted response will be evaluated once. Refreshing will not create another AI call.</p><form action="student-quick-challenge-analyze.php" method="post"><?php echo csrf_field(); ?><input type="hidden" name="attempt_guid" value="<?php echo e($quickChallengeSubmittedAttempt); ?>"><button class="button primary" type="submit">Analyze My Challenge</button></form></article><?php endif; ?>
-    <?php foreach($quickChallengeResults as$result): if(($result['status']??'')!=='Completed')continue; $gap=(int)$result['total_score']-(int)$result['benchmark_score']; ?><article class="form-card quick-challenge-result"><p class="eyebrow">Your Result · Practice Score</p><h3><?php echo e((string)$result['display_name']); ?></h3><p><strong><?php echo e((string)$result['total_score']); ?> / 100</strong> · Personal Best <?php echo e((string)($result['best_score']??$result['total_score'])); ?></p><p><strong><?php echo e((string)$result['benchmark_label']); ?>: <?php echo e((string)$result['benchmark_score']); ?></strong><br><?php echo $gap>=0?'🏆 Benchmark Beaten':e((string)abs($gap)).' points to go'; ?></p><?php foreach($result['components'] as$component): ?><p><?php echo e((string)$component['dimension']); ?> <strong><?php echo e((string)$component['score']); ?></strong></p><?php endforeach; ?><h4>What You Did Well</h4><ul><?php foreach(($result['coaching']['strengths']??[]) as$item): ?><li><?php echo e((string)$item); ?></li><?php endforeach; ?></ul><h4>Try Next</h4><ul><?php foreach(($result['coaching']['improvements']??[]) as$item): ?><li><?php echo e((string)$item); ?></li><?php endforeach; ?></ul><p><strong>Practice Mission:</strong> <?php echo e((string)($result['coaching']['practice_mission']??'')); ?></p></article><?php endforeach; ?>
+    <?php foreach($quickChallengeResults as$result): if(($result['status']??'')!=='Completed')continue; $gap=(int)$result['total_score']-(int)$result['benchmark_score']; ?><article class="form-card quick-challenge-result practice-result"><p class="eyebrow">AI Practice Score</p><p class="form-note">AI coaching score for practice. It is not an official competition score.</p><h3><?php echo e((string)$result['display_name']); ?></h3><p><strong><?php echo e((string)$result['total_score']); ?> / 100</strong> · Personal Best <?php echo e((string)($result['best_score']??$result['total_score'])); ?></p><p class="form-note">Your highest score on comparable practice challenges.</p><p><strong><?php echo e((string)$result['benchmark_label']); ?>: <?php echo e((string)$result['benchmark_score']); ?></strong><br><?php echo $gap>=0?'🏆 Benchmark Beaten':e((string)abs($gap)).' points to go'; ?></p><p class="form-note">A private target set by YUVA—not another student’s score.</p><?php foreach($result['components'] as$component): ?><p><?php echo e((string)$component['dimension']); ?> <strong><?php echo e((string)$component['score']); ?></strong></p><?php endforeach; ?><h4>What You Did Well</h4><ul><?php foreach(($result['coaching']['strengths']??[]) as$item): ?><li><?php echo e((string)$item); ?></li><?php endforeach; ?></ul><h4>Try Next</h4><ul><?php foreach(($result['coaching']['improvements']??[]) as$item): ?><li><?php echo e((string)$item); ?></li><?php endforeach; ?></ul><p><strong>Practice Mission:</strong> <?php echo e((string)($result['coaching']['practice_mission']??'')); ?></p></article><?php endforeach; ?>
     <div class="three-grid">
     <?php foreach($quickChallenges as$challenge): ?><article class="form-card"><p class="eyebrow"><?php echo e((string)$challenge['experience_mode']); ?> · <?php echo e((string)$challenge['difficulty']); ?></p><h3><?php echo e((string)$challenge['title']); ?></h3><p><?php echo e((string)$challenge['description']); ?></p><p><strong>Prompt:</strong> <?php echo e((string)$challenge['prompt_text']); ?></p><p><?php echo e((string)$challenge['division_name']); ?> · Preparation <?php echo e((string)$challenge['preparation_seconds']); ?>s · Response <?php echo e((string)$challenge['response_seconds']); ?>s<br>Attempts: <?php echo e((string)($challenge['attempt_count']??0)); ?>/<?php echo e((string)$challenge['maximum_attempts']); ?> · Deadline <?php echo e((string)$challenge['submission_deadline']); ?> UTC</p><?php if($challenge['best_score']!==null): ?><p><strong>Personal best: <?php echo e((string)$challenge['best_score']); ?></strong><br><small>Score version <?php echo e((string)$challenge['score_version']); ?></small></p><?php endif; ?><?php if($challenge['status']==='Open'&&(int)($challenge['attempt_count']??0)<(int)$challenge['maximum_attempts']): ?><form action="student-quick-challenge-start.php" method="post"><?php echo csrf_field(); ?><input type="hidden" name="competition_guid" value="<?php echo e((string)$challenge['competition_guid']); ?>"><input type="hidden" name="competition_division_id" value="<?php echo e((string)$challenge['competition_division_id']); ?>"><button class="button primary" type="submit">Start Challenge</button></form><?php endif; ?></article><?php endforeach; ?>
     <?php if($quickChallenges===[]): ?><div class="form-card"><p>No Quick Challenges are available right now.</p></div><?php endif; ?>
@@ -1343,7 +1350,7 @@ portal_header('Student Dashboard', true);
   </section>
 
   <section class="band app-section" id="app-subscription" data-app-section="profile" aria-labelledby="subscription-status-title">
-    <div class="form-card" id="subscription-status"><p class="eyebrow">Membership plan</p><h2 id="subscription-status-title"><?php echo e((string)$subscriptionStatus['display_name']); ?></h2><?php if($subscriptionStatus['source_type']==='PREMIUM_BETA_PROMO'): ?><p>YUVA Beta Program<?php if($subscriptionStatus['ends_at']!==null): ?><br>Valid until: <?php echo e((string)$subscriptionStatus['ends_at']); ?> UTC<?php endif; ?></p><?php endif; ?><p>Your plan status is private account information. Current YUVA learning and AI Mentor behavior is unchanged in this foundation release.</p><?php if($subscriptionStudentNotice!==''): ?><div class="form-status success"><?php echo e($subscriptionStudentNotice); ?></div><?php endif; ?><?php if($subscriptionStudentError!==''): ?><div class="form-status error"><?php echo e($subscriptionStudentError); ?></div><?php endif; ?><form action="student-promo-redeem.php" method="post"><?php echo csrf_field(); ?><label>Premium beta invitation code<input name="invitation_code" autocomplete="off" maxlength="64" required></label><button class="button primary">Redeem invitation</button></form></div>
+    <div class="form-card" id="subscription-status"><p class="eyebrow">Membership plan</p><h2 id="subscription-status-title"><?php echo e((string)$subscriptionStatus['display_name']); ?></h2><p class="form-note">Premium gives access to additional AI Mentor coaching and advanced features.</p><?php if($subscriptionStatus['source_type']==='PREMIUM_BETA_PROMO'): ?><p>YUVA Beta Program<?php if($subscriptionStatus['ends_at']!==null): ?><br>Valid until: <?php echo e((string)$subscriptionStatus['ends_at']); ?> UTC<?php endif; ?></p><?php endif; ?><p>Your plan status is private account information. Current YUVA learning and AI Mentor behavior is unchanged in this foundation release.</p><?php if($subscriptionStudentNotice!==''): ?><div class="form-status success"><?php echo e($subscriptionStudentNotice); ?></div><?php endif; ?><?php if($subscriptionStudentError!==''): ?><div class="form-status error"><?php echo e($subscriptionStudentError); ?></div><?php endif; ?><form action="student-promo-redeem.php" method="post"><?php echo csrf_field(); ?><label>Premium beta invitation code<input name="invitation_code" autocomplete="off" maxlength="64" required></label><button class="button primary">Redeem invitation</button></form></div>
   </section>
 </main>
 <script>

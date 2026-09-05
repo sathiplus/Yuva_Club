@@ -11,6 +11,7 @@ on:
       - "tests/backend/*login-integration.php"
       - "tests/backend/sqlsrv-integration-*.php"
       - "tools/bootstrap-sqlsrv-integration.php"
+      - "tools/beta1-metrics-report.sql"
   push:
     branches: [main]
     paths:
@@ -22,6 +23,7 @@ on:
       - "tests/backend/*login-integration.php"
       - "tests/backend/sqlsrv-integration-*.php"
       - "tools/bootstrap-sqlsrv-integration.php"
+      - "tools/beta1-metrics-report.sql"
   workflow_dispatch:
 
 permissions:
@@ -93,6 +95,7 @@ jobs:
           php tests/backend/student-login-integration.php
           php tests/backend/parent-login-integration.php
           php tests/backend/parent-credential-integration.php
+          php tests/backend/sqlsrv-integration-week2.php
           php tests/backend/sqlsrv-integration-residue.php
       - name: Run isolated backend regression suite
         shell: bash

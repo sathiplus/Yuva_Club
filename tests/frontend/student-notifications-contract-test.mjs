@@ -29,9 +29,10 @@ for (const [needle, label] of [
   assert.ok(portal.includes(needle), `Notifications use ${label}`);
 }
 
-for (const route of ['#app-present', '#app-ai-coach', '#research-submission', '#app-achievements', '#announcements']) {
+for (const route of ['#app-present', '#research-submission', '#app-achievements', '#announcements']) {
   assert.ok(portal.includes(`'href' => '${route}'`), `Notification action preserves ${route}`);
 }
+assert.ok(portal.includes("'href' => 'portal.php?view=ai-mentor#app-ai-coach'"), 'AI Mentor notification preserves its anchor and records the beta view');
 
 assert.ok(portal.includes('href="#app-notifications" aria-label="Open student notifications"'), 'Home bell opens Notifications');
 assert.ok(notifications.includes('role="status" aria-live="polite"'), 'Notification count is announced accessibly');
