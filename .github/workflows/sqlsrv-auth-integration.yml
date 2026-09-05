@@ -6,6 +6,8 @@ on:
       - ".github/workflows/sqlsrv-auth-integration.yml"
       - "backend/authentication/**"
       - "backend/database.php"
+      - "backend/subscription-entitlement.php"
+      - "backend/beta-invitation-email.php"
       - "backend/repositories.php"
       - "database/**"
       - "tests/backend/*login-integration.php"
@@ -18,6 +20,8 @@ on:
       - ".github/workflows/sqlsrv-auth-integration.yml"
       - "backend/authentication/**"
       - "backend/database.php"
+      - "backend/subscription-entitlement.php"
+      - "backend/beta-invitation-email.php"
       - "backend/repositories.php"
       - "database/**"
       - "tests/backend/*login-integration.php"
@@ -96,6 +100,12 @@ jobs:
           php tests/backend/parent-login-integration.php
           php tests/backend/parent-credential-integration.php
           php tests/backend/sqlsrv-integration-week2.php
+          php tests/backend/sqlsrv-integration-invitation-email.php
+          set +e
+          php tests/backend/sqlsrv-integration-invitation-email.php failure
+          invitation_failure_status=$?
+          set -e
+          test "$invitation_failure_status" -eq 17
           php tests/backend/sqlsrv-integration-residue.php
       - name: Run isolated backend regression suite
         shell: bash
