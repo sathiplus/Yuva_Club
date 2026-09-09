@@ -1,31 +1,30 @@
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
-
-const root = new URL('../../', import.meta.url);
-const sw = await readFile(new URL('service-worker.js', root), 'utf8');
-const app = await readFile(new URL('assets/app.js', root), 'utf8');
-
-assert.ok(sw.includes("const CACHE_NAME = 'yuva-club-demo-request-v2'"), 'Cache name must invalidate the stale demo-request cache');
-assert.ok(app.includes("serviceWorker.register('/service-worker.js?v=16')"), 'Service-worker registration must request the cache hotfix version');
-assert.ok(sw.includes('/assets/site.css?v=release-1.0.2-20260802'), 'service worker must precache versioned site.css');
-assert.ok(sw.includes('/assets/public-site.css?v=release-1.0.2-20260802'), 'service worker must precache versioned public-site.css');
-assert.ok(sw.includes('/assets/app.js?v=demo-request-v2'), 'service worker must precache the cache-hotfix app.js version');
-assert.ok(!sw.includes('/assets/site.css?v=20260714-pwa-install-icon'), 'stale versioned site.css URL should be removed');
-assert.ok(!sw.includes('/assets/app.js?v=20260714-pwa-install-icon'), 'stale versioned app.js URL should be removed');
-assert.ok(!sw.includes('yuva-club-app-v14'), 'old cache name should be removed');
-assert.ok(sw.includes('if (isNavigationRequest || isHtml)'), 'HTML and navigation must keep network-first behavior');
-assert.ok(sw.includes("{ cache: 'reload' }"), 'HTML refreshes must bypass the browser HTTP cache');
-assert.ok(sw.includes('if (isPhpRequest)'), 'php requests must stay network-only');
-assert.ok(sw.indexOf('if (isPhpRequest)') < sw.indexOf('if (isNavigationRequest || isHtml)'), 'PHP must bypass navigation caching');
-assert.ok(sw.includes('if (response && response.ok)'), 'successful network responses must be required before caching');
-assert.ok(sw.includes("const isSwRequest = path.endsWith('/service-worker.js');"), 'SW file requests must be explicitly identified');
-assert.ok(sw.includes("const isCss = path.endsWith('.css');"), 'css requests must be explicitly identified');
-assert.ok(sw.includes("const isJavaScript = path.endsWith('.js');"), 'javascript requests must be explicitly identified');
-assert.ok(sw.includes("response.ok) {"), 'network-first caching should only store successful responses');
-assert.ok(sw.includes(".filter((key) => key.startsWith('yuva-club-')"), 'activation should purge old YUVA caches');
-
-const htaccess = await readFile(new URL('.htaccess', root), 'utf8');
-assert.ok(htaccess.includes('service-worker\\.js'), '.htaccess should include service worker path');
-assert.ok(htaccess.includes('Cache-Control "no-cache, no-store, must-revalidate"'), 'service worker should enforce revalidation headers');
-
-console.log('PASS service worker cache versioning, routing, and cache lifecycle checks');
+import {readFile} from 'node:fs/promises';
+import vm from 'node:vm';
+const source=await readFile(new URL('../../service-worker.js',import.meta.url),'utf8');
+const origin='https://www.yuvaclub.app';
+const handlers={}; const stores=new Map([['yuva-club-demo-request-v2',new Map([[origin+'/portal.php/probe',{private:true}]])]]);
+let offline=false, redirect=false, control='', claimed=false;
+class Request { constructor(input,options={}) { Object.assign(this,typeof input==='string'?{url:new URL(input,origin).href,method:'GET',mode:'cors'}:input,options); } }
+const cacheFor=name=>{if(!stores.has(name))stores.set(name,new Map());const entries=stores.get(name);return {put:async(r,v)=>entries.set(typeof r==='string'?new URL(r,origin).href:r.url,v),match:async r=>entries.get(typeof r==='string'?new URL(r,origin).href:r.url)}};
+const caches={open:async name=>cacheFor(name),keys:async()=>[...stores.keys()],delete:async name=>stores.delete(name)};
+vm.runInNewContext(source,{URL,Request,caches,self:{location:{origin},addEventListener:(name,fn)=>handlers[name]=fn,skipWaiting:async()=>{},clients:{claim:async()=>{assert.ok(!stores.has('yuva-club-demo-request-v2'));claimed=true}}},fetch:async request=>{
+ if(offline)throw new Error('offline');
+ return {ok:true,type:'basic',url:redirect?origin+'/portal.php':request.url,redirected:redirect,headers:{get:()=>control},clone(){return this}};
+}});
+async function lifecycle(name){let pending;handlers[name]({waitUntil:p=>pending=p});await pending;}
+async function dispatch(path,mode='navigate'){let pending;handlers.fetch({request:new Request(origin+path,{mode}),respondWith:p=>pending=p});return pending?await pending:null;}
+const privatePaths=['/portal.php','/parent.php','/admin.php','/my-growth.php'].flatMap(p=>[p,p+'/probe',p+'/asset.css',p+'?x=1']);
+privatePaths.push('/student','/parent','/admin','/growth','/portal.PHP/probe','/portal%2ephp/probe','/private.html','/assets/unknown.js','/index.html?private=1');
+for(const path of privatePaths)assert.equal(await dispatch(path),null,`Network-only: ${path}`);
+await lifecycle('install');await lifecycle('activate');assert.ok(claimed);
+const current=stores.get('yuva-club-public-only-v3');
+for(const path of privatePaths)assert.ok(!current.has(origin+path),`No private cache write: ${path}`);
+offline=true; // Simulate logout, disconnected network, and a previously poisoned old cache.
+for(const path of privatePaths)assert.equal(await dispatch(path),null,`No offline private read after logout: ${path}`);
+for(const path of ['/index.html','/assets/site.css?v=release-1.0.2-20260802','/assets/app.js?v=demo-request-v2','/assets/logo.png'])assert.ok(await dispatch(path),`Public offline asset: ${path}`);
+offline=false;
+for(const forbidden of ['private','no-store']){control=forbidden;current.delete(origin+'/index.html');await dispatch('/index.html');assert.ok(!current.has(origin+'/index.html'));}
+control='';redirect=true;await dispatch('/index.html');assert.ok(!current.has(origin+'/index.html'),'Redirected private response is never cached');
+redirect=false;await dispatch('/index.html');assert.ok(current.has(origin+'/index.html'));
+console.log('PASS private PHP/path-info/aliases deny by default; old-cache purge; offline after logout; public assets; redirected/private responses');
