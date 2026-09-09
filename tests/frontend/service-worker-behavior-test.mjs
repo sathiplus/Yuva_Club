@@ -53,10 +53,12 @@ const context = vm.createContext({
   },
   fetch: async (request) => {
     fetched.push({ url: request.url, cache: request.cache });
-    return new Response(request.cache === 'reload' ? 'NEW HTML' : 'STALE HTTP CACHE', {
+    const response = new Response(request.cache === 'reload' ? 'NEW HTML' : 'STALE HTTP CACHE', {
       status: 200,
       headers: { 'Content-Type': 'text/html' },
     });
+    Object.defineProperty(response, 'url', {value: request.url});
+    return response;
   },
 });
 
@@ -66,7 +68,7 @@ let installWork;
 listeners.get('install')({ waitUntil(work) { installWork = work; } });
 await installWork;
 
-const currentCache = cacheStores.get('yuva-club-demo-request-v2');
+const currentCache = cacheStores.get('yuva-club-public-only-v3');
 assert.ok(currentCache, 'new service-worker cache must be created');
 assert.equal(await responseText(currentCache.get('/programs.html')), 'NEW HTML', 'fresh HTML must seed the new cache');
 assert.ok(

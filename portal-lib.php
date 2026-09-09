@@ -768,14 +768,8 @@ function complete_parent_activation(string $activationToken, string $password): 
 }
 
 function public_base_url(): string {
-    $host = clean_text((string) ($_SERVER['HTTP_HOST'] ?? ''));
-    if ($host === '') {
-        return 'https://www.yuvaclub.app';
-    }
-    $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
-        || (($_SERVER['SERVER_PORT'] ?? '') === '443')
-        || (strtolower((string) ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '')) === 'https');
-    return ($isHttps ? 'https://' : 'http://') . $host;
+    // Public links must not inherit an untrusted Host or forwarded header.
+    return app_url();
 }
 
 function parent_activation_url(string $activationToken): string {

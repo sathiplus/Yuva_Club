@@ -1,4 +1,4 @@
-const CACHE_NAME = 'yuva-club-demo-request-v2';
+const CACHE_NAME = 'yuva-club-public-only-v3';
 const HTML_ASSETS = [
   '/index.html',
   '/programs.html',
@@ -37,84 +37,56 @@ const STATIC_ASSETS = [
   '/assets/student-presentation-illustration.svg'
 ];
 
-self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then(async (cache) => {
-      await Promise.all(
-        HTML_ASSETS.map(async (path) => {
-          const request = new Request(new URL(path, self.location.origin), { cache: 'reload' });
-          const response = await fetch(request);
-          if (!response || !response.ok) {
-            throw new Error(`Unable to refresh ${path}`);
-          }
-          await cache.put(path, response);
-        })
-      );
-      await cache.addAll(STATIC_ASSETS);
-    })
-  );
-  self.skipWaiting();
+// Only exact, reviewed public URLs may enter persistent storage. Queries are
+// part of the allowlist: a dynamic response must not masquerade as an asset.
+const PUBLIC_URLS = new Set([...HTML_ASSETS, ...STATIC_ASSETS].map(path => new URL(path, self.location.origin).href));
+function isPublicRequest(request) {
+  return request.method === 'GET' && PUBLIC_URLS.has(request.url);
+}
+function cacheableResponse(request, response) {
+  return response && response.ok && response.type !== 'opaque'
+    && !response.redirected && response.url === request.url
+    && !/no-store|private/i.test(response.headers.get('Cache-Control') || '');
+}
+async function publicResponse(request) {
+  try {
+    const response = await fetch(new Request(request, { cache: 'reload' }));
+    if (cacheableResponse(request, response)) {
+      const cache = await caches.open(CACHE_NAME);
+      await cache.put(request, response.clone());
+    }
+    return response;
+  } catch (error) {
+    const cache = await caches.open(CACHE_NAME);
+    const cached = await cache.match(request);
+    if (cached) return cached;
+    if (request.mode === 'navigate') {
+      const offline = await cache.match('/offline.html');
+      if (offline) return offline;
+    }
+    throw error;
+  }
+}
+self.addEventListener('install', event => {
+  event.waitUntil((async () => {
+    // An unavailable optional public asset must not prevent a privacy update.
+    await Promise.allSettled([...PUBLIC_URLS].map(url => publicResponse(new Request(url))));
+    await self.skipWaiting();
+  })());
 });
-
-self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(
-        keys
-          .filter((key) => key.startsWith('yuva-club-') && key !== CACHE_NAME)
-          .map((key) => caches.delete(key))
-      )
-    )
-  );
-  self.clients.claim();
+self.addEventListener('activate', event => {
+  event.waitUntil((async () => {
+    // Purge the old cache, including private path-info entries, before claiming.
+    await Promise.all((await caches.keys())
+      .filter(key => key.startsWith('yuva-club-') && key !== CACHE_NAME)
+      .map(key => caches.delete(key)));
+    await self.clients.claim();
+  })());
 });
-
-self.addEventListener('fetch', (event) => {
-  const request = event.request;
-  const url = new URL(request.url);
-  const path = url.pathname.toLowerCase();
-  const isSwRequest = path.endsWith('/service-worker.js');
-  const isPhpRequest = path.endsWith('.php');
-  const isNavigationRequest = request.mode === 'navigate';
-  const isHtml = path.endsWith('.html') || isNavigationRequest;
-  const isCss = path.endsWith('.css');
-  const isJavaScript = path.endsWith('.js');
-  const shouldCacheOnSuccess = isNavigationRequest || isHtml || isCss || isJavaScript || isSwRequest;
-
-  if (request.method !== 'GET' || url.origin !== self.location.origin) {
+self.addEventListener('fetch', event => {
+  if (!isPublicRequest(event.request)) {
+    // Never consult persistent storage or fall back to cached private content.
     return;
   }
-
-  if (isPhpRequest) {
-    event.respondWith(fetch(request));
-    return;
-  }
-
-  if (isNavigationRequest || isHtml) {
-    const freshRequest = new Request(request, { cache: 'reload' });
-    event.respondWith(
-      fetch(freshRequest)
-        .then((response) => {
-          if (response && response.ok) {
-            const copy = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
-          }
-          return response;
-        })
-        .catch(() => caches.match(request).then((cached) => cached || caches.match('/index.html') || caches.match('/offline.html')))
-    );
-    return;
-  }
-
-  event.respondWith(
-    fetch(request)
-        .then((response) => {
-          if (shouldCacheOnSuccess && response && response.ok) {
-            const copy = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
-          }
-          return response;
-        })
-      .catch(() => caches.match(request))
-  );
+  event.respondWith(publicResponse(event.request));
 });

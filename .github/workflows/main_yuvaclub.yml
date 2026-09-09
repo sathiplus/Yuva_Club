@@ -125,6 +125,7 @@ jobs:
           php -l backend/delivery/SqlMediaConsentRepository.php
           php -l backend/delivery/MediaRetentionService.php
           php -l tools/media-retention.php
+          php -l backend/jobs/media-retention.php
           php -l App_Data/jobs/triggered/yuva-media-retention/run.php
           php -l admin.php
           php -l registration.php

@@ -5,6 +5,13 @@ on:
     paths:
       - ".github/workflows/sqlsrv-auth-integration.yml"
       - "backend/authentication/**"
+      - "backend/config.php"
+      - "backend/jobs/**"
+      - "App_Data/jobs/**"
+      - "service-worker.js"
+      - "portal-lib.php"
+      - "tests/backend/*retention*"
+      - "tests/backend/canonical-origin-test.php"
       - "backend/database.php"
       - "backend/repositories.php"
       - "database/**"
@@ -17,6 +24,13 @@ on:
     paths:
       - ".github/workflows/sqlsrv-auth-integration.yml"
       - "backend/authentication/**"
+      - "backend/config.php"
+      - "backend/jobs/**"
+      - "App_Data/jobs/**"
+      - "service-worker.js"
+      - "portal-lib.php"
+      - "tests/backend/*retention*"
+      - "tests/backend/canonical-origin-test.php"
       - "backend/database.php"
       - "backend/repositories.php"
       - "database/**"
@@ -118,6 +132,17 @@ jobs:
             node "$test_file"
           done < <(find tests/frontend -maxdepth 1 -type f -name '*.mjs' | sort)
           git diff --check
+      - name: Verify packaged retention job without deleting media
+        run: python3 tests/retention-artifact-test.py
+      - name: PHP lint and security contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          while IFS= read -r -d '' file; do php -l "$file" >/dev/null; done < <(git ls-files -z '*.php')
+          python3 tools/run-isolated-validation.py --source . --php "$(command -v php)" --log-directory "$RUNNER_TEMP/hotfix-security" --suite tests/phase-2a-functional-security-tests.php
+      - name: Static security contracts
+        shell: pwsh
+        run: ./tests/phase-2a-security-static-tests.ps1
       - name: Prove cleanup executes after a failing test command
         shell: bash
         run: |

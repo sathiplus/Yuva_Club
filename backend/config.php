@@ -167,7 +167,9 @@ function app_config(): array {
 
     return [
         'app_env' => $appEnv,
-        'app_url' => rtrim(env_value('APP_URL', 'https://www.yuvaclub.app'), '/'),
+        'app_url' => $appEnv === 'production'
+            ? 'https://www.yuvaclub.app'
+            : rtrim(env_value('APP_URL', 'https://www.yuvaclub.app'), '/'),
         'mutable_paths' => [
             'portal_data' => env_value('YUVA_PORTAL_DATA_PATH'),
             'portal_uploads' => env_value('YUVA_PORTAL_UPLOADS_PATH'),
